@@ -47,21 +47,21 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => 
     };
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-app-bg">
-             <header className="absolute top-0 left-0 p-4 md:p-8">
-                <button onClick={onBack} className="flex items-center gap-2 py-2 px-4 rounded-lg bg-white hover:bg-slate-50 transition-colors text-text-primary border border-border-color">
+        <div className="flex flex-col items-center justify-center min-h-screen p-4 md:p-8 bg-app-bg">
+             <header className="absolute top-0 left-0 p-3 sm:p-4 md:p-8">
+                <button onClick={onBack} className="flex items-center gap-2 py-2 px-3 sm:px-4 rounded-lg bg-white hover:bg-slate-50 transition-colors text-text-primary border border-border-color text-sm sm:text-base">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
                     {TRANSLATIONS.back[language]}
                 </button>
             </header>
-            <div className="w-full max-w-md bg-white p-8 md:p-12 rounded-2xl shadow-xl border border-border-color">
+            <div className="w-full max-w-md bg-white p-6 sm:p-8 md:p-12 rounded-2xl shadow-xl border border-border-color">
                 <div className="flex justify-center mb-8">
                     <JaboataoPrevLogo />
                 </div>
-                <h1 className="font-montserrat text-2xl font-semibold text-center text-text-primary mb-2">
+                <h1 className="font-montserrat text-xl sm:text-2xl font-semibold text-center text-text-primary mb-2">
                     {TRANSLATIONS.restrictedAccess[language]}
                 </h1>
-                <p className="text-center text-text-secondary mb-8">
+                <p className="text-center text-sm sm:text-base text-text-secondary mb-6 sm:mb-8">
                     {language === 'pt' ? 'Faça login para continuar.' : 'Please log in to continue.'}
                 </p>
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -77,7 +77,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => 
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-3 bg-white border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-jaboatao-blue placeholder:text-text-secondary text-text-primary"
+                            className="w-full p-2 sm:p-3 bg-white border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-jaboatao-blue placeholder:text-text-secondary text-sm sm:text-base text-text-primary"
                             placeholder="admin@gov.br"
                         />
                     </div>
@@ -93,7 +93,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => 
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-3 bg-white border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-jaboatao-blue placeholder:text-text-secondary text-text-primary"
+                            className="w-full p-2 sm:p-3 bg-white border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-jaboatao-blue placeholder:text-text-secondary text-sm sm:text-base text-text-primary"
                             placeholder="••••••••"
                         />
                     </div>

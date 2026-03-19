@@ -4,7 +4,12 @@ const client = new Client();
 
 client
     .setEndpoint(import.meta.env.VITE_APPWRITE_ENDPOINT!)
-    .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID!); 
+    .setProject(import.meta.env.VITE_APPWRITE_PROJECT_ID!);
+
+// If you have an API Key (optional, for server-side style security)
+if (import.meta.env.VITE_APPWRITE_API_KEY) {
+    client.setKey(import.meta.env.VITE_APPWRITE_API_KEY);
+}
 
 export const databases = new Databases(client);
 export const account = new Account(client);

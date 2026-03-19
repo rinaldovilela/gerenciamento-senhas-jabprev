@@ -34,7 +34,7 @@ const OperatorPanel: React.FC = () => {
             
             <main>
                 <h2 className="font-montserrat text-2xl font-semibold mb-4 text-text-primary">{TRANSLATIONS.waitingQueue[language]}</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {SERVICES.map((service: Service) => {
                         const queue = (waitingByService[service.id] || []).sort((a,b) => a.number - b.number);
                         const waitingCount = queue.length;

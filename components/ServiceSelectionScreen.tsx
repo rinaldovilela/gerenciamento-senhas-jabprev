@@ -15,6 +15,7 @@ import {
 interface ServiceSelectionScreenProps {
     onServiceSelected: (service: Service) => void;
     onBack: () => void;
+    fullscreenMode?: boolean;
 }
 
 const IconRenderer: React.FC<{ iconName: string }> = ({ iconName }) => {
@@ -39,7 +40,7 @@ const ServiceCard: React.FC<{ service: Service; onClick: (service: Service) => v
     </button>
 );
 
-const ServiceSelectionScreen: React.FC<ServiceSelectionScreenProps> = ({ onServiceSelected, onBack }) => {
+const ServiceSelectionScreen: React.FC<ServiceSelectionScreenProps> = ({ onServiceSelected, onBack, fullscreenMode }) => {
     const { services } = useQueue();
     const [searchTerm, setSearchTerm] = useState('');
     const [language] = useState<Language>('pt');
@@ -53,11 +54,17 @@ const ServiceSelectionScreen: React.FC<ServiceSelectionScreenProps> = ({ onServi
 
     return (
         <div className="flex flex-col w-full min-h-screen p-4 md:p-8 bg-app-bg text-text-primary">
-            <header className="flex items-center mb-8">
-                <button onClick={onBack} className="p-3 rounded-full bg-white hover:bg-slate-100 transition-colors mr-4 border border-border-color">
+            <header className="flex items-center mb-8 justify-between">
+                <button 
+                    onClick={onBack} 
+                    className={`p-3 rounded-full bg-white hover:bg-slate-100 transition-colors mr-4 border border-border-color ${
+                        fullscreenMode ? 'hidden landscape:hidden portrait:flex' : 'hidden lg:flex'
+                    }`}
+                    title="Voltar"
+                >
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
                 </button>
-                <h1 className="font-montserrat text-3xl md:text-4xl font-semibold text-jaboatao-blue">{TRANSLATIONS.selectService[language]}</h1>
+                <h1 className="font-montserrat text-3xl md:text-4xl font-semibold text-jaboatao-blue flex-1 text-center">{TRANSLATIONS.selectService[language]}</h1>
             </header>
             
             <div className="mb-8">
@@ -72,14 +79,14 @@ const ServiceSelectionScreen: React.FC<ServiceSelectionScreenProps> = ({ onServi
 
             <main className="flex-grow overflow-y-auto">
                 {filteredServices.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 tablet-landscape:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
                         {filteredServices.map(service => (
                             <ServiceCard key={service.id} service={service} onClick={onServiceSelected} />
                         ))}
                     </div>
                 ) : (
                     <div className="text-center py-16">
-                        <p className="text-xl text-text-secondary">Nenhum serviço encontrado.</p>
+                        <p className="text-lg sm:text-xl text-text-secondary">Nenhum serviço encontrado.</p>
                     </div>
                 )}
             </main>

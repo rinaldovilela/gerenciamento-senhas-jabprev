@@ -31,7 +31,7 @@ const Toast: React.FC<{ message: string; show: boolean; onClose: () => void }> =
 };
 
 const AttendanceTrackingScreen: React.FC = () => {
-    const { tickets, updateTicketStatus } = useQueue();
+    const { tickets, updateTicketStatus, refreshData } = useQueue();
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [toast, setToast] = useState({ show: false, message: '' });
 
@@ -46,8 +46,17 @@ const AttendanceTrackingScreen: React.FC = () => {
 
     const handleUpdateStatus = async (ticketId: string, status: TicketStatus) => {
         await updateTicketStatus(ticketId, status);
+        // Refetch data após ação para refletir mudanças em tempo real
+        await refreshData();
         const statusLabel = STATUS_CONFIG[status].label;
         showToast(`Senha atualizada para "${statusLabel}"!`);
+        setLastUpdated(new Date());
+    };
+
+    const handleManualRefresh = async () => {
+        await refreshData();
+        setLastUpdated(new Date());
+        showToast('Dados atualizados!');
     };
 
     const sortedTickets = useMemo(() => {
@@ -76,7 +85,7 @@ const AttendanceTrackingScreen: React.FC = () => {
                     <span className="text-xs text-text-secondary">
                         Última atualização: {lastUpdated.toLocaleTimeString('pt-BR')}
                     </span>
-                    <button onClick={() => setLastUpdated(new Date())} className="flex items-center gap-2 py-2 px-3 text-sm font-semibold text-jaboatao-blue bg-white border border-border-color rounded-lg shadow-sm hover:bg-slate-50 transition-colors">
+                    <button onClick={handleManualRefresh} className="flex items-center gap-2 py-2 px-3 text-sm font-semibold text-jaboatao-blue bg-white border border-border-color rounded-lg shadow-sm hover:bg-slate-50 transition-colors">
                         <RefreshIcon />
                         Atualizar
                     </button>

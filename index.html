@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>JaboatãoPrev - Gestão de Atendimentos</title>
     
     <!-- Google Fonts -->
@@ -12,6 +12,20 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Open+Sans:wght@400;600&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Tablet landscape adjustments */
+      @media (min-width: 768px) and (max-height: 600px) and (orientation: landscape) {
+        body { font-size: 14px; }
+        .tablet-landscape-compact { padding: 12px !important; }
+        .tablet-landscape-text-lg { font-size: 16px !important; }
+        .tablet-landscape-text-xl { font-size: 18px !important; }
+      }
+      
+      /* Tablet portrait adjustments */
+      @media (min-width: 600px) and (max-width: 1024px) and (orientation: portrait) {
+        .tablet-portrait-p { padding: 24px; }
+      }
+    </style>
     <script>
       tailwind.config = {
         theme: {
@@ -46,7 +60,7 @@
                 '100%': { opacity: '1', transform: 'translateY(0)' },
               },
               borderPulse: {
-                '0%, 100%': { 'border-color': 'rgba(37, 99, 235, 0.4)' }, // #2563EB or blue-600
+                '0%, 100%': { 'border-color': 'rgba(37, 99, 235, 0.4)' },
                 '50%': { 'border-color': 'rgba(37, 99, 235, 1)' },
               },
             }
