@@ -1,0 +1,5 @@
+{
+  "name": "Sistema de Gerenciamento de Filas",
+  "description": "Um aplicativo intuitivo para gerenciamento de filas de atendimento em serviços públicos, projetado para tablets. Foco em acessibilidade e facilidade de uso para todos os cidadãos.",
+  "requestFramePermissions": []
+}
