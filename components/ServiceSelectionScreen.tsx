@@ -9,7 +9,7 @@ import {
     FamilyRestroom, 
     ReceiptLong, 
     Elderly, 
-    HelpCircle 
+    Help 
 } from '@mui/icons-material';
 
 interface ServiceSelectionScreenProps {
@@ -24,7 +24,7 @@ const IconRenderer: React.FC<{ iconName: string }> = ({ iconName }) => {
         case 'family-restroom': return <FamilyRestroom sx={{ fontSize: 48, color: '#005696' }} />;
         case 'receipt-long': return <ReceiptLong sx={{ fontSize: 48, color: '#005696' }} />;
         case 'elderly': return <Elderly sx={{ fontSize: 48, color: '#005696' }} />;
-        default: return <HelpCircle sx={{ fontSize: 48, color: '#005696' }} />;
+        default: return <Help sx={{ fontSize: 48, color: '#005696' }} />;
     }
 };
 

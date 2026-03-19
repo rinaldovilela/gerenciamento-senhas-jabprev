@@ -48,21 +48,27 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 created_at: doc.$createdAt
             })) as Service[]);
 
-            // Fetch today's tickets
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
+            // Fetch all tickets (filtering by date will be done on client-side)
             const ticketsResponse = await databases.listDocuments(
                 APPWRITE_DATABASE_ID,
                 APPWRITE_COLLECTION_TICKETS_ID,
                 [
-                    Query.greaterThanEqual('created_at', today.toISOString()),
-                    Query.orderAsc('created_at'),
                     Query.limit(100) // Limit to a reasonable number
                 ]
             );
 
             // Map Appwrite documents to your Ticket interface and enrich with service data
-            const fetchedTickets: Ticket[] = await Promise.all(ticketsResponse.documents.map(async doc => {
+            // Filter to only today's tickets
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            const todayTickets = ticketsResponse.documents.filter(doc => {
+                const docDate = new Date(doc.$createdAt);
+                docDate.setHours(0, 0, 0, 0);
+                return docDate.getTime() === today.getTime();
+            });
+
+            const fetchedTickets: Ticket[] = await Promise.all(todayTickets.map(async doc => {
                 const service = servicesResponse.documents.find(s => s.$id === doc.service_id);
                 return {
                     id: doc.$id,
@@ -131,17 +137,25 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
             // Fetch last ticket number for today with the same prefix
             const lastTicketResponse = await databases.listDocuments(
-                APPWRITE_DATABASE_DATABASE_ID,
+                APPWRITE_DATABASE_ID,
                 APPWRITE_COLLECTION_TICKETS_ID,
                 [
                     Query.startsWith('formatted_number', prefix + '-'),
-                    Query.greaterThanEqual('created_at', new Date().toISOString().split('T')[0]), // Today's tickets
                     Query.orderDesc('number'),
-                    Query.limit(1)
+                    Query.limit(100)
                 ]
             );
+            
+            // Filter for today's tickets on the client side
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const todayTickets = lastTicketResponse.documents.filter(doc => {
+                const docDate = new Date(doc.$createdAt);
+                docDate.setHours(0, 0, 0, 0);
+                return docDate.getTime() === today.getTime();
+            });
 
-            const lastNumber = lastTicketResponse.documents.length > 0 ? (lastTicketResponse.documents[0].number || 0) : 0;
+            const lastNumber = todayTickets.length > 0 ? (todayTickets[0].number || 0) : 0;
             const nextNumber = lastNumber + 1;
             const formattedNumber = `${prefix}-${String(nextNumber).padStart(3, '0')}`;
 
