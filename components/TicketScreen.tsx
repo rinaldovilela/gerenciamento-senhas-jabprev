@@ -19,7 +19,12 @@ const TicketScreen: React.FC<TicketScreenProps> = ({ ticket, onNewTicket }) => {
     const isMyTicketCalled = calledTicket?.id === ticket.id;
 
     const peopleAhead = useMemo(() => {
-        return tickets.filter(t => t.service.id === ticket.service.id && t.createdAt < ticket.createdAt).length;
+        const myCreatedAt = new Date(ticket.created_at).getTime();
+        return tickets.filter(t => 
+            t.service_id === ticket.service_id && 
+            t.status === 'waiting' &&
+            new Date(t.created_at).getTime() < myCreatedAt
+        ).length;
     }, [tickets, ticket]);
 
     const estimatedWaitTime = useMemo(() => {
@@ -28,25 +33,14 @@ const TicketScreen: React.FC<TicketScreenProps> = ({ ticket, onNewTicket }) => {
     }, [peopleAhead]);
 
     const assignedCounter = useMemo(() => {
-        // Simple logic to assign a counter based on service category
-        if(ticket.isPriority) return '1 (Prioritário)';
-        switch (ticket.service.category) {
-            case 'Gerência de Benefícios':
-                return 2;
-            case 'Gerência de Folha de Pagamento':
-                return 3;
-            case 'Gerência Jurídica':
-                return 4;
-            case 'Geral':
-                return 5;
-            default:
-                return 5;
-        }
-    }, [ticket.service.category, ticket.isPriority]);
+        // Simple logic to assign a counter
+        if(ticket.is_priority) return '1 (Prioritário)';
+        return 'Geral';
+    }, [ticket.is_priority]);
 
     const successMessage = useMemo(() => {
-        if (ticket.isPriority) {
-            return `Senha prioritária ${ticket.formattedNumber} gerada com sucesso!`;
+        if (ticket.is_priority) {
+            return `Senha prioritária ${ticket.formatted_number} gerada com sucesso!`;
         }
         return TRANSLATIONS.ticketGeneratedSuccess[language];
     }, [ticket, language]);
@@ -77,7 +71,7 @@ const TicketScreen: React.FC<TicketScreenProps> = ({ ticket, onNewTicket }) => {
 
     const handleReprint = () => {
         // In a real app, this would trigger a print action
-        alert(`Imprimindo senha: ${ticket.formattedNumber}`);
+        alert(`Imprimindo senha: ${ticket.formatted_number}`);
     };
 
     const handleReturnNow = useCallback(() => {
@@ -100,7 +94,7 @@ const TicketScreen: React.FC<TicketScreenProps> = ({ ticket, onNewTicket }) => {
                     <h2 className="text-2xl font-semibold text-text-secondary">{TRANSLATIONS.yourTicket[language]}</h2>
                     <p className="text-jaboatao-green-prev text-lg mb-2 animate-fade-in-up">{successMessage}</p>
                     <p className="my-2 text-9xl md:text-[10rem] font-mono font-extrabold text-text-primary tracking-tighter leading-none">
-                        {ticket.formattedNumber}
+                        {ticket.formatted_number}
                     </p>
                     <div className="border border-border-color p-4 rounded-xl mb-6">
                         <p className="text-xl font-semibold text-text-primary">{ticket.service.name}</p>

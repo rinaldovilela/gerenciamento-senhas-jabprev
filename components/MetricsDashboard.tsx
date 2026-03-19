@@ -1,14 +1,13 @@
 
-
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useQueue } from '../contexts/QueueContext';
-import { TRANSLATIONS, SERVICES } from '../constants';
-import type { Language, Service, Ticket, TicketStatus, User, UserType } from '../types';
+import { TRANSLATIONS } from '../constants';
+import type { Language, Ticket, TicketType, UserType } from '../types';
 
 const language: Language = 'pt';
 
 type Period = 'today' | 'week' | 'month';
-type TicketType = 'all' | 'normal' | 'priority';
+type TicketTypeFilter = 'all' | 'normal' | 'priority';
 
 const MetricCard: React.FC<{ title: string; value: string; description?: string; icon?: React.ReactNode }> = ({ title, value, description, icon }) => (
     <div className="bg-white p-6 rounded-xl shadow-lg flex items-start gap-4 border border-border-color">
@@ -37,13 +36,10 @@ const LineChart: React.FC<{ data: { date: string; [key: string]: any }[], keys: 
         <div className="bg-white p-6 rounded-xl shadow-lg border border-border-color h-full">
             <h3 className="text-lg font-semibold mb-4 text-text-primary">Tendência de Tempos Médios (minutos)</h3>
             <div className="flex w-full h-64">
-                {/* Y Axis */}
                 <div className="flex flex-col justify-between text-right text-xs text-text-secondary pr-2">
                     {yAxisLabels.map(label => <span key={label}>{label}</span>)}
                 </div>
-                {/* Chart Area */}
                 <div className="flex-grow border-l border-b border-border-color relative">
-                    {/* Lines */}
                     {keys.map((key, keyIndex) => (
                         <svg key={key} className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
                             <polyline
@@ -57,11 +53,9 @@ const LineChart: React.FC<{ data: { date: string; [key: string]: any }[], keys: 
                     ))}
                 </div>
             </div>
-             {/* X Axis */}
             <div className="flex justify-between text-xs text-text-secondary pl-8 pt-2">
                 {data.map((d, i) => (i % (Math.floor(data.length / 5) + 1) === 0 || i === data.length - 1) && <span key={d.date}>{d.date}</span>)}
             </div>
-            {/* Legend */}
             <div className="flex justify-center gap-4 mt-4">
                 {keys.map((key, index) => (
                     <div key={key} className="flex items-center text-sm">
@@ -120,8 +114,8 @@ const DetailedTable: React.FC<{ tickets: Ticket[] }> = ({ tickets }) => {
                     <tbody>
                         {tickets.slice(0, 5).map((ticket) => (
                             <tr key={ticket.id} className="border-b border-border-color last:border-0 hover:bg-slate-50">
-                                <td className="p-2 font-mono font-bold text-text-primary">{ticket.formattedNumber}</td>
-                                <td className="p-2 text-text-primary">{ticket.service.name}</td>
+                                <td className="p-2 font-mono font-bold text-text-primary">{ticket.formatted_number}</td>
+                                <td className="p-2 text-text-primary">{ticket?.service?.name || 'N/A'}</td>
                                 <td className="p-2 text-center">
                                     <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-jaboatao-green-prev text-white">
                                         Finalizado
@@ -139,7 +133,7 @@ const DetailedTable: React.FC<{ tickets: Ticket[] }> = ({ tickets }) => {
 
 
 const MetricsDashboard: React.FC = () => {
-    const { tickets: allTickets } = useQueue();
+    const { tickets: allTickets, services } = useQueue();
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
     const exportRef = useRef<HTMLDivElement>(null);
@@ -147,13 +141,12 @@ const MetricsDashboard: React.FC = () => {
     const [filters, setFilters] = useState({
         period: 'today' as Period,
         serviceId: 'all',
-        sector: 'all',
-        type: 'all' as TicketType,
+        type: 'all' as TicketTypeFilter,
         operatorId: 'all'
     });
     
     useEffect(() => {
-        const interval = setInterval(() => setLastUpdated(new Date()), 10000);
+        const interval = setInterval(() => setLastUpdated(new Date()), 30000);
         const handleClickOutside = (event: MouseEvent) => {
             if (exportRef.current && !exportRef.current.contains(event.target as Node)) {
                 setExportDropdownOpen(false);
@@ -167,13 +160,9 @@ const MetricsDashboard: React.FC = () => {
     }, []);
 
     const operators = useMemo(() => {
-        const operatorMap = new Map<string, User>();
-        allTickets.forEach(ticket => {
-            if(ticket.operator && !operatorMap.has(ticket.operator.id)) {
-                operatorMap.set(ticket.operator.id, ticket.operator);
-            }
-        });
-        return Array.from(operatorMap.values());
+        const ops = new Set<string>();
+        allTickets.forEach(t => { if(t.operator_id) ops.add(t.operator_id) });
+        return Array.from(ops);
     }, [allTickets]);
 
     const filteredTickets = useMemo(() => {
@@ -184,32 +173,31 @@ const MetricsDashboard: React.FC = () => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
         return allTickets.filter(ticket => {
-            const ticketDate = new Date(ticket.createdAt);
+            const ticketDate = new Date(ticket.created_at);
             if (filters.period === 'today' && ticketDate < startOfToday) return false;
             if (filters.period === 'week' && ticketDate < startOfWeek) return false;
             if (filters.period === 'month' && ticketDate < startOfMonth) return false;
 
-            if (filters.serviceId !== 'all' && ticket.service.id !== filters.serviceId) return false;
-            if (filters.sector !== 'all' && ticket.service.category !== filters.sector) return false;
-            if (filters.operatorId !== 'all' && ticket.operator?.id !== filters.operatorId) return false;
+            if (filters.serviceId !== 'all' && ticket.service_id !== filters.serviceId) return false;
+            if (filters.operatorId !== 'all' && ticket.operator_id !== filters.operatorId) return false;
             
-            if (filters.type === 'normal' && ticket.isPriority) return false;
-            if (filters.type === 'priority' && !ticket.isPriority) return false;
+            if (filters.type === 'normal' && ticket.is_priority) return false;
+            if (filters.type === 'priority' && !ticket.is_priority) return false;
 
             return true;
         });
-    }, [allTickets, filters, lastUpdated]);
+    }, [allTickets, filters]);
     
     const metrics = useMemo(() => {
-        const completed = filteredTickets.filter(t => t.status === 'completed' && t.startedAt && t.completedAt);
+        const completed = filteredTickets.filter(t => t.status === 'completed' && t.started_at && t.completed_at);
         
         const waitTimes = completed
-            .map(t => (t.startedAt!.getTime() - t.createdAt.getTime()) / (1000 * 60))
+            .map(t => (new Date(t.started_at!).getTime() - new Date(t.created_at).getTime()) / (1000 * 60))
             .filter(t => t >= 0);
         const avgWaitTime = waitTimes.length > 0 ? (waitTimes.reduce((a, b) => a + b, 0) / waitTimes.length) : 0;
         
         const serviceTimes = completed
-            .map(t => (t.completedAt!.getTime() - t.startedAt!.getTime()) / (1000 * 60))
+            .map(t => (new Date(t.completed_at!).getTime() - new Date(t.started_at!).getTime()) / (1000 * 60))
             .filter(t => t >= 0);
         const avgServiceTime = serviceTimes.length > 0 ? (serviceTimes.reduce((a,b) => a+b, 0) / serviceTimes.length) : 0;
 
@@ -234,14 +222,14 @@ const MetricsDashboard: React.FC = () => {
         const dataByDay = new Map<string, { waitTimes: number[], serviceTimes: number[] }>();
 
         filteredTickets.forEach(ticket => {
-            const day = new Date(ticket.createdAt).toISOString().split('T')[0];
+            const day = new Date(ticket.created_at).toISOString().split('T')[0];
             if (!dataByDay.has(day)) dataByDay.set(day, { waitTimes: [], serviceTimes: [] });
             
-            if (ticket.status === 'completed' && ticket.startedAt) {
-                const waitTime = (ticket.startedAt.getTime() - ticket.createdAt.getTime()) / (1000 * 60);
+            if (ticket.status === 'completed' && ticket.started_at) {
+                const waitTime = (new Date(ticket.started_at).getTime() - new Date(ticket.created_at).getTime()) / (1000 * 60);
                 if (waitTime >= 0) dataByDay.get(day)!.waitTimes.push(waitTime);
-                if (ticket.completedAt) {
-                    const serviceTime = (ticket.completedAt.getTime() - ticket.startedAt.getTime()) / (1000 * 60);
+                if (ticket.completed_at) {
+                    const serviceTime = (new Date(ticket.completed_at).getTime() - new Date(ticket.started_at).getTime()) / (1000 * 60);
                     if (serviceTime >= 0) dataByDay.get(day)!.serviceTimes.push(serviceTime);
                 }
             }
@@ -260,20 +248,20 @@ const MetricsDashboard: React.FC = () => {
     }, [filteredTickets, filters.period]);
 
     const ticketsByServiceData = useMemo(() => {
-        return SERVICES.map(service => ({
+        return services.map(service => ({
             label: service.name,
-            value: filteredTickets.filter(t => t.service.id === service.id).length,
+            value: filteredTickets.filter(t => t.service_id === service.id).length,
         })).filter(d => d.value > 0).sort((a,b) => b.value - a.value);
-    }, [filteredTickets]);
+    }, [filteredTickets, services]);
     
     const exportData = useCallback((format: 'json' | 'csv' | 'xlsx') => {
         setExportDropdownOpen(false);
         const dataToExport = filteredTickets.map(t => {
-            const waitTime = t.startedAt ? ((t.startedAt.getTime() - t.createdAt.getTime()) / 60000) : null;
-            const serviceTime = t.startedAt && t.completedAt ? ((t.completedAt.getTime() - t.startedAt.getTime()) / 60000) : null;
+            const waitTime = t.started_at ? ((new Date(t.started_at).getTime() - new Date(t.created_at).getTime()) / 60000) : null;
+            const serviceTime = t.started_at && t.completed_at ? ((new Date(t.completed_at).getTime() - new Date(t.started_at).getTime()) / 60000) : null;
 
             return {
-                senha: t.formattedNumber, tipoUsuario: t.userType, prioritario: t.isPriority, servico: t.service.name, setor: t.service.category, status: t.status, dataCriacao: new Date(t.createdAt).toISOString(), dataInicioAtendimento: t.startedAt ? new Date(t.startedAt).toISOString() : null, dataFimAtendimento: t.completedAt ? new Date(t.completedAt).toISOString() : null, tempoEsperaMinutos: waitTime !== null ? waitTime.toFixed(2) : 'N/A', tempoAtendimentoMinutos: serviceTime !== null ? serviceTime.toFixed(2) : 'N/A', operador: t.operator?.email || null
+                senha: t.formatted_number, tipoUsuario: t.user_type, prioritario: t.is_priority, servico: t?.service?.name || 'N/A', status: t.status, dataCriacao: t.created_at, dataInicioAtendimento: t.started_at, dataFimAtendimento: t.completed_at, tempoEsperaMinutos: waitTime !== null ? waitTime.toFixed(2) : 'N/A', tempoAtendimentoMinutos: serviceTime !== null ? serviceTime.toFixed(2) : 'N/A', operador: t.operator_id || null
             };
         });
 
@@ -312,8 +300,6 @@ const MetricsDashboard: React.FC = () => {
             }).join('')}</Row>`).join('');
             fileContent = `<?xml version="1.0"?><?mso-application progid="Excel.Sheet"?><Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"><Worksheet ss:Name="Relatorio"><Table>${headerRow}${dataRows}</Table></Worksheet></Workbook>`;
             mimeType = 'application/vnd.ms-excel';
-            // The generated content is an XML Spreadsheet (SpreadsheetML), which is compatible with the .xls extension.
-            // Using .xlsx would cause errors in modern Excel versions as it expects a different file format (Office Open XML).
             fileExtension = 'xls';
         }
 
@@ -353,9 +339,8 @@ const MetricsDashboard: React.FC = () => {
                  </div>
             </div>
 
-            {/* Filters */}
             <div className="bg-white p-4 rounded-xl shadow-md mb-8 border border-border-color">
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                      <div>
                         <label className="text-xs font-medium text-text-secondary block mb-1">Período</label>
                         <select value={filters.period} onChange={e => setFilters(f => ({...f, period: e.target.value as Period}))} className="w-full mt-1 p-2 bg-white border border-border-color rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50 text-sm text-text-primary transition">
@@ -365,32 +350,25 @@ const MetricsDashboard: React.FC = () => {
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-text-secondary block mb-1">Setor</label>
-                        <select value={filters.sector} onChange={e => setFilters(f => ({...f, sector: e.target.value}))} className="w-full mt-1 p-2 bg-white border border-border-color rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50 text-sm text-text-primary transition">
-                            <option value="all">Todos</option>
-                            {[...new Set(SERVICES.map(s => s.category))].map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
-                    </div>
-                    <div>
                         <label className="text-xs font-medium text-text-secondary block mb-1">Serviço</label>
                         <select value={filters.serviceId} onChange={e => setFilters(f => ({...f, serviceId: e.target.value}))} className="w-full mt-1 p-2 bg-white border border-border-color rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50 text-sm text-text-primary transition">
                             <option value="all">Todos</option>
-                            {SERVICES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                            {services.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                         </select>
                     </div>
                     <div>
                         <label className="text-xs font-medium text-text-secondary block mb-1">Tipo Atendimento</label>
-                        <select value={filters.type} onChange={e => setFilters(f => ({...f, type: e.target.value as TicketType}))} className="w-full mt-1 p-2 bg-white border border-border-color rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50 text-sm text-text-primary transition">
+                        <select value={filters.type} onChange={e => setFilters(f => ({...f, type: e.target.value as TicketTypeFilter}))} className="w-full mt-1 p-2 bg-white border border-border-color rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50 text-sm text-text-primary transition">
                             <option value="all">Todos</option>
                             <option value="normal">Normal</option>
                             <option value="priority">Prioritário</option>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-medium text-text-secondary block mb-1">Operador</label>
+                        <label className="text-xs font-medium text-text-secondary block mb-1">ID Operador</label>
                         <select value={filters.operatorId} onChange={e => setFilters(f => ({...f, operatorId: e.target.value}))} className="w-full mt-1 p-2 bg-white border border-border-color rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50 text-sm text-text-primary transition">
                             <option value="all">Todos</option>
-                            {operators.map(op => <option key={op.id} value={op.id}>{op.email}</option>)}
+                            {operators.map(op => <option key={op} value={op}>{op.substring(0,8)}...</option>)}
                         </select>
                     </div>
                 </div>
@@ -412,7 +390,7 @@ const MetricsDashboard: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 gap-8">
-                <DetailedTable tickets={filteredTickets.filter(t => t.status === 'completed').sort((a,b) => b.completedAt!.getTime() - a.completedAt!.getTime())} />
+                <DetailedTable tickets={filteredTickets.filter(t => t.status === 'completed').sort((a,b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime())} />
             </div>
 
             <footer className="text-center mt-8 text-xs text-text-secondary">

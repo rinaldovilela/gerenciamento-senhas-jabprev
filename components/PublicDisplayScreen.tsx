@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useQueue } from '../contexts/QueueContext';
 import { PANEL_CONFIG } from '../constants';
@@ -18,7 +19,6 @@ const JaboataoPrevLogo: React.FC<{ className?: string }> = ({ className }) => (
 );
 
 const UserTypeIcon: React.FC<{ userType: UserType }> = ({ userType }) => {
-    const iconClass = "w-8 h-8 inline-block mr-2 text-panel-secondary";
     switch (userType) {
         case 'aposentado': return <span title="Aposentado">👴</span>;
         case 'pensionista': return <span title="Pensionista">👵</span>;
@@ -31,13 +31,8 @@ const UserTypeIcon: React.FC<{ userType: UserType }> = ({ userType }) => {
 const notificationSound = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"+Array(30).join("9vT19");
 
 const getGuicheForTicket = (ticket: Ticket): string => {
-    if (ticket.isPriority) return 'Guichê 1 (Prioritário)';
-    switch (ticket.service.category) {
-        case 'Gerência de Benefícios': return 'Guichê 2';
-        case 'Gerência de Folha de Pagamento': return 'Guichê 3';
-        case 'Gerência Jurídica': return 'Guichê 4';
-        default: return 'Guichê 5';
-    }
+    if (ticket.is_priority) return 'Guichê 1 (Prioritário)';
+    return 'Geral';
 };
 
 interface PublicDisplayScreenProps {
@@ -63,17 +58,17 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
 
     const inProgressTickets = useMemo(() => {
         return tickets
-            .filter(t => t.status === 'in_progress')
-            .sort((a, b) => (b.startedAt?.getTime() ?? 0) - (a.startedAt?.getTime() ?? 0))
+            .filter(t => t.status === 'in_progress' && t.started_at)
+            .sort((a, b) => new Date(b.started_at!).getTime() - new Date(a.started_at!).getTime())
             .slice(0, PANEL_CONFIG.mostrarEmAtendimento);
-    }, [tickets, currentTime]);
+    }, [tickets]);
     
     const waitingTickets = useMemo(() => {
         return tickets
             .filter(t => t.status === 'waiting')
-            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
             .slice(0, PANEL_CONFIG.mostrarProximas);
-    }, [tickets, currentTime]);
+    }, [tickets]);
 
     useEffect(() => {
         const currentInProgressIds = new Set(inProgressTickets.map(t => t.id));
@@ -82,7 +77,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
         const newCalls = [...currentInProgressIds].filter(id => !previousInProgressIds.current.has(id));
 
         if (newCalls.length > 0) {
-            const latestCallId = newCalls[0]; // Assuming one call at a time for simplicity
+            const latestCallId = newCalls[0];
             setLastCalledTicketId(latestCallId);
             
             if (PANEL_CONFIG.mostrarSons && audioRef.current) {
@@ -91,7 +86,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
 
             setTimeout(() => {
                 setLastCalledTicketId(null);
-            }, 3000); // Animation duration
+            }, 5000); 
         }
 
         previousInProgressIds.current = currentInProgressIds;
@@ -117,17 +112,16 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
             </header>
 
             <main className="flex-grow grid grid-cols-3 gap-6">
-                {/* Atendimento */}
                 <section className="col-span-2 bg-white/70 p-6 rounded-2xl shadow-lg">
                     <h2 className="font-poppins text-4xl font-bold text-panel-primary mb-4 border-b-4 border-panel-primary pb-2">SENHAS EM ATENDIMENTO</h2>
                     <div className="grid grid-cols-2 gap-6 h-[calc(100%-60px)]">
                         {inProgressTickets.length > 0 ? inProgressTickets.map(ticket => {
                              const isNewlyCalled = ticket.id === lastCalledTicketId;
                              return (
-                                <div key={ticket.id} className={`flex flex-col justify-center items-center p-4 rounded-xl transition-all duration-300 ${isNewlyCalled ? 'bg-jaboatao-green-prev/80 text-white shadow-2xl scale-105' : 'bg-white shadow-md'}`}>
+                                <div key={ticket.id} className={`flex flex-col justify-center items-center p-4 rounded-xl transition-all duration-300 ${isNewlyCalled ? 'bg-jaboatao-green-prev/80 text-white shadow-2xl scale-105 animate-pulse' : 'bg-white shadow-md'}`}>
                                     <p className={`font-bold text-2xl ${isNewlyCalled ? 'text-white' : 'text-panel-secondary'}`}>{getGuicheForTicket(ticket)}</p>
-                                    <p className={`font-bold text-8xl my-2 tracking-tighter ${isNewlyCalled ? 'text-white' : 'text-panel-primary'}`}>{ticket.formattedNumber}</p>
-                                    <div className={`flex items-center text-xl font-semibold border-4 rounded-lg px-4 py-2 animate-border-pulse border-blue-600/40 ${isNewlyCalled ? 'text-white border-transparent' : 'text-blue-600'}`}>
+                                    <p className={`font-bold text-8xl my-2 tracking-tighter ${isNewlyCalled ? 'text-white' : 'text-panel-primary'}`}>{ticket.formatted_number}</p>
+                                    <div className={`flex items-center text-xl font-semibold border-4 rounded-lg px-4 py-2 border-blue-600/40 ${isNewlyCalled ? 'text-white border-transparent' : 'text-blue-600'}`}>
                                         <div className="w-3 h-3 bg-blue-600 rounded-full mr-2 animate-ping"></div>
                                         Em Atendimento
                                     </div>
@@ -137,15 +131,14 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                     </div>
                 </section>
 
-                {/* Próximas */}
                 <aside className="col-span-1 bg-white/70 p-6 rounded-2xl shadow-lg flex flex-col">
                     <h2 className="font-poppins text-3xl font-bold text-panel-primary mb-4 border-b-4 border-panel-primary pb-2">PRÓXIMAS SENHAS</h2>
                     <ul className="space-y-4 flex-grow">
                         {waitingTickets.length > 0 ? waitingTickets.map(ticket => (
                             <li key={ticket.id} className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm text-2xl">
-                                <span className="font-bold text-panel-primary">{ticket.formattedNumber}</span>
+                                <span className="font-bold text-panel-primary">{ticket.formatted_number}</span>
                                 <div className="flex items-center font-semibold capitalize">
-                                   <UserTypeIcon userType={ticket.userType} /> {ticket.userType.replace('_', ' ')}
+                                   <UserTypeIcon userType={ticket.user_type} /> {ticket.user_type.replace('_', ' ')}
                                 </div>
                             </li>
                         )) : <p className="text-xl text-center self-center text-text-secondary">Aguardando novas senhas...</p>}

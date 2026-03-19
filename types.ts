@@ -1,14 +1,12 @@
 
-
 import type React from 'react';
 
 export interface Service {
     id: string;
     name: string;
     description: string;
-    category: string;
-    prefix: string;
-    icon: React.ReactNode;
+    icon: string; // Changed to string for the icon name/ID
+    created_at?: string;
 }
 
 export type TicketStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
@@ -16,20 +14,21 @@ export type TicketStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled'
 export interface Ticket {
     id: string;
     number: number;
-    formattedNumber: string;
+    formatted_number: string; // Snake case to match DB
+    service_id: string;
     service: Service;
-    createdAt: Date;
-    userType: UserType;
+    user_type: UserType; // Snake case to match DB
     status: TicketStatus;
-    isPriority: boolean;
-    operator?: User | null;
-    startedAt?: Date | null;
-    completedAt?: Date | null;
+    is_priority: boolean; // Snake case to match DB
+    operator_id?: string | null;
+    created_at: string; // ISO String from DB
+    started_at?: string | null;
+    completed_at?: string | null;
 }
 
 export interface QueueState {
     tickets: Ticket[];
-    counters: Record<string, number>;
+    services: Service[];
     calledTicket: Ticket | null;
 }
 

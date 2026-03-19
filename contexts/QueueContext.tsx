@@ -1,161 +1,162 @@
 
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
-import type { QueueState, Ticket, Service, UserType, User, TicketStatus } from '../types';
-import { SERVICES } from '../constants';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { supabase } from '../supabase/client';
+import type { Ticket, Service, UserType, TicketStatus } from '../types';
+import { useAuth } from './AuthContext'; // Assuming you have an AuthContext to get the operator
 
+// --- Type Definitions ---
+// It's a good practice to have Supabase generate these types for you
+// After running `supabase gen types typescript > types/supabase.ts`, you can do:
+// import type { Database } from '../types/supabase';
+// type TicketWithService = Database['public']['Tables']['tickets']['Row'] & { services: Database['public']['Tables']['services']['Row'] };
 
 interface QueueContextType {
     tickets: Ticket[];
-    addTicket: (service: Service, userType: UserType, isPriority: boolean) => Ticket;
-    callNextTicket: (serviceId: string) => void;
-    updateTicketStatus: (ticketId: string, status: TicketStatus, operator: User) => void;
+    services: Service[];
     calledTicket: Ticket | null;
+    addTicket: (serviceId: string, userType: UserType, isPriority: boolean) => Promise<Ticket | null>;
+    callNextTicket: (serviceId: string) => Promise<void>;
+    updateTicketStatus: (ticketId: string, status: TicketStatus) => Promise<void>;
 }
 
 const QueueContext = createContext<QueueContextType | undefined>(undefined);
 
-type Action = 
-    | { type: 'ADD_TICKET'; payload: Ticket }
-    | { type: 'CALL_NEXT_TICKET'; payload: Ticket }
-    | { type: 'UPDATE_TICKET_STATUS'; payload: { ticketId: string; status: TicketStatus; operator: User } };
-
-// Mock data generation for a more realistic initial state
-const generateInitialTickets = (): Ticket[] => {
-    const tickets: Ticket[] = [];
-    const userTypes: UserType[] = ['aposentado', 'pensionista', 'servidor_ativo'];
-    const counters: Record<string, number> = {};
-
-    for (let i = 0; i < 35; i++) {
-        const userType = userTypes[i % 3];
-        const service = SERVICES[i % SERVICES.length];
-        const createdAt = new Date(Date.now() - Math.floor(Math.random() * 8 * 60 * 60 * 1000)); // within last 8 hours
-        const prefix = { aposentado: 'APO', pensionista: 'PEN', servidor_ativo: 'ATV' }[userType];
-        
-        const nextNumber = (counters[prefix] || 0) + 1;
-        counters[prefix] = nextNumber;
-
-        const newTicket: Ticket = {
-            id: `${prefix}-${nextNumber}-${createdAt.getTime()}`,
-            number: nextNumber,
-            formattedNumber: `${prefix}-${String(nextNumber).padStart(3, '0')}`,
-            service,
-            createdAt,
-            userType,
-            status: 'waiting',
-            isPriority: false,
-        };
-        tickets.push(newTicket);
-    }
-
-    // Pre-populate some tickets with different statuses for demonstration
-    if (tickets.length > 5) {
-        tickets[1].status = 'in_progress';
-        tickets[1].startedAt = new Date(tickets[1].createdAt.getTime() + 60000);
-        tickets[3].status = 'completed';
-        tickets[3].startedAt = new Date(tickets[3].createdAt.getTime() + 60000);
-        tickets[3].completedAt = new Date(tickets[3].createdAt.getTime() + 300000);
-        tickets[5].status = 'cancelled';
-    }
-    
-    return tickets.sort((a,b) => a.createdAt.getTime() - b.createdAt.getTime());
-};
-
-
-const initialState: QueueState = {
-    tickets: generateInitialTickets(),
-    counters: {},
-    calledTicket: null,
-};
-
-const USER_TYPE_PREFIX: Record<UserType, string> = {
-    aposentado: 'APO',
-    pensionista: 'PEN',
-    servidor_ativo: 'ATV',
-};
-
-const queueReducer = (state: QueueState, action: Action): QueueState => {
-    switch (action.type) {
-        case 'ADD_TICKET': {
-            const newTicket = action.payload;
-            const prefix = newTicket.formattedNumber.split('-')[0];
-            return {
-                ...state,
-                tickets: [...state.tickets, newTicket].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
-                counters: {
-                    ...state.counters,
-                    [prefix]: (state.counters[prefix] || 0) + 1,
-                },
-            };
-        }
-        case 'CALL_NEXT_TICKET': {
-            // This is now more of a visual cue than a state change
-            return {
-                ...state,
-                calledTicket: action.payload,
-            };
-        }
-        case 'UPDATE_TICKET_STATUS': {
-            const { ticketId, status, operator } = action.payload;
-            return {
-                ...state,
-                tickets: state.tickets.map(ticket => {
-                    if (ticket.id === ticketId) {
-                        const updatedTicket: Ticket = { ...ticket, status, operator };
-                        if (status === 'in_progress' && !ticket.startedAt) {
-                            updatedTicket.startedAt = new Date();
-                        } else if ((status === 'completed' || status === 'cancelled' || status === 'no_show') && !ticket.completedAt) {
-                            updatedTicket.completedAt = new Date();
-                        }
-                        return updatedTicket;
-                    }
-                    return ticket;
-                })
-            };
-        }
-        default:
-            return state;
-    }
-};
-
 export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [state, dispatch] = useReducer(queueReducer, initialState);
+    const { user } = useAuth(); // Get the currently logged-in user (operator)
+    const [services, setServices] = useState<Service[]>([]);
+    const [tickets, setTickets] = useState<Ticket[]>([]);
+    const [calledTicket, setCalledTicket] = useState<Ticket | null>(null);
 
-    const addTicket = useCallback((service: Service, userType: UserType, isPriority: boolean): Ticket => {
-        const prefix = isPriority ? 'PRIO' : USER_TYPE_PREFIX[userType];
-        const nextNumber = (state.counters[prefix] || 0) + 1;
-        const newTicket: Ticket = {
-            id: `${prefix}-${nextNumber}-${Date.now()}`,
-            number: nextNumber,
-            formattedNumber: `${prefix}-${String(nextNumber).padStart(3, '0')}`,
-            service,
-            createdAt: new Date(),
-            userType,
-            status: 'waiting',
-            isPriority,
-        };
-        dispatch({ type: 'ADD_TICKET', payload: newTicket });
-        return newTicket;
-    }, [state.counters]);
+    // Function to fetch initial data from the database
+    const fetchInitialData = useCallback(async () => {
+        // Fetch all services
+        const { data: servicesData, error: servicesError } = await supabase
+            .from('services')
+            .select('*');
+        if (servicesError) console.error('Error fetching services:', servicesError);
+        else setServices(servicesData as Service[]);
 
-    const callNextTicket = useCallback((serviceId: string) => {
-        const waitingTicketsForService = state.tickets
-            .filter(t => t.service.id === serviceId && t.status === 'waiting')
-            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+        // Fetch today's tickets
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const { data: ticketsData, error: ticketsError } = await supabase
+            .from('tickets')
+            .select('*, service:services(*)') // Joins services table
+            .gte('created_at', today.toISOString());
         
-        if (waitingTicketsForService.length > 0) {
-            const nextTicket = waitingTicketsForService[0];
-            dispatch({ type: 'CALL_NEXT_TICKET', payload: nextTicket });
-        }
-    }, [state.tickets]);
+        if (ticketsError) console.error('Error fetching tickets:', ticketsError);
+        else setTickets(ticketsData as unknown as Ticket[]);
 
-    const updateTicketStatus = useCallback((ticketId: string, status: TicketStatus, operator: User) => {
-        dispatch({ type: 'UPDATE_TICKET_STATUS', payload: { ticketId, status, operator } });
     }, []);
 
+    // Fetch initial data on component mount
+    useEffect(() => {
+        fetchInitialData();
+    }, [fetchInitialData]);
+
+    // --- REAL-TIME SUBSCRIPTION ---
+    useEffect(() => {
+        const subscription = supabase
+            .channel('public:tickets')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'tickets' },
+                async (payload) => {
+                    // When a change occurs, refetch all of today's tickets to ensure consistency.
+                    // A more optimized approach would be to handle INSERT, UPDATE, DELETE individually.
+                    console.log('Real-time change detected:', payload);
+                    await fetchInitialData(); 
+                }
+            )
+            .subscribe();
+
+        // Cleanup subscription on component unmount
+        return () => {
+            supabase.removeChannel(subscription);
+        };
+    }, [fetchInitialData]);
+
+    // --- CORE FUNCTIONS ---
+
+    const addTicket = useCallback(async (serviceId: string, userType: UserType, isPriority: boolean): Promise<Ticket | null> => {
+        // We will call a Postgres function to securely generate the ticket number
+        // This function needs to be created in your SQL migration
+        const { data, error } = await supabase.rpc('create_ticket', {
+            p_service_id: serviceId,
+            p_user_type: userType,
+            p_is_priority: isPriority,
+        });
+
+        if (error) {
+            console.error('Error creating ticket:', error);
+            return null;
+        }
+
+        // The real-time subscription will automatically update the state for all clients.
+        // But we can return the newly created ticket for immediate feedback to the user.
+        return data as Ticket;
+    }, []);
+
+    const updateTicketStatus = useCallback(async (ticketId: string, status: TicketStatus) => {
+        if (!user) {
+            console.error('Operator not authenticated to update ticket status');
+            return;
+        }
+
+        const updatePayload: any = {
+            status,
+            operator_id: user.id,
+        };
+
+        if (status === 'in_progress') {
+            updatePayload.started_at = new Date().toISOString();
+        } else if (['completed', 'cancelled', 'no_show'].includes(status)) {
+            updatePayload.completed_at = new Date().toISOString();
+        }
+
+        const { error } = await supabase
+            .from('tickets')
+            .update(updatePayload)
+            .eq('id', ticketId);
+        
+        if (error) {
+            console.error(`Error updating ticket to ${status}:`, error);
+        }
+        // UI will update via real-time subscription
+    }, [user]);
+
+    const callNextTicket = useCallback(async (serviceId: string) => {
+        // Find the next ticket in 'waiting' state for the given service
+        const { data: nextTicket, error } = await supabase
+            .from('tickets')
+            .select('*, service:services(*)')
+            .eq('service_id', serviceId)
+            .eq('status', 'waiting')
+            .order('is_priority', { ascending: false }) // Priority first
+            .order('created_at', { ascending: true }) // Then oldest
+            .limit(1)
+            .single();
+        
+        if (error || !nextTicket) {
+            console.log('No waiting tickets for this service.', error?.message);
+            setCalledTicket(null);
+            return;
+        }
+
+        // Set for visual effect (e.g., flashing on screen)
+        setCalledTicket(nextTicket as unknown as Ticket);
+        
+        // Automatically update its status to 'in_progress' after a short delay
+        setTimeout(() => {
+            updateTicketStatus(nextTicket.id, 'in_progress');
+            setCalledTicket(null); // Clear the visual effect
+        }, 3000); // 3-second delay for the visual call effect
+
+    }, [updateTicketStatus]);
+
     return (
-        <QueueContext.Provider value={{ ...state, addTicket, callNextTicket, updateTicketStatus }}>
+        <QueueContext.Provider value={{ tickets, services, calledTicket, addTicket, callNextTicket, updateTicketStatus }}>
             {children}
-{/* FIX: Corrected typo in the closing tag for QueueContext.Provider. */}
         </QueueContext.Provider>
     );
 };
