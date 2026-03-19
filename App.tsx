@@ -29,7 +29,7 @@ const AppContent: React.FC = () => {
         if (userType === 'servidor_ativo') {
             setCurrentScreen(Screen.PRIORITY_SELECTION);
         } else {
-            setIsPriority(false); // Garante que não é prioritário para outros tipos
+            setIsPriority(false); 
             setCurrentScreen(Screen.SERVICE_SELECTION);
         }
     }, []);
@@ -39,14 +39,24 @@ const AppContent: React.FC = () => {
         setCurrentScreen(Screen.SERVICE_SELECTION);
     }, []);
 
-    const handleServiceSelected = useCallback((service: Service) => {
+    const handleServiceSelected = useCallback(async (service: Service) => {
         if (!selectedUserType) {
             setCurrentScreen(Screen.HOME);
             return;
         }
-        const newTicket = addTicket(service, selectedUserType, isPriority);
-        setActiveTicket(newTicket);
-        setCurrentScreen(Screen.TICKET);
+        
+        try {
+            const newTicket = await addTicket(service.id, selectedUserType, isPriority);
+            if (newTicket) {
+                setActiveTicket(newTicket);
+                setCurrentScreen(Screen.TICKET);
+            } else {
+                alert('Erro ao gerar senha. Por favor, tente novamente.');
+            }
+        } catch (error) {
+            console.error('Failed to create ticket:', error);
+            alert('Erro de conexão. Verifique sua internet.');
+        }
     }, [addTicket, selectedUserType, isPriority]);
 
     const handleNewTicketRequest = useCallback(() => {
@@ -119,11 +129,11 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
     return (
-        <QueueProvider>
-            <AuthProvider>
+        <AuthProvider>
+            <QueueProvider>
                 <AppContent />
-            </AuthProvider>
-        </QueueProvider>
+            </QueueProvider>
+        </AuthProvider>
     );
 };
 

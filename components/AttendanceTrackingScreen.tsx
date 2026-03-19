@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useQueue } from '../contexts/QueueContext';
-import { useAuth } from '../contexts/AuthContext';
 import type { Ticket, TicketStatus } from '../types';
 
 const RefreshIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>;
@@ -33,12 +32,11 @@ const Toast: React.FC<{ message: string; show: boolean; onClose: () => void }> =
 
 const AttendanceTrackingScreen: React.FC = () => {
     const { tickets, updateTicketStatus } = useQueue();
-    const { user } = useAuth();
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [toast, setToast] = useState({ show: false, message: '' });
 
     useEffect(() => {
-        const timer = setInterval(() => setLastUpdated(new Date()), 10000); // Auto-refresh every 10s
+        const timer = setInterval(() => setLastUpdated(new Date()), 30000); // Auto-refresh for visual timer update
         return () => clearInterval(timer);
     }, []);
 
@@ -46,16 +44,13 @@ const AttendanceTrackingScreen: React.FC = () => {
         setToast({ show: true, message });
     };
 
-    const handleUpdateStatus = (ticketId: string, status: TicketStatus) => {
-        if (user) {
-            updateTicketStatus(ticketId, status, user);
-            const statusLabel = STATUS_CONFIG[status].label;
-            showToast(`Senha atualizada para "${statusLabel}"!`);
-        }
+    const handleUpdateStatus = async (ticketId: string, status: TicketStatus) => {
+        await updateTicketStatus(ticketId, status);
+        const statusLabel = STATUS_CONFIG[status].label;
+        showToast(`Senha atualizada para "${statusLabel}"!`);
     };
 
     const sortedTickets = useMemo(() => {
-        // Prioritize tickets in progress and waiting, then sort by date
         return [...tickets].sort((a, b) => {
              const statusOrder = (status: TicketStatus) => {
                 switch(status) {
@@ -67,9 +62,9 @@ const AttendanceTrackingScreen: React.FC = () => {
             if (statusOrder(a.status) !== statusOrder(b.status)) {
                 return statusOrder(a.status) - statusOrder(b.status);
             }
-            return a.createdAt.getTime() - b.createdAt.getTime();
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         });
-    }, [tickets, lastUpdated]);
+    }, [tickets]);
 
 
     return (
@@ -103,10 +98,10 @@ const AttendanceTrackingScreen: React.FC = () => {
                         <tbody>
                             {sortedTickets.length > 0 ? sortedTickets.map(ticket => (
                                 <tr key={ticket.id} className="border-b border-border-color last:border-0 hover:bg-slate-50 transition-colors">
-                                    <td className="p-3 font-mono font-bold text-text-primary">{ticket.formattedNumber}</td>
+                                    <td className="p-3 font-mono font-bold text-text-primary">{ticket.formatted_number}</td>
                                     <td className="p-3 capitalize">
-                                        {ticket.userType.replace('_', ' ')}
-                                        {ticket.isPriority && (
+                                        {ticket.user_type.replace('_', ' ')}
+                                        {ticket.is_priority && (
                                             <span className="ml-2 px-2 py-0.5 text-xs font-bold text-jaboatao-orange bg-jaboatao-yellow/20 rounded-full">
                                                 PRIORITÁRIO
                                             </span>

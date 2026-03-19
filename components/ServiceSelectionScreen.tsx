@@ -1,40 +1,55 @@
+
 import React, { useState, useMemo } from 'react';
-import { SERVICES, TRANSLATIONS } from '../constants';
+import { TRANSLATIONS } from '../constants';
 import type { Service, Language } from '../types';
+import { useQueue } from '../contexts/QueueContext';
+import { 
+    Fingerprint, 
+    PersonAdd, 
+    FamilyRestroom, 
+    ReceiptLong, 
+    Elderly, 
+    Help 
+} from '@mui/icons-material';
 
 interface ServiceSelectionScreenProps {
     onServiceSelected: (service: Service) => void;
     onBack: () => void;
 }
 
+const IconRenderer: React.FC<{ iconName: string }> = ({ iconName }) => {
+    switch (iconName) {
+        case 'fingerprint': return <Fingerprint sx={{ fontSize: 48, color: '#005696' }} />;
+        case 'person-add': return <PersonAdd sx={{ fontSize: 48, color: '#005696' }} />;
+        case 'family-restroom': return <FamilyRestroom sx={{ fontSize: 48, color: '#005696' }} />;
+        case 'receipt-long': return <ReceiptLong sx={{ fontSize: 48, color: '#005696' }} />;
+        case 'elderly': return <Elderly sx={{ fontSize: 48, color: '#005696' }} />;
+        default: return <Help sx={{ fontSize: 48, color: '#005696' }} />;
+    }
+};
+
 const ServiceCard: React.FC<{ service: Service; onClick: (service: Service) => void; }> = ({ service, onClick }) => (
     <button
         onClick={() => onClick(service)}
         className="flex flex-col items-center justify-center text-center p-6 bg-white rounded-2xl shadow-md hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/50 transition-all duration-300 ease-in-out w-full h-full border border-border-color"
     >
-        {service.icon}
+        <IconRenderer iconName={service.icon} />
         <h3 className="mt-4 text-xl font-semibold text-text-primary">{service.name}</h3>
         <p className="mt-1 text-sm text-text-secondary">{service.description}</p>
     </button>
 );
 
 const ServiceSelectionScreen: React.FC<ServiceSelectionScreenProps> = ({ onServiceSelected, onBack }) => {
+    const { services } = useQueue();
     const [searchTerm, setSearchTerm] = useState('');
-    const [language] = useState<Language>('pt'); // Simplified for this component
+    const [language] = useState<Language>('pt');
 
     const filteredServices = useMemo(() => {
-        return SERVICES.filter(service =>
+        return services.filter(service =>
             service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             service.description.toLowerCase().includes(searchTerm.toLowerCase())
         );
-    }, [searchTerm]);
-
-    const servicesByCategory = useMemo(() => {
-        return filteredServices.reduce<Record<string, Service[]>>((acc, service) => {
-            (acc[service.category] = acc[service.category] || []).push(service);
-            return acc;
-        }, {});
-    }, [filteredServices]);
+    }, [services, searchTerm]);
 
     return (
         <div className="flex flex-col w-full min-h-screen p-4 md:p-8 bg-app-bg text-text-primary">
@@ -56,18 +71,12 @@ const ServiceSelectionScreen: React.FC<ServiceSelectionScreenProps> = ({ onServi
             </div>
 
             <main className="flex-grow overflow-y-auto">
-                {Object.keys(servicesByCategory).length > 0 ? (
-                    // FIX: Replaced Object.entries with Object.keys to work around a type inference issue where the value in [key, value] pairs was being inferred as 'unknown'.
-                    Object.keys(servicesByCategory).map((category) => (
-                        <section key={category} className="mb-10">
-                            <h2 className="text-2xl font-semibold text-text-secondary mb-6 pb-2 border-b-2 border-border-color">{category}</h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                {servicesByCategory[category].map(service => (
-                                    <ServiceCard key={service.id} service={service} onClick={onServiceSelected} />
-                                ))}
-                            </div>
-                        </section>
-                    ))
+                {filteredServices.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                        {filteredServices.map(service => (
+                            <ServiceCard key={service.id} service={service} onClick={onServiceSelected} />
+                        ))}
+                    </div>
                 ) : (
                     <div className="text-center py-16">
                         <p className="text-xl text-text-secondary">Nenhum serviço encontrado.</p>
