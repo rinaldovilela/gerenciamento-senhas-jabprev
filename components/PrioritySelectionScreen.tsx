@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { ArrowBack } from '@mui/icons-material';
 
 interface PrioritySelectionScreenProps {
     onSelect: (isPriority: boolean) => void;
@@ -18,7 +19,7 @@ const PrioritySelectionScreen: React.FC<PrioritySelectionScreenProps> = ({ onSel
                     }`}
                     title="Voltar"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+                    <ArrowBack sx={{ fontSize: 20, color: '#005696' }} />
                 </button>
                 <h1 className="font-montserrat text-xl sm:text-2xl md:text-3xl lg:text-4xl landscape:text-lg font-semibold text-jaboatao-blue text-center flex-1">Atendimento Servidor Ativo</h1>
             </header>

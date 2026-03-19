@@ -84,8 +84,16 @@ const AppContent: React.FC = () => {
     }, []);
     
     const handlePrioritySelected = useCallback((priority: boolean) => {
-        setIsPriority(priority);
-        setCurrentScreen(Screen.SERVICE_SELECTION);
+        if (!priority) {
+            // Ao selecionar "Não", volta para seleção de tipo de atendimento
+            setSelectedUserType(null);
+            setIsPriority(false);
+            setCurrentScreen(Screen.USER_TYPE_SELECTION);
+        } else {
+            // Ao selecionar "Sim", continua para seleção de serviço
+            setIsPriority(true);
+            setCurrentScreen(Screen.SERVICE_SELECTION);
+        }
     }, []);
 
     const handleServiceSelected = useCallback(async (service: Service) => {

@@ -9,7 +9,8 @@ import {
     FamilyRestroom, 
     ReceiptLong, 
     Elderly, 
-    Help 
+    Help,
+    ArrowBack
 } from '@mui/icons-material';
 
 interface ServiceSelectionScreenProps {
@@ -53,33 +54,31 @@ const ServiceSelectionScreen: React.FC<ServiceSelectionScreenProps> = ({ onServi
     }, [services, searchTerm]);
 
     return (
-        <div className="flex flex-col w-full min-h-screen p-4 md:p-8 bg-app-bg text-text-primary">
-            <header className="flex items-center mb-8 justify-between">
+        <div className="flex flex-col w-full h-screen md:min-h-screen p-4 md:p-8 landscape:p-3 landscape:h-screen bg-app-bg text-text-primary overflow-hidden">
+            <header className="flex items-center mb-6 md:mb-8 landscape:mb-2 justify-between flex-shrink-0">
                 <button 
                     onClick={onBack} 
-                    className={`p-3 rounded-full bg-white hover:bg-slate-100 transition-colors mr-4 border border-border-color ${
-                        fullscreenMode ? 'hidden landscape:hidden portrait:flex' : 'hidden lg:flex'
-                    }`}
+                    className="p-3 landscape:p-1.5 rounded-full bg-white hover:bg-slate-100 transition-colors mr-4 landscape:mr-2 border border-border-color flex"
                     title="Voltar"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+                    <ArrowBack sx={{ fontSize: 24, color: '#005696' }} />
                 </button>
-                <h1 className="font-montserrat text-3xl md:text-4xl font-semibold text-jaboatao-blue flex-1 text-center">{TRANSLATIONS.selectService[language]}</h1>
+                <h1 className="font-montserrat text-3xl md:text-4xl landscape:text-lg font-semibold text-jaboatao-blue flex-1 text-center">{TRANSLATIONS.selectService[language]}</h1>
             </header>
             
-            <div className="mb-8">
+            <div className="mb-4 md:mb-8 landscape:mb-2 flex-shrink-0">
                 <input
                     type="search"
                     placeholder={TRANSLATIONS.searchService[language]}
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full p-4 text-lg bg-white border border-border-color rounded-xl focus:outline-none focus:ring-2 focus:ring-jaboatao-blue focus:border-transparent transition-shadow placeholder:text-text-secondary text-text-primary"
+                    className="w-full p-3 md:p-4 landscape:p-2 text-base md:text-lg landscape:text-sm bg-white border border-border-color rounded-xl focus:outline-none focus:ring-2 focus:ring-jaboatao-blue focus:border-transparent transition-shadow placeholder:text-text-secondary text-text-primary"
                 />
             </div>
 
-            <main className="flex-grow overflow-y-auto">
+            <main className="flex-grow overflow-y-auto overflow-x-hidden">
                 {filteredServices.length > 0 ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 tablet-landscape:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 landscape:gap-2 landscape:grid-cols-3">
                         {filteredServices.map(service => (
                             <ServiceCard key={service.id} service={service} onClick={onServiceSelected} />
                         ))}
