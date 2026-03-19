@@ -52,27 +52,27 @@ const UserTypeSelectionScreen: React.FC<UserTypeSelectionScreenProps> = ({ onSel
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6 md:gap-8">
                     <button 
                         onClick={() => onSelect('aposentado')}
-                        className="flex flex-col items-center justify-center w-40 sm:w-48 md:w-56 h-40 sm:h-48 md:h-56 bg-jaboatao-blue text-white rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/50 transition-all duration-300 ease-in-out"
+                        className="flex flex-col items-center justify-center w-40 sm:w-48 md:w-56 landscape:w-32 h-40 sm:h-48 md:h-56 landscape:h-32 bg-jaboatao-blue text-white rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/50 transition-all duration-300 ease-in-out landscape:text-sm"
                         aria-label="Selecionar tipo de atendimento Aposentado"
                     >
-                        <AposentadoIcon className="w-10 sm:w-12 md:w-14 h-10 sm:h-12 md:h-14 mb-2" />
-                        <span className="font-semibold text-base sm:text-lg md:text-xl">Aposentado</span>
+                        <AposentadoIcon className="w-10 sm:w-12 md:w-14 landscape:w-8 h-10 sm:h-12 md:h-14 landscape:h-8 mb-2" />
+                        <span className="font-semibold text-base sm:text-lg md:text-xl landscape:text-sm">Aposentado</span>
                     </button>
                     <button 
                         onClick={() => onSelect('pensionista')}
-                        className="flex flex-col items-center justify-center w-40 sm:w-48 md:w-56 h-40 sm:h-48 md:h-56 bg-jaboatao-green-prev text-white rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-jaboatao-green-prev/50 transition-all duration-300 ease-in-out"
+                        className="flex flex-col items-center justify-center w-40 sm:w-48 md:w-56 landscape:w-32 h-40 sm:h-48 md:h-56 landscape:h-32 bg-jaboatao-green-prev text-white rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-jaboatao-green-prev/50 transition-all duration-300 ease-in-out landscape:text-sm"
                         aria-label="Selecionar tipo de atendimento Pensionista"
                     >
-                        <PensionistaIcon className="w-10 sm:w-12 md:w-14 h-10 sm:h-12 md:h-14 mb-2" />
-                        <span className="font-semibold text-base sm:text-lg md:text-xl">Pensionista</span>
+                        <PensionistaIcon className="w-10 sm:w-12 md:w-14 landscape:w-8 h-10 sm:h-12 md:h-14 landscape:h-8 mb-2" />
+                        <span className="font-semibold text-base sm:text-lg md:text-xl landscape:text-sm">Pensionista</span>
                     </button>
                     <button 
                         onClick={() => onSelect('servidor_ativo')}
-                        className="flex flex-col items-center justify-center w-40 sm:w-48 md:w-56 h-40 sm:h-48 md:h-56 bg-jaboatao-yellow text-text-primary rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-jaboatao-yellow/50 transition-all duration-300 ease-in-out"
+                        className="flex flex-col items-center justify-center w-40 sm:w-48 md:w-56 landscape:w-32 h-40 sm:h-48 md:h-56 landscape:h-32 bg-jaboatao-yellow text-text-primary rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 focus:outline-none focus:ring-4 focus:ring-jaboatao-yellow/50 transition-all duration-300 ease-in-out landscape:text-sm"
                         aria-label="Selecionar tipo de atendimento Servidor Ativo"
                     >
-                        <ServidorAtivoIcon className="w-10 sm:w-12 md:w-14 h-10 sm:h-12 md:h-14 mb-2" />
-                        <span className="font-semibold text-base sm:text-lg md:text-xl">Servidor Ativo</span>
+                        <ServidorAtivoIcon className="w-10 sm:w-12 md:w-14 landscape:w-8 h-10 sm:h-12 md:h-14 landscape:h-8 mb-2" />
+                        <span className="font-semibold text-base sm:text-lg md:text-xl landscape:text-sm">Servidor Ativo</span>
                     </button>
                 </div>
             </main>
