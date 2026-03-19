@@ -2,28 +2,30 @@
 import type React from 'react';
 
 export interface Service {
-    id: string;
+    id: string; // Mapped from Appwrite's $id
     name: string;
     description: string;
-    icon: string; // Changed to string for the icon name/ID
-    created_at?: string;
+    icon: string; 
+    created_at: string; // Mapped from Appwrite's $createdAt
+    updated_at?: string; // Mapped from Appwrite's $updatedAt
 }
 
 export type TicketStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
 
 export interface Ticket {
-    id: string;
+    id: string; // Mapped from Appwrite's $id
     number: number;
-    formatted_number: string; // Snake case to match DB
+    formatted_number: string;
     service_id: string;
-    service: Service;
-    user_type: UserType; // Snake case to match DB
+    service: Service | null; // Can be null if service data isn't loaded or found
+    user_type: UserType;
     status: TicketStatus;
-    is_priority: boolean; // Snake case to match DB
+    is_priority: boolean;
     operator_id?: string | null;
-    created_at: string; // ISO String from DB
+    created_at: string; // Mapped from Appwrite's $createdAt
     started_at?: string | null;
     completed_at?: string | null;
+    updated_at?: string; // Mapped from Appwrite's $updatedAt
 }
 
 export interface QueueState {
