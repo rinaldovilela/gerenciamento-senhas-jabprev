@@ -10,17 +10,8 @@ interface HomeScreenProps {
 }
 
 const JaboataoPrevLogo: React.FC<{ className?: string }> = ({ className }) => (
-    <div className={`flex items-center space-x-4 ${className}`}>
-        <div className="p-2 bg-jaboatao-blue rounded-md shadow-md">
-             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
-                <circle cx="12" cy="10" r="3"/>
-            </svg>
-        </div>
-        <div>
-            <h1 className="font-montserrat text-2xl font-semibold text-jaboatao-blue">JABOATÃOPREV</h1>
-            <p className="text-sm text-text-secondary font-semibold">Compromisso com o Futuro</p>
-        </div>
+    <div className={`flex items-center ${className}`}>
+        <img src="/logo-jabprev.png" alt="JaboatãoPrev" className="h-16 w-auto object-contain" />
     </div>
 );
 

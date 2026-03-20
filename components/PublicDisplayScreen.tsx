@@ -5,16 +5,8 @@ import { PANEL_CONFIG } from '../constants';
 import type { Ticket, UserType } from '../types';
 
 const JaboataoPrevLogo: React.FC<{ className?: string }> = ({ className }) => (
-    <div className={`flex items-center space-x-4 ${className}`}>
-        <div className="p-2 bg-panel-primary rounded-md shadow-md">
-             <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/>
-                <circle cx="12" cy="10" r="3"/>
-            </svg>
-        </div>
-        <div>
-            <h1 className="font-poppins text-4xl font-bold text-panel-primary">JABOATÃOPREV</h1>
-        </div>
+    <div className={`flex items-center ${className}`}>
+        <img src="/logo-jabprev.png" alt="JaboatãoPrev" className="h-20 w-auto object-contain" />
     </div>
 );
 
