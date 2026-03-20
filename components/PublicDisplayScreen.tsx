@@ -35,8 +35,27 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
     const { todayTickets: tickets } = useTodayQueue();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [lastCalledTicketId, setLastCalledTicketId] = useState<string | null>(null);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const previousInProgressIds = useRef<Set<string>>(new Set());
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.error('Erro ao entrar em tela cheia:', err);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    };
+
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    }, []);
 
     useEffect(() => {
         if (PANEL_CONFIG.mostrarSons) {
@@ -97,9 +116,23 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                     </button>
                     <JaboataoPrevLogo />
                 </div>
+                <div className="flex items-center gap-3">
                 <div className="text-right text-sm sm:text-base">
                     <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-panel-primary">{currentTime.toLocaleTimeString('pt-BR')}</p>
                     <p className="text-xs sm:text-sm md:text-base text-panel-secondary">{currentTime.toLocaleDateString('pt-BR', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+                </div>
+                    <button
+                        onClick={toggleFullscreen}
+                        title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
+                        aria-label={isFullscreen ? 'Sair da tela cheia' : 'Entrar em tela cheia'}
+                        className="p-2 sm:p-3 rounded-full bg-white/80 hover:bg-white transition-colors border border-border-color shadow-sm flex-shrink-0"
+                    >
+                        {isFullscreen ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-panel-primary"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-panel-primary"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+                        )}
+                    </button>
                 </div>
             </header>
 
