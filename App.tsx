@@ -1,6 +1,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { QueueProvider, useQueue } from './contexts/QueueContext';
+import { QueueProvider } from './contexts/QueueContext';
+import { TodayQueueProvider, useTodayQueue } from './contexts/TodayQueueContext';
 import { AuthProvider } from './contexts/AuthContext';
 import HomeScreen from './components/HomeScreen';
 import ServiceSelectionScreen from './components/ServiceSelectionScreen';
@@ -19,7 +20,7 @@ const AppContent: React.FC = () => {
     const [selectedUserType, setSelectedUserType] = useState<UserType | null>(null);
     const [isPriority, setIsPriority] = useState<boolean>(false);
     const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
-    const { addTicket } = useQueue();
+    const { addTicket } = useTodayQueue();
 
     // Detectar se entrou em fullscreen
     useEffect(() => {
@@ -195,7 +196,9 @@ const App: React.FC = () => {
     return (
         <AuthProvider>
             <QueueProvider>
-                <AppContent />
+                <TodayQueueProvider>
+                    <AppContent />
+                </TodayQueueProvider>
             </QueueProvider>
         </AuthProvider>
     );

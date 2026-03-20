@@ -1,9 +1,18 @@
 
+/**
+ * QueueContext (para Painel de Métricas)
+ * Contexto para "Painel de Métricas" - Análise histórica
+ * 
+ * Propósito:
+ * - Carrega senhas de PERÍODO (últimos 30 dias por padrão)
+ * - Permite filtros avançados para análise
+ * - Consulta os campos existentes em tickets
+ */
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { databases, client } from '../appwrite/client';
-import { Query, ID } from 'appwrite';
-import type { Ticket, Service, UserType, TicketStatus } from '../types';
-import { useAuth } from './AuthContext'; // Assuming you have an AuthContext to get the operator
+import { databases } from '../appwrite/client';
+import { Query } from 'appwrite';
+import type { Ticket, Service } from '../types';
 
 const APPWRITE_DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
 const APPWRITE_COLLECTION_SERVICES_ID = import.meta.env.VITE_APPWRITE_COLLECTION_SERVICES_ID;
@@ -12,285 +21,139 @@ const APPWRITE_COLLECTION_TICKETS_ID = import.meta.env.VITE_APPWRITE_COLLECTION_
 interface QueueContextType {
     tickets: Ticket[];
     services: Service[];
-    calledTicket: Ticket | null;
-    addTicket: (serviceId: string, userType: UserType, isPriority: boolean) => Promise<Ticket | null>;
-    callNextTicket: (serviceId: string) => Promise<void>;
-    updateTicketStatus: (ticketId: string, status: TicketStatus) => Promise<void>;
+    isLoading: boolean;
+    fetchTicketsByDateRange: (startDate: Date, endDate: Date) => Promise<Ticket[]>;
+    refreshData: () => Promise<void>;
 }
 
 const QueueContext = createContext<QueueContextType | undefined>(undefined);
 
 export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user } = useAuth(); // Get the currently logged-in user (operator)
     const [services, setServices] = useState<Service[]>([]);
     const [tickets, setTickets] = useState<Ticket[]>([]);
-    const [calledTicket, setCalledTicket] = useState<Ticket | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const fetchInitialData = useCallback(async () => {
-        if (!APPWRITE_DATABASE_ID || !APPWRITE_COLLECTION_SERVICES_ID || !APPWRITE_COLLECTION_TICKETS_ID) {
-            console.error("Appwrite IDs are not configured. Check your .env.local file.");
-            return;
-        }
-
+    /**
+     * Carrega serviços
+     */
+    const loadServices = useCallback(async () => {
         try {
-            // Fetch all services
             const servicesResponse = await databases.listDocuments(
                 APPWRITE_DATABASE_ID,
                 APPWRITE_COLLECTION_SERVICES_ID,
                 [Query.orderAsc('name')]
             );
-            // Map Appwrite documents to your Service interface
-            setServices(servicesResponse.documents.map(doc => ({
-                id: doc.$id,
-                name: doc.name,
-                description: doc.description,
-                icon: doc.icon,
-                created_at: doc.$createdAt
-            })) as Service[]);
 
-            // Fetch all tickets (filtering by date will be done on client-side)
-            const ticketsResponse = await databases.listDocuments(
-                APPWRITE_DATABASE_ID,
-                APPWRITE_COLLECTION_TICKETS_ID,
-                [
-                    Query.limit(100) // Limit to a reasonable number
-                ]
-            );
-
-            // Map Appwrite documents to your Ticket interface and enrich with service data
-            // Filter to only today's tickets
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            const todayTickets = ticketsResponse.documents.filter(doc => {
-                const docDate = new Date(doc.$createdAt);
-                docDate.setHours(0, 0, 0, 0);
-                return docDate.getTime() === today.getTime();
-            });
-
-            const fetchedTickets: Ticket[] = await Promise.all(todayTickets.map(async doc => {
-                const service = servicesResponse.documents.find(s => s.$id === doc.service_id);
-                return {
+            setServices(
+                servicesResponse.documents.map(doc => ({
                     id: doc.$id,
-                    number: doc.number,
-                    formatted_number: doc.formatted_number,
-                    service_id: doc.service_id,
-                    // @ts-ignore - Temporary ignore as service might be undefined if not found
-                    service: service ? { id: service.$id, name: service.name, description: service.description, icon: service.icon } : null,
-                    user_type: doc.user_type,
-                    status: doc.status,
-                    is_priority: doc.is_priority,
-                    operator_id: doc.operator_id || null,
+                    name: doc.name,
+                    description: doc.description,
+                    icon: doc.icon,
                     created_at: doc.$createdAt,
-                    started_at: doc.started_at || null,
-                    completed_at: doc.completed_at || null,
-                };
-            }));
-            setTickets(fetchedTickets);
-
+                })) as Service[]
+            );
         } catch (error) {
-            console.error('Error fetching initial data from Appwrite:', error);
+            console.error('[QueueContext] Erro ao carregar serviços:', error);
         }
     }, []);
 
-    useEffect(() => {
-        fetchInitialData();
-    }, [fetchInitialData]);
+    /**
+     * Carrega senhas por período
+     */
+    const fetchTicketsByDateRange = useCallback(
+        async (startDate: Date, endDate: Date): Promise<Ticket[]> => {
+            try {
+                const response = await databases.listDocuments(
+                    APPWRITE_DATABASE_ID,
+                    APPWRITE_COLLECTION_TICKETS_ID,
+                    [Query.limit(500)]
+                );
 
-    // --- REAL-TIME SUBSCRIPTION ---
-    useEffect(() => {
-        if (!APPWRITE_DATABASE_ID || !APPWRITE_COLLECTION_TICKETS_ID) {
-            console.error("Appwrite IDs are not configured for real-time. Check your .env.local file.");
-            return;
-        }
+                // Filtra por data (cliente-side)
+                const filteredDocs = response.documents.filter(doc => {
+                    const docDate = new Date(doc.$createdAt);
+                    return docDate >= startDate && docDate <= endDate;
+                });
 
-        const unsubscribe = client.subscribe(
-            `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_COLLECTION_TICKETS_ID}.documents`,
-            response => {
-                // For any change (create, update, delete), refetch all data for consistency
-                // A more optimized approach would handle each event type individually
-                console.log('Appwrite Real-time change detected:', response);
-                fetchInitialData();
+                // Enriquece com dados de serviço
+                const fetchedTickets: Ticket[] = filteredDocs.map(doc => {
+                    const service = services.find(s => s.id === doc.service_id);
+                    return {
+                        id: doc.$id,
+                        number: doc.number,
+                        formatted_number: doc.formatted_number,
+                        service_id: doc.service_id,
+                        service: service
+                            ? {
+                                                                    id: service.id,
+                                  name: service.name,
+                                  description: service.description,
+                                  icon: service.icon,
+                                                                    created_at: service.created_at,
+                              }
+                            : null,
+                        user_type: doc.user_type,
+                        status: doc.status,
+                        is_priority: doc.is_priority,
+                        operator_id: doc.operator_id || null,
+                        created_at: doc.$createdAt,
+                        started_at: doc.started_at || null,
+                        completed_at: doc.completed_at || null,
+                        updated_at: doc.$updatedAt || null,
+                    };
+                });
+
+                setTickets(fetchedTickets);
+                return fetchedTickets;
+            } catch (error) {
+                console.error('[QueueContext] Erro ao carregar senhas por período:', error);
+                return [];
             }
-        );
+        },
+        [services]
+    );
 
-        return () => {
-            unsubscribe();
-        };
-    }, [fetchInitialData]);
-
-    // --- CORE FUNCTIONS ---
-
-    const addTicket = useCallback(async (serviceId: string, userType: UserType, isPriority: boolean): Promise<Ticket | null> => {
-        if (!APPWRITE_DATABASE_ID || !APPWRITE_COLLECTION_TICKETS_ID) {
-            console.error("Appwrite IDs are not configured for adding tickets. Check your .env.local file.");
-            return null;
-        }
-
+    /**
+     * Carrega dados iniciais (últimos 30 dias)
+     */
+    const refreshData = useCallback(async () => {
+        setIsLoading(true);
         try {
-            // Determine prefix
-            let prefix = isPriority ? 'PRIO' : (
-                userType === 'aposentado' ? 'APO' :
-                userType === 'pensionista' ? 'PEN' :
-                'ATV'
-            );
+            await loadServices();
 
-            // Fetch last ticket number for today with the same prefix
-            const lastTicketResponse = await databases.listDocuments(
-                APPWRITE_DATABASE_ID,
-                APPWRITE_COLLECTION_TICKETS_ID,
-                [
-                    Query.startsWith('formatted_number', prefix + '-'),
-                    Query.orderDesc('number'),
-                    Query.limit(100)
-                ]
-            );
-            
-            // Filter for today's tickets on the client side
             const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const todayTickets = lastTicketResponse.documents.filter(doc => {
-                const docDate = new Date(doc.$createdAt);
-                docDate.setHours(0, 0, 0, 0);
-                return docDate.getTime() === today.getTime();
-            });
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+            thirtyDaysAgo.setHours(0, 0, 0, 0);
 
-            const lastNumber = todayTickets.length > 0 ? (todayTickets[0].number || 0) : 0;
-            const nextNumber = lastNumber + 1;
-            const formattedNumber = `${prefix}-${String(nextNumber).padStart(3, '0')}`;
+            today.setHours(23, 59, 59, 999);
 
-            const newTicketDocument = await databases.createDocument(
-                APPWRITE_DATABASE_ID,
-                APPWRITE_COLLECTION_TICKETS_ID,
-                ID.unique(), // Let Appwrite generate a unique ID
-                {
-                    number: nextNumber,
-                    formatted_number: formattedNumber,
-                    service_id: serviceId,
-                    user_type: userType,
-                    status: 'waiting',
-                    is_priority: isPriority,
-                }
-            );
-
-            // Enrich with service data before returning
-            const service = services.find(s => s.id === serviceId);
-            const newTicket: Ticket = {
-                id: newTicketDocument.$id,
-                number: newTicketDocument.number,
-                formatted_number: newTicketDocument.formatted_number,
-                service_id: newTicketDocument.service_id,
-                // @ts-ignore
-                service: service ? { id: service.id, name: service.name, description: service.description, icon: service.icon } : null,
-                user_type: newTicketDocument.user_type,
-                status: newTicketDocument.status,
-                is_priority: newTicketDocument.is_priority,
-                operator_id: newTicketDocument.operator_id || null,
-                created_at: newTicketDocument.$createdAt,
-                started_at: newTicketDocument.started_at || null,
-                completed_at: newTicketDocument.completed_at || null,
-            };
-            
-            return newTicket;
-
+            await fetchTicketsByDateRange(thirtyDaysAgo, today);
         } catch (error) {
-            console.error('Error creating ticket in Appwrite:', error);
-            return null;
+            console.error('[QueueContext] Erro ao atualizar dados:', error);
+        } finally {
+            setIsLoading(false);
         }
-    }, [services]);
+    }, [loadServices, fetchTicketsByDateRange]);
 
-    const updateTicketStatus = useCallback(async (ticketId: string, status: TicketStatus) => {
-        if (!APPWRITE_DATABASE_ID || !APPWRITE_COLLECTION_TICKETS_ID) {
-            console.error("Appwrite IDs are not configured for updating tickets. Check your .env.local file.");
-            return;
-        }
-        if (!user) {
-            console.error('Operator not authenticated to update ticket status');
-            return;
-        }
-
-        const updatePayload: any = {
-            status,
-            operator_id: user.id,
-        };
-
-        if (status === 'in_progress') {
-            updatePayload.started_at = new Date().toISOString();
-        } else if (['completed', 'cancelled', 'no_show'].includes(status)) {
-            updatePayload.completed_at = new Date().toISOString();
-        }
-
-        try {
-            await databases.updateDocument(
-                APPWRITE_DATABASE_ID,
-                APPWRITE_COLLECTION_TICKETS_ID,
-                ticketId,
-                updatePayload
-            );
-        } catch (error) {
-            console.error(`Error updating ticket ${ticketId} status to ${status} in Appwrite:`, error);
-        }
-        // UI will update via real-time subscription
-    }, [user]);
-
-    const callNextTicket = useCallback(async (serviceId: string) => {
-        if (!APPWRITE_DATABASE_ID || !APPWRITE_COLLECTION_TICKETS_ID) {
-            console.error("Appwrite IDs are not configured for calling next ticket. Check your .env.local file.");
-            return;
-        }
-
-        try {
-            const nextTicketResponse = await databases.listDocuments(
-                APPWRITE_DATABASE_ID,
-                APPWRITE_COLLECTION_TICKETS_ID,
-                [
-                    Query.equal('service_id', serviceId),
-                    Query.equal('status', 'waiting'),
-                    Query.orderDesc('is_priority'), // Priority first
-                    Query.orderAsc('created_at'), // Then oldest
-                    Query.limit(1)
-                ]
-            );
-            
-            const nextTicketDocument = nextTicketResponse.documents[0];
-
-            if (nextTicketDocument) {
-                // Enrich with service data for visual effect
-                const service = services.find(s => s.id === nextTicketDocument.service_id);
-                const ticketForDisplay: Ticket = {
-                    id: nextTicketDocument.$id,
-                    number: nextTicketDocument.number,
-                    formatted_number: nextTicketDocument.formatted_number,
-                    service_id: nextTicketDocument.service_id,
-                    // @ts-ignore
-                    service: service ? { id: service.id, name: service.name, description: service.description, icon: service.icon } : null,
-                    user_type: nextTicketDocument.user_type,
-                    status: nextTicketDocument.status,
-                    is_priority: nextTicketDocument.is_priority,
-                    operator_id: nextTicketDocument.operator_id || null,
-                    created_at: nextTicketDocument.$createdAt,
-                    started_at: nextTicketDocument.started_at || null,
-                    completed_at: nextTicketDocument.completed_at || null,
-                };
-
-                setCalledTicket(ticketForDisplay);
-                
-                // Automatically update its status to 'in_progress' after a short delay
-                setTimeout(() => {
-                    updateTicketStatus(nextTicketDocument.$id, 'in_progress');
-                    setCalledTicket(null); // Clear the visual effect
-                }, 3000); // 3-second delay for the visual call effect
-            } else {
-                console.log('No waiting tickets for this service.');
-                setCalledTicket(null);
-            }
-        } catch (error) {
-            console.error('Error calling next ticket from Appwrite:', error);
-        }
-    }, [updateTicketStatus, services]);
+    /**
+     * Carrega dados na primeira vez
+     */
+    useEffect(() => {
+        refreshData();
+    }, [refreshData]);
 
     return (
-        <QueueContext.Provider value={{ tickets, services, calledTicket, addTicket, callNextTicket, updateTicketStatus }}>
+        <QueueContext.Provider
+            value={{
+                tickets,
+                services,
+                isLoading,
+                fetchTicketsByDateRange,
+                refreshData,
+            }}
+        >
             {children}
         </QueueContext.Provider>
     );
@@ -298,8 +161,8 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
 export const useQueue = (): QueueContextType => {
     const context = useContext(QueueContext);
-    if (context === undefined) {
-        throw new Error('useQueue must be used within a QueueProvider');
+    if (!context) {
+        throw new Error('useQueue deve ser usado dentro de QueueProvider');
     }
     return context;
 };

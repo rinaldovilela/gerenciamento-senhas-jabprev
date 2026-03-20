@@ -2,7 +2,7 @@
 import React, { useState, useMemo } from 'react';
 import { TRANSLATIONS } from '../constants';
 import type { Service, Language } from '../types';
-import { useQueue } from '../contexts/QueueContext';
+import { useTodayQueue } from '../contexts/TodayQueueContext';
 import { 
     Fingerprint, 
     PersonAdd, 
@@ -42,7 +42,7 @@ const ServiceCard: React.FC<{ service: Service; onClick: (service: Service) => v
 );
 
 const ServiceSelectionScreen: React.FC<ServiceSelectionScreenProps> = ({ onServiceSelected, onBack, fullscreenMode }) => {
-    const { services } = useQueue();
+    const { services } = useTodayQueue();
     const [searchTerm, setSearchTerm] = useState('');
     const [language] = useState<Language>('pt');
 

@@ -60,3 +60,28 @@ export interface Translations {
         [lang in Language]: string;
     };
 }
+
+// Novos tipos para auditoria e histórico
+export interface AuditLogEntry {
+    id: string;
+    ticket_id: string;
+    ticket_number: string;
+    old_status: TicketStatus | null;
+    new_status: TicketStatus;
+    operator_id: string | null;
+    operator_name: string | null;
+    reason?: string;
+    metadata?: Record<string, any>;
+    created_at: string;
+}
+
+export interface CallHistoryEntry {
+    id: string;
+    ticket_id: string;
+    ticket_number: string;
+    operator_id: string | null;
+    operator_name: string | null;
+    called_at: string;
+    duration_seconds?: number;
+    result?: 'attended' | 'not_attended' | 'pending';
+}

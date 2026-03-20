@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useQueue } from '../contexts/QueueContext';
+import { useTodayQueue } from '../contexts/TodayQueueContext';
 import { PANEL_CONFIG } from '../constants';
 import type { Ticket, UserType } from '../types';
 
@@ -40,7 +40,7 @@ interface PublicDisplayScreenProps {
 }
 
 const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => {
-    const { tickets } = useQueue();
+    const { todayTickets: tickets } = useTodayQueue();
     const [currentTime, setCurrentTime] = useState(new Date());
     const [lastCalledTicketId, setLastCalledTicketId] = useState<string | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);

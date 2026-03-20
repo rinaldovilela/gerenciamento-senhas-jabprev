@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { useQueue } from '../contexts/QueueContext';
+import { useTodayQueue } from '../contexts/TodayQueueContext';
 import type { Ticket, Language } from '../types';
 import { TRANSLATIONS } from '../constants';
 
@@ -14,7 +14,7 @@ interface TicketScreenProps {
 }
 
 const TicketScreen: React.FC<TicketScreenProps> = ({ ticket, onNewTicket, onExit, fullscreenMode }) => {
-    const { tickets, calledTicket } = useQueue();
+    const { todayTickets: tickets, calledTicket } = useTodayQueue();
     const [language] = useState<Language>('pt');
     const [countdown, setCountdown] = useState(RETURN_TIMEOUT_SECONDS);
 

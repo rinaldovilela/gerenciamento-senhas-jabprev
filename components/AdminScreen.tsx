@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react';
-import { useQueue } from '../contexts/QueueContext';
+import { useTodayQueue } from '../contexts/TodayQueueContext';
 import { SERVICES, TRANSLATIONS } from '../constants';
 import type { Ticket, Language, Service } from '../types';
 
 const language: Language = 'pt'; // Simplified for this component
 
 const OperatorPanel: React.FC = () => {
-    const { tickets, callNextTicket, calledTicket } = useQueue();
+    const { todayTickets: tickets, callNextTicket, calledTicket } = useTodayQueue();
 
     const waitingByService = useMemo(() => {
         return tickets.reduce((acc, ticket) => {
