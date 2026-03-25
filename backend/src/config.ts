@@ -1,3 +1,16 @@
+import { config as dotenvConfig } from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get __dirname in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load .env.local file
+dotenvConfig({
+  path: path.resolve(__dirname, '../.env.local'),
+});
+
 export const config = {
   PORT: parseInt(process.env.PORT || '3001', 10),
   NODE_ENV: process.env.NODE_ENV || 'development',

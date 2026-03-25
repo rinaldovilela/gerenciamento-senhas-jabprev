@@ -13,7 +13,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '../supabase/client';
 import type { Ticket, Service, UserType, TicketStatus } from '../types';
 import { useAuth } from './AuthContext';
-import { initializeSocket, getSocket } from '../services/SocketClient';
+import { initializeSocket } from '../services/SocketClient';
 
 interface TodayQueueContextType {
     // Estado
@@ -40,6 +40,10 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const [todayTickets, setTodayTickets] = useState<Ticket[]>([]);
     const [calledTicket, setCalledTicket] = useState<Ticket | null>(null);
     const [isLoadingToday, setIsLoadingToday] = useState(true);
+
+    const isUuid = (value: string): boolean => {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+    };
 
     /**
      * Carrega serviços e senhas de HOJE
@@ -254,18 +258,39 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     updatePayload.completed_at = new Date().toISOString();
                 }
 
-                if (user) {
+                if (user && isUuid(user.id)) {
                     updatePayload.operator_id = user.id;
                 }
 
                 console.log('[TodayQueueContext] Payload:', updatePayload);
 
-                const { error } = await supabase
+                const { data: updatedRow, error } = await supabase
                     .from('tickets')
                     .update(updatePayload)
-                    .eq('id', ticketId);
+                    .eq('id', ticketId)
+                    .select('*')
+                    .maybeSingle();
 
                 if (error) throw error;
+
+                if (!updatedRow) {
+                    throw new Error('Nenhuma linha foi atualizada. Verifique políticas RLS/permissões.');
+                }
+
+                setTodayTickets(prevTickets =>
+                    prevTickets.map(ticket =>
+                        ticket.id === ticketId
+                            ? {
+                                  ...ticket,
+                                  status: updatedRow.status,
+                                  operator_id: updatedRow.operator_id || ticket.operator_id,
+                                  started_at: updatedRow.started_at || ticket.started_at,
+                                  completed_at: updatedRow.completed_at || ticket.completed_at,
+                                  updated_at: updatedRow.updated_at || ticket.updated_at,
+                              }
+                            : ticket
+                    )
+                );
                 
                 console.log('[TodayQueueContext] Status atualizado com sucesso');
             } catch (error) {
