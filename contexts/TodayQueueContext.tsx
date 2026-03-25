@@ -44,6 +44,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
      * Carrega serviços e senhas de HOJE
      */
     const fetchTodayData = useCallback(async () => {
+        console.log('[TodayQueueContext] Iniciando carregamento de dados...');
         setIsLoadingToday(true);
         try {
             // Busca serviços
@@ -53,6 +54,8 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 .order('name', { ascending: true });
 
             if (servicesError) throw servicesError;
+
+            console.log('[TodayQueueContext] Serviços carregados:', servicesData?.length);
 
             setServices(
                 (servicesData || []).map(doc => ({
@@ -85,6 +88,8 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 .lte('created_at', todayEndISO);
 
             if (ticketsError) throw ticketsError;
+
+            console.log('[TodayQueueContext] Senhas carregadas:', ticketsData?.length);
 
             // Enriquece com dados de serviço
             const fetchedTickets: Ticket[] = (ticketsData || []).map(doc => ({
@@ -124,22 +129,67 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         fetchTodayData();
     }, [fetchTodayData]);
 
-    // Subscription real-time
+    // Subscription real-time - OTIMIZADA COM UPDATE LOCAL
     useEffect(() => {
-        const subscription = supabase
+        // Primeiro, vamos carregar os dados iniciais
+        fetchTodayData();
+
+        // Helper: verifica se um ticket é de hoje
+        const isToday = (dateString: string): boolean => {
+            const ticketDate = new Date(dateString);
+            const today = new Date();
+            return ticketDate.toDateString() === today.toDateString();
+        };
+
+        // Depois, cria a subscription
+        const channel = supabase
             .channel('public:tickets')
             .on(
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'tickets' },
-                () => {
-                    console.log('[TodayQueueContext] Mudança detectada, atualizando...');
-                    fetchTodayData();
+                (payload) => {
+                    console.log('[TodayQueueContext] Mudança detectada:', payload.eventType, payload.new?.id);
+                    
+                    // UPDATE: atualizar localmente SEM refetch
+                    if (payload.eventType === 'UPDATE' && payload.new) {
+                        const updatedTicketData = payload.new;
+                        
+                        // Apenas processa se o ticket é de hoje
+                        if (isToday(updatedTicketData.created_at)) {
+                            console.log('[TodayQueueContext] Atualizando ticket localmente:', updatedTicketData.id);
+                            
+                            setTodayTickets(prevTickets =>
+                                prevTickets.map(ticket => {
+                                    if (ticket.id === updatedTicketData.id) {
+                                        return {
+                                            ...ticket,
+                                            status: updatedTicketData.status,
+                                            operator_id: updatedTicketData.operator_id || ticket.operator_id,
+                                            started_at: updatedTicketData.started_at || ticket.started_at,
+                                            completed_at: updatedTicketData.completed_at || ticket.completed_at,
+                                            updated_at: updatedTicketData.updated_at,
+                                        };
+                                    }
+                                    return ticket;
+                                })
+                            );
+                        }
+                    }
+                    // INSERT ou DELETE: refetch completo
+                    else if ((payload.eventType === 'INSERT' || payload.eventType === 'DELETE') && payload.new) {
+                        if (isToday(payload.new.created_at)) {
+                            console.log('[TodayQueueContext] Refetch necessário para', payload.eventType);
+                            fetchTodayData();
+                        }
+                    }
                 }
             )
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[TodayQueueContext] Subscription status:', status);
+            });
 
         return () => {
-            subscription.unsubscribe();
+            channel.unsubscribe();
         };
     }, [fetchTodayData]);
 
@@ -197,6 +247,8 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const updateTicketStatus = useCallback(
         async (ticketId: string, status: TicketStatus, reason?: string) => {
             try {
+                console.log('[TodayQueueContext] Atualizando status da senha:', ticketId, 'para', status);
+                
                 const updatePayload: any = {
                     status,
                 };
@@ -211,14 +263,19 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     updatePayload.operator_id = user.id;
                 }
 
+                console.log('[TodayQueueContext] Payload:', updatePayload);
+
                 const { error } = await supabase
                     .from('tickets')
                     .update(updatePayload)
                     .eq('id', ticketId);
 
                 if (error) throw error;
+                
+                console.log('[TodayQueueContext] Status atualizado com sucesso');
             } catch (error) {
                 console.error('[TodayQueueContext] Erro ao atualizar status:', error);
+                throw error;
             }
         },
         [user]

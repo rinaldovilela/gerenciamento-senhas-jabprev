@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTodayQueue } from '../contexts/TodayQueueContext';
 import { oldTicketNotificationManager } from '../services/OldTicketNotificationManager';
+import ConfirmationModal from './ConfirmationModal';
 import type { Ticket, TicketStatus } from '../types';
 
 const RefreshIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>;
@@ -36,6 +37,11 @@ const AttendanceTrackingScreen: React.FC = () => {
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [toast, setToast] = useState({ show: false, message: '' });
     const [oldTicketAlerts, setOldTicketAlerts] = useState<ReturnType<typeof oldTicketNotificationManager.getOldTicketAlerts>>([]);
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, ticketId: '', status: null as TicketStatus | null });
+    const [isUpdating, setIsUpdating] = useState(false);
+
+    // Buscar dados da senha selecionada
+    const selectedTicket = todayTickets.find(t => t.id === confirmModal.ticketId);
 
     useEffect(() => {
         // Auto-refresh a cada 30 segundos
@@ -52,13 +58,37 @@ const AttendanceTrackingScreen: React.FC = () => {
         setToast({ show: true, message });
     };
 
-    const handleUpdateStatus = async (ticketId: string, status: TicketStatus) => {
-        await updateTicketStatus(ticketId, status, `Alterado para ${STATUS_CONFIG[status].label}`);
-        // Refetch data após ação para refletir mudanças em tempo real
-        await refreshTodayTickets();
-        const statusLabel = STATUS_CONFIG[status].label;
-        showToast(`Senha atualizada para "${statusLabel}"!`);
-        setLastUpdated(new Date());
+    const handleUpdateStatus = (ticketId: string, status: TicketStatus) => {
+        // Abrir modal de confirmação
+        setConfirmModal({ isOpen: true, ticketId, status });
+    };
+
+    const handleConfirmUpdate = async () => {
+        if (!confirmModal.ticketId || !confirmModal.status) return;
+
+        setIsUpdating(true);
+        try {
+            await updateTicketStatus(
+                confirmModal.ticketId,
+                confirmModal.status,
+                `Alterado para ${STATUS_CONFIG[confirmModal.status].label}`
+            );
+            
+            // Refetch data após ação para refletir mudanças em tempo real
+            await refreshTodayTickets();
+            
+            const statusLabel = STATUS_CONFIG[confirmModal.status].label;
+            showToast(`Senha atualizada para "${statusLabel}"!`);
+            setLastUpdated(new Date());
+            
+            // Fechar modal
+            setConfirmModal({ isOpen: false, ticketId: '', status: null });
+        } catch (error) {
+            console.error('Erro ao atualizar status:', error);
+            showToast('Erro ao atualizar status da senha');
+        } finally {
+            setIsUpdating(false);
+        }
     };
 
     const handleManualRefresh = async () => {
@@ -87,6 +117,22 @@ const AttendanceTrackingScreen: React.FC = () => {
     return (
         <div className="fade-in">
             <Toast message={toast.message} show={toast.show} onClose={() => setToast({ ...toast, show: false })} />
+            
+            {/* Modal de Confirmação */}
+            {selectedTicket && confirmModal.status && (
+                <ConfirmationModal
+                    isOpen={confirmModal.isOpen}
+                    title={`Confirmar Ação`}
+                    message={`Tem certeza que deseja alterar a senha ${selectedTicket.formatted_number} para "${STATUS_CONFIG[confirmModal.status].label}"?`}
+                    confirmText="Confirmar"
+                    cancelText="Cancelar"
+                    isDangerous={['cancelled', 'no_show'].includes(confirmModal.status)}
+                    onConfirm={handleConfirmUpdate}
+                    onCancel={() => setConfirmModal({ isOpen: false, ticketId: '', status: null })}
+                    isLoading={isUpdating}
+                />
+            )}
+            
             <header className="flex flex-wrap justify-between items-center mb-6 gap-4">
                 <h1 className="font-montserrat text-3xl font-semibold text-text-primary">Acompanhamento de Senhas</h1>
                 <div className="flex items-center gap-4">
