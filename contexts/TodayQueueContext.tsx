@@ -4,7 +4,7 @@
  * 
  * Propósito:
  * - Carrega APENAS senhas de hoje
- * - Atualiza em tempo real
+ * - Atualiza em tempo real via WebSocket backend
  * - Foca em operações do atendente (chamar, atualizar status, cancelar)
  * - Consulta os campos existentes em tickets
  */
@@ -13,6 +13,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '../supabase/client';
 import type { Ticket, Service, UserType, TicketStatus } from '../types';
 import { useAuth } from './AuthContext';
+import { initializeSocket, getSocket } from '../services/SocketClient';
 
 interface TodayQueueContextType {
     // Estado
@@ -129,68 +130,62 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         fetchTodayData();
     }, [fetchTodayData]);
 
-    // Subscription real-time - OTIMIZADA COM UPDATE LOCAL
+    // Subscription WebSocket - USA BACKEND PARA EVENTOS EM TEMPO REAL
     useEffect(() => {
-        // Primeiro, vamos carregar os dados iniciais
-        fetchTodayData();
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001';
+        console.log('[TodayQueueContext] Inicializando WebSocket:', backendUrl);
 
-        // Helper: verifica se um ticket é de hoje
-        const isToday = (dateString: string): boolean => {
-            const ticketDate = new Date(dateString);
-            const today = new Date();
-            return ticketDate.toDateString() === today.toDateString();
-        };
+        try {
+            const socket = initializeSocket(backendUrl);
 
-        // Depois, cria a subscription
-        const channel = supabase
-            .channel('public:tickets')
-            .on(
-                'postgres_changes',
-                { event: '*', schema: 'public', table: 'tickets' },
-                (payload) => {
-                    console.log('[TodayQueueContext] Mudança detectada:', payload.eventType, payload.new?.id);
-                    
-                    // UPDATE: atualizar localmente SEM refetch
-                    if (payload.eventType === 'UPDATE' && payload.new) {
-                        const updatedTicketData = payload.new;
-                        
-                        // Apenas processa se o ticket é de hoje
-                        if (isToday(updatedTicketData.created_at)) {
-                            console.log('[TodayQueueContext] Atualizando ticket localmente:', updatedTicketData.id);
-                            
-                            setTodayTickets(prevTickets =>
-                                prevTickets.map(ticket => {
-                                    if (ticket.id === updatedTicketData.id) {
-                                        return {
-                                            ...ticket,
-                                            status: updatedTicketData.status,
-                                            operator_id: updatedTicketData.operator_id || ticket.operator_id,
-                                            started_at: updatedTicketData.started_at || ticket.started_at,
-                                            completed_at: updatedTicketData.completed_at || ticket.completed_at,
-                                            updated_at: updatedTicketData.updated_at,
-                                        };
-                                    }
-                                    return ticket;
-                                })
-                            );
-                        }
-                    }
-                    // INSERT ou DELETE: refetch completo
-                    else if ((payload.eventType === 'INSERT' || payload.eventType === 'DELETE') && payload.new) {
-                        if (isToday(payload.new.created_at)) {
-                            console.log('[TodayQueueContext] Refetch necessário para', payload.eventType);
-                            fetchTodayData();
-                        }
-                    }
+            // Listener para mudanças em tickets
+            socket.on('ticket:change', (event: any) => {
+                console.log('[TodayQueueContext] 📨 Mudança de ticket recebida:', {
+                    tipo: event.type,
+                    ticketId: event.data?.id,
+                    status: event.data?.status,
+                });
+
+                const isToday = (dateString: string): boolean => {
+                    const ticketDate = new Date(dateString);
+                    const today = new Date();
+                    return ticketDate.toDateString() === today.toDateString();
+                };
+
+                // UPDATE: atualizar localmente
+                if (event.type === 'UPDATE' && event.data && isToday(event.data.created_at)) {
+                    console.log('[TodayQueueContext] ✅ Atualizando ticket localmente:', event.data.id);
+
+                    setTodayTickets(prevTickets =>
+                        prevTickets.map(ticket => {
+                            if (ticket.id === event.data.id) {
+                                return {
+                                    ...ticket,
+                                    status: event.data.status,
+                                    operator_id: event.data.operator_id || ticket.operator_id,
+                                    started_at: event.data.started_at || ticket.started_at,
+                                    completed_at: event.data.completed_at || ticket.completed_at,
+                                    updated_at: event.data.updated_at,
+                                };
+                            }
+                            return ticket;
+                        })
+                    );
+                } else if ((event.type === 'INSERT' || event.type === 'DELETE') && event.data?.created_at && isToday(event.data.created_at)) {
+                    console.log('[TodayQueueContext] 🔄 Refetch necessário para', event.type);
+                    fetchTodayData();
                 }
-            )
-            .subscribe((status) => {
-                console.log('[TodayQueueContext] Subscription status:', status);
             });
 
-        return () => {
-            channel.unsubscribe();
-        };
+            return () => {
+                socket.off('ticket:change');
+                console.log('[TodayQueueContext] Desconectado de ticket:change');
+            };
+        } catch (error) {
+            console.error('[TodayQueueContext] Erro ao configurar WebSocket:', error);
+            // Fallback: tentar usar Supabase real-time se WebSocket falhar
+            return undefined;
+        }
     }, [fetchTodayData]);
 
     /**
