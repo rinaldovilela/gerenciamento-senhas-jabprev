@@ -2,11 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { config } from './config.js';
 
 // Client com service_role para ouvir eventos
-export const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
-  realtime: {
-    log_level: 'debug',
-  },
-});
+export const supabase = createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY);
 
 // Cliente para acessar tabelas públicas
 export const supabaseAnon = createClient(config.SUPABASE_URL, config.SUPABASE_ANON_KEY);
