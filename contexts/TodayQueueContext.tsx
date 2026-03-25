@@ -10,14 +10,9 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { databases, client } from '../appwrite/client';
-import { Query, ID } from 'appwrite';
+import { supabase } from '../supabase/client';
 import type { Ticket, Service, UserType, TicketStatus } from '../types';
 import { useAuth } from './AuthContext';
-
-const APPWRITE_DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
-const APPWRITE_COLLECTION_SERVICES_ID = import.meta.env.VITE_APPWRITE_COLLECTION_SERVICES_ID;
-const APPWRITE_COLLECTION_TICKETS_ID = import.meta.env.VITE_APPWRITE_COLLECTION_TICKETS_ID;
 
 interface TodayQueueContextType {
     // Estado
@@ -52,19 +47,20 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         setIsLoadingToday(true);
         try {
             // Busca serviços
-            const servicesResponse = await databases.listDocuments(
-                APPWRITE_DATABASE_ID,
-                APPWRITE_COLLECTION_SERVICES_ID,
-                [Query.orderAsc('name')]
-            );
+            const { data: servicesData, error: servicesError } = await supabase
+                .from('services')
+                .select('*')
+                .order('name', { ascending: true });
+
+            if (servicesError) throw servicesError;
 
             setServices(
-                servicesResponse.documents.map(doc => ({
-                    id: doc.$id,
+                (servicesData || []).map(doc => ({
+                    id: doc.id,
                     name: doc.name,
                     description: doc.description,
                     icon: doc.icon,
-                    created_at: doc.$createdAt,
+                    created_at: doc.created_at,
                 })) as Service[]
             );
 
@@ -76,45 +72,44 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             const todayEnd = new Date(today);
             todayEnd.setHours(23, 59, 59, 999);
 
-            const allTicketsResponse = await databases.listDocuments(
-                APPWRITE_DATABASE_ID,
-                APPWRITE_COLLECTION_TICKETS_ID,
-                [Query.limit(1000)]
-            );
+            const todayStartISO = todayStart.toISOString();
+            const todayEndISO = todayEnd.toISOString();
 
-            // Filtra apenas de hoje (cliente-side)
-            const todayTicketsList = allTicketsResponse.documents.filter(doc => {
-                const docDate = new Date(doc.$createdAt);
-                return docDate >= todayStart && docDate <= todayEnd;
-            });
+            const { data: ticketsData, error: ticketsError } = await supabase
+                .from('tickets')
+                .select(`
+                    *,
+                    service:service_id(id, name, description, icon, created_at)
+                `)
+                .gte('created_at', todayStartISO)
+                .lte('created_at', todayEndISO);
+
+            if (ticketsError) throw ticketsError;
 
             // Enriquece com dados de serviço
-            const fetchedTickets: Ticket[] = todayTicketsList.map(doc => {
-                const service = servicesResponse.documents.find(s => s.$id === doc.service_id);
-                return {
-                    id: doc.$id,
-                    number: doc.number,
-                    formatted_number: doc.formatted_number,
-                    service_id: doc.service_id,
-                    service: service
-                        ? {
-                              id: service.$id,
-                              name: service.name,
-                              description: service.description,
-                              icon: service.icon,
-                              created_at: service.$createdAt,
-                          }
-                        : null,
-                    user_type: doc.user_type,
-                    status: doc.status,
-                    is_priority: doc.is_priority,
-                    operator_id: doc.operator_id || null,
-                    created_at: doc.$createdAt,
-                    started_at: doc.started_at || null,
-                    completed_at: doc.completed_at || null,
-                    updated_at: doc.$updatedAt || null,
-                };
-            });
+            const fetchedTickets: Ticket[] = (ticketsData || []).map(doc => ({
+                id: doc.id,
+                number: doc.number,
+                formatted_number: doc.formatted_number,
+                service_id: doc.service_id,
+                service: doc.service
+                    ? {
+                          id: doc.service.id,
+                          name: doc.service.name,
+                          description: doc.service.description,
+                          icon: doc.service.icon,
+                          created_at: doc.service.created_at,
+                      }
+                    : null,
+                user_type: doc.user_type,
+                status: doc.status,
+                is_priority: doc.is_priority,
+                operator_id: doc.operator_id || null,
+                created_at: doc.created_at,
+                started_at: doc.started_at || null,
+                completed_at: doc.completed_at || null,
+                updated_at: doc.updated_at || null,
+            }));
 
             setTodayTickets(fetchedTickets);
         } catch (error) {
@@ -131,21 +126,20 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     // Subscription real-time
     useEffect(() => {
-        if (!APPWRITE_DATABASE_ID || !APPWRITE_COLLECTION_TICKETS_ID) {
-            console.error('[TodayQueueContext] IDs não configurados');
-            return;
-        }
-
-        const unsubscribe = client.subscribe(
-            `databases.${APPWRITE_DATABASE_ID}.collections.${APPWRITE_COLLECTION_TICKETS_ID}.documents`,
-            () => {
-                console.log('[TodayQueueContext] Mudança detectada, atualizando...');
-                fetchTodayData();
-            }
-        );
+        const subscription = supabase
+            .channel('public:tickets')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'tickets' },
+                () => {
+                    console.log('[TodayQueueContext] Mudança detectada, atualizando...');
+                    fetchTodayData();
+                }
+            )
+            .subscribe();
 
         return () => {
-            unsubscribe();
+            subscription.unsubscribe();
         };
     }, [fetchTodayData]);
 
@@ -154,52 +148,19 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
      */
     const addTicket = useCallback(
         async (serviceId: string, userType: UserType, isPriority: boolean): Promise<Ticket | null> => {
-            if (!APPWRITE_DATABASE_ID || !APPWRITE_COLLECTION_TICKETS_ID) {
-                console.error('[TodayQueueContext] IDs não configurados');
-                return null;
-            }
-
             try {
-                let prefix = isPriority ? 'PRIO' : userType === 'aposentado' ? 'APO' : userType === 'pensionista' ? 'PEN' : 'ATV';
-
-                // Busca último número do dia
-                const lastResponse = await databases.listDocuments(
-                    APPWRITE_DATABASE_ID,
-                    APPWRITE_COLLECTION_TICKETS_ID,
-                    [Query.startsWith('formatted_number', prefix + '-'), Query.orderDesc('number'), Query.limit(100)]
-                );
-
-                // Filtra de hoje
-                const today = new Date();
-                const todayStart = new Date(today);
-                todayStart.setHours(0, 0, 0, 0);
-
-                const todayTickets = lastResponse.documents.filter(doc => {
-                    const docDate = new Date(doc.$createdAt);
-                    return docDate >= todayStart;
+                // Usar a função RPC do Supabase para criar a senha
+                const { data: newTicketDocument, error } = await supabase.rpc('create_ticket', {
+                    p_service_id: serviceId,
+                    p_user_type: userType,
+                    p_is_priority: isPriority,
                 });
 
-                const lastNumber = todayTickets.length > 0 ? (todayTickets[0].number || 0) : 0;
-                const nextNumber = lastNumber + 1;
-                const formattedNumber = `${prefix}-${String(nextNumber).padStart(3, '0')}`;
-
-                const newTicketDocument = await databases.createDocument(
-                    APPWRITE_DATABASE_ID,
-                    APPWRITE_COLLECTION_TICKETS_ID,
-                    ID.unique(),
-                    {
-                        number: nextNumber,
-                        formatted_number: formattedNumber,
-                        service_id: serviceId,
-                        user_type: userType,
-                        status: 'waiting',
-                        is_priority: isPriority,
-                    }
-                );
+                if (error) throw error;
 
                 const service = services.find(s => s.id === serviceId);
                 const newTicket: Ticket = {
-                    id: newTicketDocument.$id,
+                    id: newTicketDocument.id,
                     number: newTicketDocument.number,
                     formatted_number: newTicketDocument.formatted_number,
                     service_id: newTicketDocument.service_id,
@@ -216,7 +177,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     status: newTicketDocument.status,
                     is_priority: newTicketDocument.is_priority,
                     operator_id: null,
-                    created_at: newTicketDocument.$createdAt,
+                    created_at: newTicketDocument.created_at,
                     started_at: null,
                     completed_at: null,
                 };
@@ -235,11 +196,6 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
      */
     const updateTicketStatus = useCallback(
         async (ticketId: string, status: TicketStatus, reason?: string) => {
-            if (!APPWRITE_DATABASE_ID || !APPWRITE_COLLECTION_TICKETS_ID) {
-                console.error('[TodayQueueContext] IDs não configurados');
-                return;
-            }
-
             try {
                 const updatePayload: any = {
                     status,
@@ -255,12 +211,12 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     updatePayload.operator_id = user.id;
                 }
 
-                await databases.updateDocument(
-                    APPWRITE_DATABASE_ID,
-                    APPWRITE_COLLECTION_TICKETS_ID,
-                    ticketId,
-                    updatePayload
-                );
+                const { error } = await supabase
+                    .from('tickets')
+                    .update(updatePayload)
+                    .eq('id', ticketId);
+
+                if (error) throw error;
             } catch (error) {
                 console.error('[TodayQueueContext] Erro ao atualizar status:', error);
             }
@@ -273,47 +229,45 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
      */
     const callNextTicket = useCallback(
         async (serviceId: string) => {
-            if (!APPWRITE_DATABASE_ID || !APPWRITE_COLLECTION_TICKETS_ID) {
-                console.error('[TodayQueueContext] IDs não configurados');
-                return;
-            }
-
             try {
-                const nextTicketResponse = await databases.listDocuments(
-                    APPWRITE_DATABASE_ID,
-                    APPWRITE_COLLECTION_TICKETS_ID,
-                    [
-                        Query.equal('service_id', serviceId),
-                        Query.equal('status', 'waiting'),
-                        Query.orderDesc('is_priority'),
-                        Query.orderAsc('created_at'),
-                        Query.limit(1),
-                    ]
-                );
+                // Busca próxima senha aguardando (prioriza prioritários)
+                const { data: nextTickets, error } = await supabase
+                    .from('tickets')
+                    .select(`
+                        *,
+                        service:service_id(id, name, description, icon, created_at)
+                    `)
+                    .eq('service_id', serviceId)
+                    .eq('status', 'waiting')
+                    .order('is_priority', { ascending: false })
+                    .order('created_at', { ascending: true })
+                    .limit(1);
 
-                const nextTicketDocument = nextTicketResponse.documents[0];
+                if (error) throw error;
+
+                const nextTicketDocument = nextTickets?.[0];
 
                 if (nextTicketDocument) {
                     const service = services.find(s => s.id === nextTicketDocument.service_id);
                     const ticketForDisplay: Ticket = {
-                        id: nextTicketDocument.$id,
+                        id: nextTicketDocument.id,
                         number: nextTicketDocument.number,
                         formatted_number: nextTicketDocument.formatted_number,
                         service_id: nextTicketDocument.service_id,
-                        service: service
+                        service: nextTicketDocument.service
                             ? {
-                                  id: service.id,
-                                  name: service.name,
-                                  description: service.description,
-                                  icon: service.icon,
-                                  created_at: service.created_at,
+                                  id: nextTicketDocument.service.id,
+                                  name: nextTicketDocument.service.name,
+                                  description: nextTicketDocument.service.description,
+                                  icon: nextTicketDocument.service.icon,
+                                  created_at: nextTicketDocument.service.created_at,
                               }
-                            : null,
+                            : service || null,
                         user_type: nextTicketDocument.user_type,
                         status: nextTicketDocument.status,
                         is_priority: nextTicketDocument.is_priority,
                         operator_id: nextTicketDocument.operator_id || null,
-                        created_at: nextTicketDocument.$createdAt,
+                        created_at: nextTicketDocument.created_at,
                         started_at: nextTicketDocument.started_at || null,
                         completed_at: nextTicketDocument.completed_at || null,
                     };
@@ -322,7 +276,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
                     // Muda status para in_progress após 3s
                     setTimeout(() => {
-                        updateTicketStatus(nextTicketDocument.$id, 'in_progress', 'Chamada pelo operador');
+                        updateTicketStatus(nextTicketDocument.id, 'in_progress', 'Chamada pelo operador');
                         setCalledTicket(null);
                     }, 3000);
                 } else {

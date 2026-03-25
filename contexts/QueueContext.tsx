@@ -10,13 +10,8 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { databases } from '../appwrite/client';
-import { Query } from 'appwrite';
+import { supabase } from '../supabase/client';
 import type { Ticket, Service } from '../types';
-
-const APPWRITE_DATABASE_ID = import.meta.env.VITE_APPWRITE_DATABASE_ID;
-const APPWRITE_COLLECTION_SERVICES_ID = import.meta.env.VITE_APPWRITE_COLLECTION_SERVICES_ID;
-const APPWRITE_COLLECTION_TICKETS_ID = import.meta.env.VITE_APPWRITE_COLLECTION_TICKETS_ID;
 
 interface QueueContextType {
     tickets: Ticket[];
@@ -38,19 +33,20 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
      */
     const loadServices = useCallback(async () => {
         try {
-            const servicesResponse = await databases.listDocuments(
-                APPWRITE_DATABASE_ID,
-                APPWRITE_COLLECTION_SERVICES_ID,
-                [Query.orderAsc('name')]
-            );
+            const { data: servicesData, error } = await supabase
+                .from('services')
+                .select('*')
+                .order('name', { ascending: true });
+
+            if (error) throw error;
 
             setServices(
-                servicesResponse.documents.map(doc => ({
-                    id: doc.$id,
+                (servicesData || []).map(doc => ({
+                    id: doc.id,
                     name: doc.name,
                     description: doc.description,
                     icon: doc.icon,
-                    created_at: doc.$createdAt,
+                    created_at: doc.created_at,
                 })) as Service[]
             );
         } catch (error) {
@@ -64,43 +60,46 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const fetchTicketsByDateRange = useCallback(
         async (startDate: Date, endDate: Date): Promise<Ticket[]> => {
             try {
-                const response = await databases.listDocuments(
-                    APPWRITE_DATABASE_ID,
-                    APPWRITE_COLLECTION_TICKETS_ID,
-                    [Query.limit(500)]
-                );
+                const startISO = startDate.toISOString();
+                const endISO = endDate.toISOString();
 
-                // Filtra por data (cliente-side)
-                const filteredDocs = response.documents.filter(doc => {
-                    const docDate = new Date(doc.$createdAt);
-                    return docDate >= startDate && docDate <= endDate;
-                });
+                const { data: ticketsData, error } = await supabase
+                    .from('tickets')
+                    .select(`
+                        *,
+                        service:service_id(id, name, description, icon, created_at)
+                    `)
+                    .gte('created_at', startISO)
+                    .lte('created_at', endISO)
+                    .limit(500);
+
+                if (error) throw error;
 
                 // Enriquece com dados de serviço
-                const fetchedTickets: Ticket[] = filteredDocs.map(doc => {
+                const fetchedTickets: Ticket[] = (ticketsData || []).map(doc => {
                     const service = services.find(s => s.id === doc.service_id);
                     return {
-                        id: doc.$id,
+                        id: doc.id,
                         number: doc.number,
                         formatted_number: doc.formatted_number,
                         service_id: doc.service_id,
-                        service: service
+                        service: doc.service
                             ? {
-                                                                    id: service.id,
-                                  name: service.name,
-                                  description: service.description,
-                                  icon: service.icon,
-                                                                    created_at: service.created_at,
+                                  id: doc.service.id,
+                                  name: doc.service.name,
+                                  description: doc.service.description,
+                                  icon: doc.service.icon,
+                                  created_at: doc.service.created_at,
                               }
-                            : null,
+                            : service || null,
                         user_type: doc.user_type,
                         status: doc.status,
                         is_priority: doc.is_priority,
                         operator_id: doc.operator_id || null,
-                        created_at: doc.$createdAt,
+                        created_at: doc.created_at,
                         started_at: doc.started_at || null,
                         completed_at: doc.completed_at || null,
-                        updated_at: doc.$updatedAt || null,
+                        updated_at: doc.updated_at || null,
                     };
                 });
 
