@@ -140,4 +140,4 @@ Todos os gaps críticos foram resolvidos. O sistema está pronto para:
 - ✅ Segurança configurada
 - ✅ Operações de auditoria (tabela attendance_records)
 
-**Se algo quebrar, consulte GAPS_CORRIGIDOS.md**
+**Se algo quebrar, consulte ../audits/2026-03-26_GAPS_CORRIGIDOS.md**

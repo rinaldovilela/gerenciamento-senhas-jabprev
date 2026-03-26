@@ -170,9 +170,9 @@ Status: ✅ DESBLOQUEADO - PRONTO PARA MVP
 ## 📞 SE ALGO QUEBRAR
 
 Consulte:
-1. [GAPS_CORRIGIDOS.md](./GAPS_CORRIGIDOS.md) - Detalhes de cada correção
-2. [CHECKLIST_VERIFICACAO.md](./CHECKLIST_VERIFICACAO.md) - Verificação técnica
-3. [docs/BACKEND_README.md](./docs/BACKEND_README.md) - Documentação backend
+1. [2026-03-26_GAPS_CORRIGIDOS.md](./2026-03-26_GAPS_CORRIGIDOS.md) - Detalhes de cada correção
+2. [2026-03-26_CHECKLIST_VERIFICACAO.md](../checklists/2026-03-26_CHECKLIST_VERIFICACAO.md) - Verificação técnica
+3. [BACKEND_README.md](../BACKEND_README.md) - Documentação backend
 
 ---
 

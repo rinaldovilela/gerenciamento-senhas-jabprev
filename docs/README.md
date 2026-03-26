@@ -1,0 +1,45 @@
+# Documentacao do Projeto
+
+Este indice organiza os documentos por ordem cronologica de uso (do setup ao release).
+
+## 1. Setup Inicial
+
+1. [COMECANDO_RAPIDO.md](COMECANDO_RAPIDO.md)
+2. [QUICK_START.md](QUICK_START.md)
+3. [setup/GUIA_SUPABASE.md](setup/GUIA_SUPABASE.md)
+4. [setup/SUPABASE_SETUP.md](setup/SUPABASE_SETUP.md)
+
+## 2. Visao e Arquitetura
+
+1. [OVERVIEW.md](OVERVIEW.md)
+2. [architecture/MIGRACAO_APPWRITE_SUPABASE.md](architecture/MIGRACAO_APPWRITE_SUPABASE.md)
+3. [architecture/ANALISE_COMPLETA_GAPS.md](architecture/ANALISE_COMPLETA_GAPS.md)
+
+## 3. Implementacao e Evolucao
+
+1. [IMPLEMENTACAO_COMPLETA.md](IMPLEMENTACAO_COMPLETA.md)
+2. [MELHORIAS_IMPLEMENTADAS.md](MELHORIAS_IMPLEMENTADAS.md)
+3. [DIAGNOSTICO_REALTIME.md](DIAGNOSTICO_REALTIME.md)
+
+## 4. Deploy
+
+1. [DEPLOY_RENDER.md](DEPLOY_RENDER.md)
+2. [DEPLOY_RENDER_DASHBOARD.md](DEPLOY_RENDER_DASHBOARD.md)
+3. [deploy/2026-03-26_DEPLOYMENT_GUIDE.md](deploy/2026-03-26_DEPLOYMENT_GUIDE.md)
+
+## 5. Checklists e Validacao
+
+1. [checklists/CHECKLIST_FINAL.md](checklists/CHECKLIST_FINAL.md)
+2. [checklists/CORRECOES_IMPLEMENTADAS.md](checklists/CORRECOES_IMPLEMENTADAS.md)
+3. [checklists/SUMARIO_GAPS_CORRIGIDOS.md](checklists/SUMARIO_GAPS_CORRIGIDOS.md)
+4. [checklists/2026-03-26_CHECKLIST_VERIFICACAO.md](checklists/2026-03-26_CHECKLIST_VERIFICACAO.md)
+
+## 6. Auditorias e Status Final
+
+1. [audits/2026-03-26_GAPS_CORRIGIDOS.md](audits/2026-03-26_GAPS_CORRIGIDOS.md)
+2. [audits/2026-03-26_MVP_STATUS_FINAL.md](audits/2026-03-26_MVP_STATUS_FINAL.md)
+
+## 7. Historico de Reorganizacao
+
+1. [changes/2026-03-26_REORGANIZATION_COMPLETE.md](changes/2026-03-26_REORGANIZATION_COMPLETE.md)
+2. [BACKEND_README.md](BACKEND_README.md)

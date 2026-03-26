@@ -230,9 +230,9 @@ Browser DevTools > Console
 
 Se encontrar problemas:
 
-1. Verificar [MVP_STATUS_FINAL.md](./MVP_STATUS_FINAL.md)
-2. Consultar [GAPS_CORRIGIDOS.md](./GAPS_CORRIGIDOS.md)
-3. Revisar [Backend README](./docs/BACKEND_README.md)
+1. Verificar [2026-03-26_MVP_STATUS_FINAL.md](../audits/2026-03-26_MVP_STATUS_FINAL.md)
+2. Consultar [2026-03-26_GAPS_CORRIGIDOS.md](../audits/2026-03-26_GAPS_CORRIGIDOS.md)
+3. Revisar [BACKEND_README.md](../BACKEND_README.md)
 4. Abrir issue no repositório
 
 ---
