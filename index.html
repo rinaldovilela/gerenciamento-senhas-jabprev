@@ -12,20 +12,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Open+Sans:wght@400;600&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
 
     <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-      /* Tablet landscape adjustments */
-      @media (min-width: 768px) and (max-height: 600px) and (orientation: landscape) {
-        body { font-size: 14px; }
-        .tablet-landscape-compact { padding: 12px !important; }
-        .tablet-landscape-text-lg { font-size: 16px !important; }
-        .tablet-landscape-text-xl { font-size: 18px !important; }
-      }
-      
-      /* Tablet portrait adjustments */
-      @media (min-width: 600px) and (max-width: 1024px) and (orientation: portrait) {
-        .tablet-portrait-p { padding: 24px; }
-      }
-    </style>
     <script>
       tailwind.config = {
         theme: {
@@ -68,18 +54,9 @@
         }
       }
     </script>
-    <script type="importmap">
-      {
-        "imports": {
-          "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-          "react/": "https://aistudiocdn.com/react@^19.2.0/",
-          "react": "https://aistudiocdn.com/react@^19.2.0"
-        }
-      }
-    </script>
   </head>
   <body class="bg-app-bg">
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

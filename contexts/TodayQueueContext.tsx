@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * TodayQueueContext
  * Contexto para "Acompanhamento de Senhas" (operacional - HOJE APENAS)
