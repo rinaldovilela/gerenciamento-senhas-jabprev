@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware, operatorOnlyMiddleware, validateRequest } from '../middleware';
 import * as queueController from '../controllers/queueController';
-import * as Joi from 'joi';
+import Joi from 'joi';
 
 const router = Router();
 
@@ -20,7 +20,7 @@ const updateTicketSchema = Joi.object({
 router.post('/', authMiddleware, validateRequest(createTicketSchema), queueController.createTicket);
 router.get('/', authMiddleware, queueController.listTickets);
 router.get('/:id', authMiddleware, queueController.getTicket);
-router.patch('/:id', operatorOnlyMiddleware, validateRequest(updateTicketSchema), queueController.updateTicket);
-router.delete('/:id', operatorOnlyMiddleware, queueController.deleteTicket);
+router.patch('/:id', authMiddleware, operatorOnlyMiddleware, validateRequest(updateTicketSchema), queueController.updateTicket);
+router.delete('/:id', authMiddleware, operatorOnlyMiddleware, queueController.deleteTicket);
 
 export default router;

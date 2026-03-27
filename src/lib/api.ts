@@ -2,8 +2,33 @@ import { config } from './environment';
 
 const API_BASE_URL = `${config.apiUrl}/api/v1`;
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status?: number,
+    public details?: string[]
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
+
 export class ApiClient {
   private static token: string | null = null;
+
+  private static async parseResponseBody(response: Response): Promise<any> {
+    if (response.status === 204) {
+      return null;
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      return response.json();
+    }
+
+    const text = await response.text();
+    return text || null;
+  }
 
   static setToken(token: string) {
     this.token = token;
@@ -29,12 +54,20 @@ export class ApiClient {
       body: data ? JSON.stringify(data) : undefined,
     });
 
+    const body = await this.parseResponseBody(response);
+
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.error || 'API request failed');
+      const message =
+        (body && typeof body === 'object' && (body.error || body.message)) ||
+        (typeof body === 'string' && body) ||
+        'API request failed';
+      const details = body && typeof body === 'object' && Array.isArray(body.details)
+        ? body.details
+        : undefined;
+      throw new ApiError(message, response.status, details);
     }
 
-    return response.json();
+    return body as T;
   }
 
   // Auth endpoints
@@ -52,7 +85,7 @@ export class ApiClient {
 
   // Queue endpoints
   static async createTicket(data: { service: string; priority?: string; description?: string }) {
-    return this.request('POST', '/queue/ticket', data);
+    return this.request('POST', '/queue/tickets', data);
   }
 
   static async listTickets(filters?: { status?: string; service?: string }) {

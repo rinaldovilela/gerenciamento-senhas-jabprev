@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware, validateRequest } from '../middleware';
 import * as authController from '../controllers/authController';
-import * as Joi from 'joi';
+import Joi from 'joi';
 
 const router = Router();
 
@@ -12,8 +12,8 @@ const registerSchema = Joi.object({
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required(),
-  password: Joi.string().required(),
+  email: Joi.string().trim().required(),
+  password: Joi.string().trim().required(),
 });
 
 router.post('/register', validateRequest(registerSchema), authController.register);

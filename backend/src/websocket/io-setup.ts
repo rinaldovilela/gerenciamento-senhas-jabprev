@@ -6,9 +6,23 @@ import { logger } from '../utils/logger';
 let io: SocketIOServer;
 
 export function initializeSocket(httpServer: HTTPServer): SocketIOServer {
+  const allowedOrigins = config.CORS_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean);
+
   io = new SocketIOServer(httpServer, {
     cors: {
-      origin: config.CORS_ORIGIN,
+      origin: (origin, callback) => {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error(`Origin ${origin} not allowed by Socket.IO CORS`));
+      },
       credentials: true,
     },
     transports: ['websocket', 'polling'],

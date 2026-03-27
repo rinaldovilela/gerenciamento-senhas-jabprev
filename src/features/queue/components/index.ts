@@ -10,4 +10,5 @@ export { default as NameInputScreen } from './NameInputScreen';
 export { default as RestrictedArea } from './RestrictedArea';
 export { default as AttendanceTrackingScreen } from './AttendanceTrackingScreen';
 export { default as MetricsDashboard } from './MetricsDashboard';
+export { default as UserManagementScreen } from './UserManagementScreen';
 export { default as ConfirmationModal } from './ConfirmationModal';

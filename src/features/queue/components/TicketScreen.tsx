@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useTodayQueue } from '@features/queue/contexts/TodayQueueContext';
 import type { Ticket, Language } from '@shared/types';
 import { TRANSLATIONS } from '@shared/constants';
+import Toast from '@shared/components/Toast';
 
 const RETURN_TIMEOUT_SECONDS = 15;
 
@@ -17,6 +18,11 @@ const TicketScreen: React.FC<TicketScreenProps> = ({ ticket, onNewTicket, onExit
     const { todayTickets: tickets, calledTicket } = useTodayQueue();
     const [language] = useState<Language>('pt');
     const [countdown, setCountdown] = useState(RETURN_TIMEOUT_SECONDS);
+    const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
+        show: false,
+        message: '',
+        type: 'info',
+    });
 
     const isMyTicketCalled = calledTicket?.id === ticket.id;
 
@@ -73,7 +79,7 @@ const TicketScreen: React.FC<TicketScreenProps> = ({ ticket, onNewTicket, onExit
 
     const handleReprint = () => {
         // In a real app, this would trigger a print action
-        alert(`Imprimindo senha: ${ticket.formatted_number}`);
+        setToast({ show: true, message: `Imprimindo senha: ${ticket.formatted_number}`, type: 'info' });
     };
 
     const handleReturnNow = useCallback(() => {
@@ -82,6 +88,12 @@ const TicketScreen: React.FC<TicketScreenProps> = ({ ticket, onNewTicket, onExit
 
     return (
         <div className={`flex flex-col items-center justify-center w-full h-screen overflow-y-auto transition-colors duration-500 ${isMyTicketCalled ? 'bg-jaboatao-green-prev' : 'bg-jaboatao-blue'}`}>
+            <Toast
+                show={toast.show}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+            />
             <div className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl p-6 sm:p-8 lg:p-10 landscape:p-4 text-center relative overflow-hidden my-auto">
                 {isMyTicketCalled && (
                     <div className="absolute inset-0 bg-jaboatao-green-prev text-white flex items-center justify-center z-20 animate-pulse">

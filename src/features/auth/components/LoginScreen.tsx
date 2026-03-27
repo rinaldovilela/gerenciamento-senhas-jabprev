@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { z } from 'zod';
 import { useAuth } from '@features/auth/contexts/AuthContext';
 import { TRANSLATIONS } from '@shared/constants';
 import type { Language } from '@shared/types';
@@ -10,6 +11,11 @@ const JaboataoPrevLogo: React.FC<{ className?: string }> = ({ className }) => (
     </div>
 );
 
+const loginSchema = z.object({
+    email: z.string().trim().email('Informe um e-mail valido.'),
+    password: z.string().min(8, 'A senha deve ter no minimo 8 caracteres.'),
+});
+
 
 interface LoginScreenProps {
     onLoginSuccess: () => void;
@@ -20,6 +26,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
     const language: Language = 'pt'; // Simplified
@@ -27,19 +34,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setFieldErrors({});
 
-        if (!email.trim()) {
-            setError(language === 'pt' ? 'Informe o e-mail.' : 'Please provide an email.');
-            return;
-        }
-
-        if (!password || password.length < 8) {
-            setError(language === 'pt' ? 'A senha deve ter no minimo 8 caracteres.' : 'Password must be at least 8 characters.');
+        const parsed = loginSchema.safeParse({ email, password });
+        if (!parsed.success) {
+            const formErrors = parsed.error.flatten().fieldErrors;
+            setFieldErrors({
+                email: formErrors.email?.[0],
+                password: formErrors.password?.[0],
+            });
             return;
         }
 
         setIsLoading(true);
-        const result = await login(email, password);
+        const result = await login(parsed.data.email, parsed.data.password);
         setIsLoading(false);
         if (result.success) {
             onLoginSuccess();
@@ -82,6 +90,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => 
                             className="w-full p-2 sm:p-3 bg-white border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-jaboatao-blue placeholder:text-text-secondary text-sm sm:text-base text-text-primary"
                             placeholder="admin@gov.br"
                         />
+                        {fieldErrors.email && <p className="mt-1 text-xs text-red-500">{fieldErrors.email}</p>}
                     </div>
                     <div>
                         <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-2">
@@ -98,6 +107,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => 
                             className="w-full p-2 sm:p-3 bg-white border border-border-color rounded-lg focus:outline-none focus:ring-2 focus:ring-jaboatao-blue placeholder:text-text-secondary text-sm sm:text-base text-text-primary"
                             placeholder="••••••••"
                         />
+                        {fieldErrors.password && <p className="mt-1 text-xs text-red-500">{fieldErrors.password}</p>}
                     </div>
                     {error && <p className="text-sm text-red-500">{error}</p>}
                     <div>

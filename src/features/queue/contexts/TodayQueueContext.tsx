@@ -11,6 +11,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@lib/supabase/client';
+import { config as appConfig } from '@lib/environment';
 import type { Ticket, Service, UserType, TicketStatus } from '@shared/types';
 import { useAuth } from '@features/auth/contexts/AuthContext';
 import { initializeSocket } from '@shared/services/SocketClient';
@@ -136,17 +137,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }, [fetchTodayData]);
 
     useEffect(() => {
-        let backendUrl = import.meta.env.VITE_BACKEND_URL;
-        
-        // Em produção, a falta da URL é um erro crítico
-        if (!backendUrl && import.meta.env.PROD) {
-            console.error('[TodayQueueContext] ❌ VITE_BACKEND_URL não definida em produção!');
-        }
-
-        // Fallback apenas para desenvolvimento
-        if (!backendUrl) {
-            backendUrl = 'http://localhost:3001';
-        }
+        const backendUrl = appConfig.wsUrl || 'ws://localhost:3001';
 
         console.log('[TodayQueueContext] Inicializando WebSocket:', backendUrl);
 
@@ -201,6 +192,42 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             // Fallback: tentar usar Supabase real-time se WebSocket falhar
             return undefined;
         }
+    }, [fetchTodayData]);
+
+    useEffect(() => {
+        const isToday = (dateString?: string): boolean => {
+            if (!dateString) return false;
+            const d = new Date(dateString);
+            const t = new Date();
+            return d.toDateString() === t.toDateString();
+        };
+
+        // Realtime direto do Supabase para manter painel público e operacional em sincronia
+        const channel = supabase
+            .channel('tickets-live-updates')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'tickets' },
+                (payload: any) => {
+                    const createdAt = payload?.new?.created_at || payload?.old?.created_at;
+                    if (isToday(createdAt)) {
+                        fetchTodayData();
+                    }
+                }
+            )
+            .subscribe((status) => {
+                console.log('[TodayQueueContext] Supabase realtime status:', status);
+            });
+
+        // Fallback de consistência para ambientes onde websocket/realtime sofram intermitência
+        const pollTimer = setInterval(() => {
+            fetchTodayData();
+        }, 15000);
+
+        return () => {
+            clearInterval(pollTimer);
+            supabase.removeChannel(channel);
+        };
     }, [fetchTodayData]);
 
     /**

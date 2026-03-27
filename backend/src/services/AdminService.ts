@@ -109,12 +109,28 @@ export async function updateUser(
     email?: string;
     role?: string;
     status?: string;
+    password?: string;
     updatedBy: string;
   }
 ): Promise<User> {
+  const { name, email, role, status, password } = updates;
+  const updateData: Record<string, any> = {};
+
+  if (name !== undefined) updateData.name = name;
+  if (email !== undefined) updateData.email = email;
+  if (role !== undefined) updateData.role = role;
+  if (status !== undefined) updateData.status = status;
+  if (password !== undefined) {
+    updateData.password_hash = await bcrypt.hash(password, 10);
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    throw new AppError(400, 'No valid fields provided for update');
+  }
+
   const { data: user, error } = await supabase
     .from('users')
-    .update(updates)
+    .update(updateData)
     .eq('id', userId)
     .select()
     .single();

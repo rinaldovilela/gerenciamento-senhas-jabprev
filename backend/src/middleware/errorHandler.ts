@@ -25,6 +25,10 @@ export function errorHandler(
     statusCode = err.statusCode;
     message = err.message;
     isOperational = err.isOperational;
+  } else if (err instanceof SyntaxError && 'body' in (err as any)) {
+    statusCode = 400;
+    message = 'Invalid JSON payload';
+    isOperational = true;
   } else if (err.name === 'ValidationError') {
     statusCode = 400;
     message = err.message;

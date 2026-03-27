@@ -12,6 +12,7 @@ import { UserTypeSelectionScreen } from '@features/queue/components';
 import { PrioritySelectionScreen } from '@features/queue/components';
 import { PublicDisplayScreen } from '@features/queue/components';
 import { NameInputScreen } from '@features/queue/components';
+import Toast from '@shared/components/Toast';
 import type { Ticket, Service, UserType } from '@shared/types';
 import { Screen } from '@shared/types';
 
@@ -22,6 +23,11 @@ const AppContent: React.FC = () => {
     const [selectedUserType, setSelectedUserType] = useState<UserType | null>(null);
     const [isPriority, setIsPriority] = useState<boolean>(false);
     const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
+    const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
+        show: false,
+        message: '',
+        type: 'info',
+    });
     const { addTicket } = useTodayQueue();
 
     // Detectar se entrou em fullscreen
@@ -128,11 +134,11 @@ const AppContent: React.FC = () => {
                 setActiveTicket(newTicket);
                 setCurrentScreen(Screen.TICKET);
             } else {
-                alert('Erro ao gerar senha. Por favor, tente novamente.');
+                setToast({ show: true, message: 'Erro ao gerar senha. Por favor, tente novamente.', type: 'error' });
             }
         } catch (error) {
             console.error('Failed to create ticket:', error);
-            alert('Erro de conexão. Verifique sua internet.');
+            setToast({ show: true, message: 'Erro de conexão. Verifique sua internet.', type: 'error' });
         }
     }, [addTicket, selectedService, selectedUserType, isPriority]);
 
@@ -212,6 +218,12 @@ const AppContent: React.FC = () => {
 
     return (
         <div className="min-h-screen font-sans">
+            <Toast
+                show={toast.show}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+            />
             {renderScreen()}
         </div>
     );

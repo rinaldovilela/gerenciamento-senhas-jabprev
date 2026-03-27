@@ -55,13 +55,14 @@ export async function listUsers(req: AuthRequest, res: Response, next: any) {
 
 export async function updateUser(req: AuthRequest, res: Response, next: any) {
   try {
-    const { name, email, role, status } = req.body;
+    const { name, email, role, status, password } = req.body;
 
     const user = await AdminService.updateUser(req.params.id, {
       name,
       email,
       role,
       status,
+      password,
       updatedBy: req.user!.id,
     });
 

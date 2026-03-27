@@ -1,11 +1,19 @@
 import io, { Socket } from 'socket.io-client';
 
 let socket: Socket | null = null;
+let socketUrl: string | null = null;
 
 export function initializeSocket(backendUrl: string): Socket {
   if (socket) {
-    console.log('[SocketClient] Socket já inicializado');
-    return socket;
+    if (socketUrl && socketUrl !== backendUrl) {
+      console.log('[SocketClient] URL alterada, recriando socket:', { de: socketUrl, para: backendUrl });
+      socket.disconnect();
+      socket = null;
+      socketUrl = null;
+    } else {
+      console.log('[SocketClient] Socket já inicializado');
+      return socket;
+    }
   }
 
   console.log('[SocketClient] Conectando ao backend:', backendUrl);
@@ -17,6 +25,7 @@ export function initializeSocket(backendUrl: string): Socket {
     reconnectionAttempts: 5,
     transports: ['websocket', 'polling'],
   });
+  socketUrl = backendUrl;
 
   socket.on('connect', () => {
     console.log('[SocketClient] ✅ Conectado ao backend');
@@ -47,6 +56,7 @@ export function closeSocket(): void {
   if (socket) {
     socket.disconnect();
     socket = null;
+    socketUrl = null;
     console.log('[SocketClient] Socket fechado');
   }
 }

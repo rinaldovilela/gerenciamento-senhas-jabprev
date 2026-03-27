@@ -22,6 +22,7 @@ import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { FileDownload, TrendingUp, Schedule } from '@mui/icons-material';
+import Toast from '@shared/components/Toast';
 
 const language: Language = 'pt';
 
@@ -66,6 +67,11 @@ const MetricsDashboard: React.FC = () => {
     const dashboardRef = useRef<HTMLDivElement>(null);
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+    const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
+        show: false,
+        message: '',
+        type: 'info',
+    });
     const exportRef = useRef<HTMLDivElement>(null);
 
     const today = new Date();
@@ -238,7 +244,7 @@ const MetricsDashboard: React.FC = () => {
             pdf.save(`relatorio_metricas_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.pdf`);
         } catch (error) {
             console.error('Erro ao gerar PDF:', error);
-            alert('Erro ao gerar relatório PDF. Tente novamente.');
+            setToast({ show: true, message: 'Erro ao gerar relatorio PDF. Tente novamente.', type: 'error' });
         }
     }, []);
 
@@ -300,6 +306,12 @@ const MetricsDashboard: React.FC = () => {
 
     return (
         <div className="fade-in">
+            <Toast
+                show={toast.show}
+                message={toast.message}
+                type={toast.type}
+                onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+            />
             <div ref={dashboardRef} className="space-y-8">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
