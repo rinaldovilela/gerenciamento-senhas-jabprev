@@ -4,24 +4,30 @@ import { ArrowBack, Person } from '@mui/icons-material';
 
 interface NameInputScreenProps {
     service: Service;
-    onSubmit: (attendeeName: string) => void;
+    onSubmit: (attendeeName: string) => Promise<void> | void;
     onBack: () => void;
     fullscreenMode?: boolean;
 }
 
 const NameInputScreen: React.FC<NameInputScreenProps> = ({ service, onSubmit, onBack, fullscreenMode }) => {
     const [name, setName] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const isValid = useMemo(() => name.trim().length >= 3, [name]);
 
-    const handleSubmit = (event: React.FormEvent) => {
+    const handleSubmit = async (event: React.FormEvent) => {
         event.preventDefault();
 
-        if (!isValid) {
+        if (!isValid || isSubmitting) {
             return;
         }
 
-        onSubmit(name.trim());
+        try {
+            setIsSubmitting(true);
+            await onSubmit(name.trim());
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -71,16 +77,17 @@ const NameInputScreen: React.FC<NameInputScreenProps> = ({ service, onSubmit, on
                         <button
                             type="button"
                             onClick={onBack}
+                            disabled={isSubmitting}
                             className="w-full py-3 rounded-xl border border-border-color bg-white text-text-primary font-semibold hover:bg-slate-50 transition-colors"
                         >
                             Voltar
                         </button>
                         <button
                             type="submit"
-                            disabled={!isValid}
+                            disabled={!isValid || isSubmitting}
                             className="w-full py-3 rounded-xl bg-jaboatao-blue text-white font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Gerar senha
+                            {isSubmitting ? 'Gerando...' : 'Gerar senha'}
                         </button>
                     </div>
                 </form>

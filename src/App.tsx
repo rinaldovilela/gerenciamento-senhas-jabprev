@@ -23,6 +23,7 @@ const AppContent: React.FC = () => {
     const [selectedUserType, setSelectedUserType] = useState<UserType | null>(null);
     const [isPriority, setIsPriority] = useState<boolean>(false);
     const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
+    const [isGeneratingTicket, setIsGeneratingTicket] = useState<boolean>(false);
     const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
         show: false,
         message: '',
@@ -118,6 +119,10 @@ const AppContent: React.FC = () => {
     }, [selectedUserType]);
 
     const handleAttendeeNameSubmitted = useCallback(async (attendeeName: string) => {
+        if (isGeneratingTicket) {
+            return;
+        }
+
         if (!selectedUserType) {
             setCurrentScreen(Screen.HOME);
             return;
@@ -129,6 +134,7 @@ const AppContent: React.FC = () => {
         }
         
         try {
+            setIsGeneratingTicket(true);
             const newTicket = await addTicket(selectedService.id, selectedUserType, isPriority, attendeeName);
             if (newTicket) {
                 setActiveTicket(newTicket);
@@ -139,8 +145,10 @@ const AppContent: React.FC = () => {
         } catch (error) {
             console.error('Failed to create ticket:', error);
             setToast({ show: true, message: 'Erro de conexão. Verifique sua internet.', type: 'error' });
+        } finally {
+            setIsGeneratingTicket(false);
         }
-    }, [addTicket, selectedService, selectedUserType, isPriority]);
+    }, [addTicket, selectedService, selectedUserType, isPriority, isGeneratingTicket]);
 
     const handleNewTicketRequest = useCallback(() => {
         setActiveTicket(null);

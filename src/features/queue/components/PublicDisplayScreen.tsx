@@ -19,8 +19,7 @@ const UserTypeIcon: React.FC<{ userType: UserType }> = ({ userType }) => {
     }
 };
 
-// Base64 encoded WAV file for a simple "ding" sound
-const notificationSound = "data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU"+Array(30).join("9vT19");
+const notificationSound = '/sounds/campainha_geren_senhas_jabprev.mp3';
 
 const getGuicheForTicket = (ticket: Ticket): string => {
     if (ticket.is_priority) return 'Guichê 1 (Prioritário)';
@@ -60,11 +59,22 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
     useEffect(() => {
         if (PANEL_CONFIG.mostrarSons) {
             audioRef.current = new Audio(notificationSound);
+            audioRef.current.volume = 0.8;
         }
-        const timer = setInterval(() => {
+    }, []);
+
+    useEffect(() => {
+        let timerId: number;
+
+        const updateClock = () => {
             setCurrentTime(new Date());
-        }, PANEL_CONFIG.atualizacaoAutomatica);
-        return () => clearInterval(timer);
+            const now = Date.now();
+            const delayToNextSecond = 1000 - (now % 1000);
+            timerId = window.setTimeout(updateClock, delayToNextSecond);
+        };
+
+        updateClock();
+        return () => window.clearTimeout(timerId);
     }, []);
 
     const inProgressTickets = useMemo(() => {
@@ -73,12 +83,14 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
             .sort((a, b) => new Date(b.started_at!).getTime() - new Date(a.started_at!).getTime())
             .slice(0, PANEL_CONFIG.mostrarEmAtendimento);
     }, [tickets]);
+
+    const mainInProgressTicket = inProgressTickets[0] || null;
+    const secondaryInProgressTickets = inProgressTickets.slice(1);
     
     const waitingTickets = useMemo(() => {
         return tickets
             .filter(t => t.status === 'waiting')
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
-            .slice(0, PANEL_CONFIG.mostrarProximas);
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     }, [tickets]);
 
     useEffect(() => {
@@ -104,7 +116,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
     }, [inProgressTickets]);
 
     return (
-        <div className="flex flex-col w-full min-h-screen p-3 sm:p-4 md:p-6 bg-panel-bg font-poppins text-panel-secondary">
+        <div className="flex flex-col w-full h-screen overflow-hidden p-3 sm:p-4 md:p-6 bg-panel-bg font-poppins text-panel-secondary">
             <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4">
                 <div className="flex items-center gap-4">
                     <button 
@@ -136,39 +148,73 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 </div>
             </header>
 
-            <main className="flex-grow grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                <section className="md:col-span-2 bg-white/70 p-4 md:p-6 rounded-2xl shadow-lg">
+            <main className="flex-grow min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <section className="md:col-span-2 bg-white/70 p-4 md:p-6 rounded-2xl shadow-lg min-h-0 overflow-hidden">
                     <h2 className="font-poppins text-2xl sm:text-3xl md:text-4xl font-bold text-panel-primary mb-3 md:mb-4 border-b-4 border-panel-primary pb-2">SENHAS EM ATENDIMENTO</h2>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-6 min-h-[150px] md:min-h-[unset]">
-                        {inProgressTickets.length > 0 ? inProgressTickets.map(ticket => {
-                             const isNewlyCalled = ticket.id === lastCalledTicketId;
-                             return (
-                                <div key={ticket.id} className={`flex flex-col justify-center items-center p-4 rounded-xl transition-all duration-300 ${isNewlyCalled ? 'bg-jaboatao-green-prev/80 text-white shadow-2xl scale-105 animate-pulse' : 'bg-white shadow-md'}`}>
-                                    <p className={`font-bold text-lg md:text-2xl ${isNewlyCalled ? 'text-white' : 'text-panel-secondary'}`}>{getGuicheForTicket(ticket)}</p>
-                                    <p className={`font-bold text-5xl sm:text-6xl md:text-8xl my-2 tracking-tighter ${isNewlyCalled ? 'text-white' : 'text-panel-primary'}`}>{ticket.formatted_number}</p>
-                                    <p className={`text-base md:text-lg font-semibold mb-2 ${isNewlyCalled ? 'text-white' : 'text-text-primary'}`}>
-                                        {ticket.attendee_name || 'Nome nao informado'}
-                                    </p>
-                                    <div className={`flex items-center text-sm md:text-xl font-semibold border-4 rounded-lg px-3 md:px-4 py-2 border-blue-600/40 ${isNewlyCalled ? 'text-white border-transparent' : 'text-blue-600'}`}>
-                                        <div className="w-3 h-3 bg-blue-600 rounded-full mr-2 animate-ping"></div>
-                                        Em Atendimento
+                    {mainInProgressTicket ? (
+                        <>
+                            <div
+                                className={`flex flex-col justify-center items-center p-6 md:p-8 rounded-2xl transition-all duration-300 mb-4 md:mb-6 min-h-[280px] md:min-h-[360px] ${
+                                    mainInProgressTicket.id === lastCalledTicketId
+                                        ? 'bg-jaboatao-green-prev/80 text-white shadow-2xl animate-pulse'
+                                        : 'bg-white shadow-xl'
+                                }`}
+                            >
+                                <p className={`font-bold text-xl md:text-3xl ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-panel-secondary'}`}>
+                                    {getGuicheForTicket(mainInProgressTicket)}
+                                </p>
+                                <p className={`font-bold text-7xl sm:text-8xl md:text-9xl my-3 tracking-tighter ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-panel-primary'}`}>
+                                    {mainInProgressTicket.formatted_number}
+                                </p>
+                                <p className={`text-lg md:text-2xl font-semibold mb-3 ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-text-primary'}`}>
+                                    {mainInProgressTicket.attendee_name || 'Nome nao informado'}
+                                </p>
+                                <div className={`flex items-center text-base md:text-2xl font-semibold border-4 rounded-lg px-4 md:px-5 py-2 border-blue-600/40 ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white border-transparent' : 'text-blue-600'}`}>
+                                    <div className="w-3 h-3 bg-blue-600 rounded-full mr-2 animate-ping"></div>
+                                    Em Atendimento
+                                </div>
+                            </div>
+
+                            {secondaryInProgressTickets.length > 0 && (
+                                <div>
+                                    <p className="text-sm md:text-base font-semibold text-panel-secondary mb-2">Outras senhas em atendimento</p>
+                                    <div className="flex gap-3 overflow-x-auto pb-2">
+                                        {secondaryInProgressTickets.map(ticket => {
+                                            const isNewlyCalled = ticket.id === lastCalledTicketId;
+                                            return (
+                                                <div
+                                                    key={ticket.id}
+                                                    className={`flex-shrink-0 min-w-[220px] md:min-w-[260px] flex flex-col justify-center items-center p-4 rounded-xl transition-all duration-300 ${
+                                                        isNewlyCalled ? 'bg-jaboatao-green-prev/80 text-white shadow-xl animate-pulse' : 'bg-white shadow-md'
+                                                    }`}
+                                                >
+                                                    <p className={`font-bold text-sm md:text-lg ${isNewlyCalled ? 'text-white' : 'text-panel-secondary'}`}>{getGuicheForTicket(ticket)}</p>
+                                                    <p className={`font-bold text-4xl md:text-5xl my-1 tracking-tighter ${isNewlyCalled ? 'text-white' : 'text-panel-primary'}`}>{ticket.formatted_number}</p>
+                                                    <p className={`text-sm md:text-base font-semibold ${isNewlyCalled ? 'text-white' : 'text-text-primary'}`}>{ticket.attendee_name || 'Nome nao informado'}</p>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                 </div>
-                            )
-                        }) : <p className="col-span-full text-base md:text-2xl text-center self-center text-text-secondary">Nenhuma senha em atendimento no momento.</p>}
-                    </div>
+                            )}
+                        </>
+                    ) : (
+                        <p className="text-base md:text-2xl text-center self-center text-text-secondary min-h-[150px] flex items-center justify-center">
+                            Nenhuma senha em atendimento no momento.
+                        </p>
+                    )}
                 </section>
 
-                <aside className="md:col-span-1 bg-white/70 p-4 md:p-6 rounded-2xl shadow-lg flex flex-col">
+                <aside className="md:col-span-1 bg-white/70 p-4 md:p-6 rounded-2xl shadow-lg flex flex-col h-full min-h-0 overflow-hidden">
                     <h2 className="font-poppins text-2xl sm:text-3xl md:text-3xl font-bold text-panel-primary mb-3 md:mb-4 border-b-4 border-panel-primary pb-2">PRÓXIMAS SENHAS</h2>
-                    <ul className="space-y-3 flex-grow overflow-y-auto">
+                    <ul className="space-y-3 flex-grow overflow-y-auto min-h-0">
                         {waitingTickets.length > 0 ? waitingTickets.map(ticket => (
                             <li key={ticket.id} className="flex items-center justify-between bg-white p-3 md:p-4 rounded-lg shadow-sm text-base md:text-2xl">
                                 <div>
                                     <span className="font-bold text-panel-primary block">{ticket.formatted_number}</span>
                                     <span className="text-xs md:text-sm text-text-secondary block">{ticket.attendee_name || 'Nome nao informado'}</span>
                                 </div>
-                                <div className="flex items-center font-semibold capitalize text-xs md:text-sm">
+                                <div className="flex items-center gap-1 font-semibold capitalize text-xs md:text-sm">
                                    <UserTypeIcon userType={ticket.user_type} /> {ticket.user_type.replace('_', ' ')}
                                 </div>
                             </li>
