@@ -163,10 +163,10 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                                 <p className={`font-bold text-xl md:text-3xl ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-panel-secondary'}`}>
                                     {getGuicheForTicket(mainInProgressTicket)}
                                 </p>
-                                <p className={`font-bold text-7xl sm:text-8xl md:text-9xl my-3 tracking-tighter ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-panel-primary'}`}>
+                                <p className={`font-bold text-5xl sm:text-6xl md:text-7xl my-2 tracking-tighter ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-panel-primary'}`}>
                                     {mainInProgressTicket.formatted_number}
                                 </p>
-                                <p className={`text-lg md:text-2xl font-semibold mb-3 ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-text-primary'}`}>
+                                <p className={`text-4xl sm:text-5xl md:text-6xl font-bold mb-3 ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-text-primary'}`}>
                                     {mainInProgressTicket.attendee_name || 'Nome nao informado'}
                                 </p>
                                 <div className={`flex items-center text-base md:text-2xl font-semibold border-4 rounded-lg px-4 md:px-5 py-2 border-blue-600/40 ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white border-transparent' : 'text-blue-600'}`}>
