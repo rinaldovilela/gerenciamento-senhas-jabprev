@@ -57,7 +57,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                     <NavButton label="Acompanhamento de Senhas" onClick={() => setView('tracking')} active={view === 'tracking'}>
                         <TrackingIcon />
                     </NavButton>
-                    {user.role === 'ADMIN' && (
+                    {user.role === 'admin' && (
                         <NavButton label="Painel de Métricas" onClick={() => setView('metrics')} active={view === 'metrics'}>
                             <MetricsIcon />
                         </NavButton>
@@ -79,7 +79,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
             {/* Main Content */}
             <main className="flex-grow p-4 md:p-8 overflow-y-auto">
                 {view === 'tracking' && <AttendanceTrackingScreen />}
-                {view === 'metrics' && user.role === 'ADMIN' && <MetricsDashboard />}
+                {view === 'metrics' && user.role === 'admin' && <MetricsDashboard />}
             </main>
         </div>
     );

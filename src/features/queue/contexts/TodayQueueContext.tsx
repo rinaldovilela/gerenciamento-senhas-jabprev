@@ -23,7 +23,7 @@ interface TodayQueueContextType {
     isLoadingToday: boolean;
     
     // Funções operacionais
-    addTicket: (serviceId: string, userType: UserType, isPriority: boolean) => Promise<Ticket | null>;
+    addTicket: (serviceId: string, userType: UserType, isPriority: boolean, attendeeName?: string) => Promise<Ticket | null>;
     callNextTicket: (serviceId: string) => Promise<void>;
     updateTicketStatus: (ticketId: string, status: TicketStatus, reason?: string) => Promise<void>;
     
@@ -101,6 +101,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 id: doc.id,
                 number: doc.number,
                 formatted_number: doc.formatted_number,
+                attendee_name: doc.attendee_name || null,
                 service_id: doc.service_id,
                 service: doc.service
                     ? {
@@ -206,13 +207,14 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
      * Adiciona nova senha
      */
     const addTicket = useCallback(
-        async (serviceId: string, userType: UserType, isPriority: boolean): Promise<Ticket | null> => {
+        async (serviceId: string, userType: UserType, isPriority: boolean, attendeeName?: string): Promise<Ticket | null> => {
             try {
                 // Usar a função RPC do Supabase para criar a senha
                 const { data: newTicketDocument, error } = await supabase.rpc('create_ticket', {
                     p_service_id: serviceId,
                     p_user_type: userType,
                     p_is_priority: isPriority,
+                    p_attendee_name: attendeeName || null,
                 });
 
                 if (error) throw error;
@@ -222,6 +224,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     id: newTicketDocument.id,
                     number: newTicketDocument.number,
                     formatted_number: newTicketDocument.formatted_number,
+                    attendee_name: newTicketDocument.attendee_name || null,
                     service_id: newTicketDocument.service_id,
                     service: service
                         ? {
@@ -268,7 +271,9 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     updatePayload.completed_at = new Date().toISOString();
                 }
 
-                if (user && isUuid(user.id)) {
+                // operator_id pode ter FK diferente entre ambientes legados.
+                // Mantemos o update de status resiliente sem forcar operator_id quando houver conflito.
+                if (user && isUuid(user.id) && status === 'in_progress') {
                     updatePayload.operator_id = user.id;
                 }
 
@@ -280,6 +285,42 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     .eq('id', ticketId)
                     .select('*')
                     .maybeSingle();
+
+                if (error && updatePayload.operator_id) {
+                    const fallbackPayload = { ...updatePayload };
+                    delete fallbackPayload.operator_id;
+
+                    const { data: fallbackRow, error: fallbackError } = await supabase
+                        .from('tickets')
+                        .update(fallbackPayload)
+                        .eq('id', ticketId)
+                        .select('*')
+                        .maybeSingle();
+
+                    if (fallbackError) throw fallbackError;
+
+                    if (!fallbackRow) {
+                        throw new Error('Nenhuma linha foi atualizada. Verifique políticas RLS/permissões.');
+                    }
+
+                    setTodayTickets(prevTickets =>
+                        prevTickets.map(ticket =>
+                            ticket.id === ticketId
+                                ? {
+                                      ...ticket,
+                                      status: fallbackRow.status,
+                                      operator_id: fallbackRow.operator_id || ticket.operator_id,
+                                      started_at: fallbackRow.started_at || ticket.started_at,
+                                      completed_at: fallbackRow.completed_at || ticket.completed_at,
+                                      updated_at: fallbackRow.updated_at || ticket.updated_at,
+                                  }
+                                : ticket
+                        )
+                    );
+
+                    console.warn('[TodayQueueContext] Update com operator_id falhou; aplicado fallback sem operator_id');
+                    return;
+                }
 
                 if (error) throw error;
 
@@ -340,6 +381,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                         id: nextTicketDocument.id,
                         number: nextTicketDocument.number,
                         formatted_number: nextTicketDocument.formatted_number,
+                        attendee_name: nextTicketDocument.attendee_name || null,
                         service_id: nextTicketDocument.service_id,
                         service: nextTicketDocument.service
                             ? {

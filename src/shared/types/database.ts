@@ -16,6 +16,7 @@ export interface Ticket {
     id: string; // Mapped from Appwrite's $id
     number: number;
     formatted_number: string;
+    attendee_name?: string | null;
     service_id: string;
     service: Service | null; // Can be null if service data isn't loaded or found
     user_type: UserType;
@@ -37,14 +38,17 @@ export interface QueueState {
 export interface User {
     id: string;
     email: string;
-    role: 'ADMIN' | 'OPERATOR';
+    role: UserRole;
 }
+
+export type UserRole = 'user' | 'operator' | 'admin';
 
 export enum Screen {
     HOME = 'HOME',
     USER_TYPE_SELECTION = 'USER_TYPE_SELECTION',
     PRIORITY_SELECTION = 'PRIORITY_SELECTION',
     SERVICE_SELECTION = 'SERVICE_SELECTION',
+    NAME_INPUT = 'NAME_INPUT',
     TICKET = 'TICKET',
     LOGIN = 'LOGIN',
     RESTRICTED_AREA = 'RESTRICTED_AREA',

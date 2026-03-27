@@ -101,6 +101,9 @@ const TicketScreen: React.FC<TicketScreenProps> = ({ ticket, onNewTicket, onExit
                     <div className="border border-border-color p-3 sm:p-4 landscape:p-2 rounded-xl mb-3 sm:mb-4 landscape:mb-2">
                         <p className="text-lg sm:text-xl landscape:text-sm font-semibold text-text-primary">{ticket.service.name}</p>
                         <p className="text-base md:text-lg landscape:text-xs text-text-secondary">{ticket.service.description}</p>
+                        <p className="text-sm md:text-base landscape:text-xs text-text-primary mt-1">
+                            Nome: <span className="font-semibold">{ticket.attendee_name || 'Nao informado'}</span>
+                        </p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 landscape:gap-1 text-left mb-4 sm:mb-6 landscape:mb-2">

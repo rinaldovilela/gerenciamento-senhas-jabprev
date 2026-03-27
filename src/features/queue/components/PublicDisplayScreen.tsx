@@ -146,6 +146,9 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                                 <div key={ticket.id} className={`flex flex-col justify-center items-center p-4 rounded-xl transition-all duration-300 ${isNewlyCalled ? 'bg-jaboatao-green-prev/80 text-white shadow-2xl scale-105 animate-pulse' : 'bg-white shadow-md'}`}>
                                     <p className={`font-bold text-lg md:text-2xl ${isNewlyCalled ? 'text-white' : 'text-panel-secondary'}`}>{getGuicheForTicket(ticket)}</p>
                                     <p className={`font-bold text-5xl sm:text-6xl md:text-8xl my-2 tracking-tighter ${isNewlyCalled ? 'text-white' : 'text-panel-primary'}`}>{ticket.formatted_number}</p>
+                                    <p className={`text-base md:text-lg font-semibold mb-2 ${isNewlyCalled ? 'text-white' : 'text-text-primary'}`}>
+                                        {ticket.attendee_name || 'Nome nao informado'}
+                                    </p>
                                     <div className={`flex items-center text-sm md:text-xl font-semibold border-4 rounded-lg px-3 md:px-4 py-2 border-blue-600/40 ${isNewlyCalled ? 'text-white border-transparent' : 'text-blue-600'}`}>
                                         <div className="w-3 h-3 bg-blue-600 rounded-full mr-2 animate-ping"></div>
                                         Em Atendimento
@@ -161,7 +164,10 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                     <ul className="space-y-3 flex-grow overflow-y-auto">
                         {waitingTickets.length > 0 ? waitingTickets.map(ticket => (
                             <li key={ticket.id} className="flex items-center justify-between bg-white p-3 md:p-4 rounded-lg shadow-sm text-base md:text-2xl">
-                                <span className="font-bold text-panel-primary">{ticket.formatted_number}</span>
+                                <div>
+                                    <span className="font-bold text-panel-primary block">{ticket.formatted_number}</span>
+                                    <span className="text-xs md:text-sm text-text-secondary block">{ticket.attendee_name || 'Nome nao informado'}</span>
+                                </div>
                                 <div className="flex items-center font-semibold capitalize text-xs md:text-sm">
                                    <UserTypeIcon userType={ticket.user_type} /> {ticket.user_type.replace('_', ' ')}
                                 </div>

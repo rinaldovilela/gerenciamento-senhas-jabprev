@@ -82,6 +82,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                         id: doc.id,
                         number: doc.number,
                         formatted_number: doc.formatted_number,
+                        attendee_name: doc.attendee_name || null,
                         service_id: doc.service_id,
                         service: doc.service
                             ? {

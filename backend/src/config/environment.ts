@@ -25,7 +25,7 @@ export const config = {
 };
 
 // Validate required env vars
-const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'];
+const requiredEnvVars = ['SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'JWT_SECRET'];
 const missing = requiredEnvVars.filter(key => !process.env[key]);
 
 if (missing.length > 0) {

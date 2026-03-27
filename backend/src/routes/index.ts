@@ -22,16 +22,16 @@ export function createRoutes(): Router {
   router.post('/queue/ticket', authMiddleware, queueController.createTicket);
   router.get('/queue/tickets', authMiddleware, queueController.listTickets);
   router.get('/queue/tickets/:id', authMiddleware, queueController.getTicket);
-  router.patch('/queue/tickets/:id', operatorOnlyMiddleware, queueController.updateTicket);
-  router.delete('/queue/tickets/:id', operatorOnlyMiddleware, queueController.deleteTicket);
+  router.patch('/queue/tickets/:id', authMiddleware, operatorOnlyMiddleware, queueController.updateTicket);
+  router.delete('/queue/tickets/:id', authMiddleware, operatorOnlyMiddleware, queueController.deleteTicket);
 
   // Admin routes
-  router.get('/admin/dashboard', adminOnlyMiddleware, adminController.getDashboard);
-  router.get('/admin/metrics', adminOnlyMiddleware, adminController.getMetrics);
-  router.post('/admin/users', adminOnlyMiddleware, adminController.createUser);
-  router.get('/admin/users', adminOnlyMiddleware, adminController.listUsers);
-  router.patch('/admin/users/:id', adminOnlyMiddleware, adminController.updateUser);
-  router.delete('/admin/users/:id', adminOnlyMiddleware, adminController.deleteUser);
+  router.get('/admin/dashboard', authMiddleware, adminOnlyMiddleware, adminController.getDashboard);
+  router.get('/admin/metrics', authMiddleware, adminOnlyMiddleware, adminController.getMetrics);
+  router.post('/admin/users', authMiddleware, adminOnlyMiddleware, adminController.createUser);
+  router.get('/admin/users', authMiddleware, adminOnlyMiddleware, adminController.listUsers);
+  router.patch('/admin/users/:id', authMiddleware, adminOnlyMiddleware, adminController.updateUser);
+  router.delete('/admin/users/:id', authMiddleware, adminOnlyMiddleware, adminController.deleteUser);
 
   return router;
 }

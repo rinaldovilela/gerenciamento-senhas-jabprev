@@ -27,13 +27,24 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+
+        if (!email.trim()) {
+            setError(language === 'pt' ? 'Informe o e-mail.' : 'Please provide an email.');
+            return;
+        }
+
+        if (!password || password.length < 8) {
+            setError(language === 'pt' ? 'A senha deve ter no minimo 8 caracteres.' : 'Password must be at least 8 characters.');
+            return;
+        }
+
         setIsLoading(true);
-        const success = await login(email, password);
+        const result = await login(email, password);
         setIsLoading(false);
-        if (success) {
+        if (result.success) {
             onLoginSuccess();
         } else {
-            setError(TRANSLATIONS.loginError[language]);
+            setError(result.error || TRANSLATIONS.loginError[language]);
         }
     };
 

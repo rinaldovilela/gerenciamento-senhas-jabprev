@@ -6,6 +6,7 @@ import { errorHandler } from '../middleware/errorHandler';
 
 export function createServer(): Express {
   const app = express();
+  const allowedOrigins = config.CORS_ORIGIN.split(',').map(origin => origin.trim()).filter(Boolean);
 
   // Middleware - Body parsing
   app.use(express.json({ limit: '10mb' }));
@@ -14,7 +15,19 @@ export function createServer(): Express {
   // Middleware - CORS
   app.use(
     cors({
-      origin: config.CORS_ORIGIN,
+      origin: (origin, callback) => {
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+          return;
+        }
+
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      },
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization'],

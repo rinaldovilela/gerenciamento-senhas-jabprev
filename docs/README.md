@@ -42,4 +42,5 @@ Este indice organiza os documentos por ordem cronologica de uso (do setup ao rel
 ## 7. Historico de Reorganizacao
 
 1. [changes/2026-03-26_REORGANIZATION_COMPLETE.md](changes/2026-03-26_REORGANIZATION_COMPLETE.md)
-2. [BACKEND_README.md](BACKEND_README.md)
+2. [changes/2026-03-27_UNCOMMITTED_CHANGES_LOG.md](changes/2026-03-27_UNCOMMITTED_CHANGES_LOG.md)
+3. [BACKEND_README.md](BACKEND_README.md)

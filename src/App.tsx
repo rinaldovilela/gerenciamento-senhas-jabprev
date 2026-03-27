@@ -11,12 +11,14 @@ import { RestrictedArea } from '@features/queue/components';
 import { UserTypeSelectionScreen } from '@features/queue/components';
 import { PrioritySelectionScreen } from '@features/queue/components';
 import { PublicDisplayScreen } from '@features/queue/components';
+import { NameInputScreen } from '@features/queue/components';
 import type { Ticket, Service, UserType } from '@shared/types';
 import { Screen } from '@shared/types';
 
 const AppContent: React.FC = () => {
     const [currentScreen, setCurrentScreen] = useState<Screen>(Screen.HOME);
     const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
+    const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [selectedUserType, setSelectedUserType] = useState<UserType | null>(null);
     const [isPriority, setIsPriority] = useState<boolean>(false);
     const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
@@ -63,6 +65,7 @@ const AppContent: React.FC = () => {
             }
             setCurrentScreen(Screen.HOME);
             setActiveTicket(null);
+            setSelectedService(null);
             setSelectedUserType(null);
             setIsPriority(false);
         } catch (error) {
@@ -98,13 +101,29 @@ const AppContent: React.FC = () => {
     }, []);
 
     const handleServiceSelected = useCallback(async (service: Service) => {
+        setSelectedService(service);
+
         if (!selectedUserType) {
             setCurrentScreen(Screen.HOME);
             return;
         }
+
+        setCurrentScreen(Screen.NAME_INPUT);
+    }, [selectedUserType]);
+
+    const handleAttendeeNameSubmitted = useCallback(async (attendeeName: string) => {
+        if (!selectedUserType) {
+            setCurrentScreen(Screen.HOME);
+            return;
+        }
+
+        if (!selectedService) {
+            setCurrentScreen(Screen.SERVICE_SELECTION);
+            return;
+        }
         
         try {
-            const newTicket = await addTicket(service.id, selectedUserType, isPriority);
+            const newTicket = await addTicket(selectedService.id, selectedUserType, isPriority, attendeeName);
             if (newTicket) {
                 setActiveTicket(newTicket);
                 setCurrentScreen(Screen.TICKET);
@@ -115,10 +134,11 @@ const AppContent: React.FC = () => {
             console.error('Failed to create ticket:', error);
             alert('Erro de conexão. Verifique sua internet.');
         }
-    }, [addTicket, selectedUserType, isPriority]);
+    }, [addTicket, selectedService, selectedUserType, isPriority]);
 
     const handleNewTicketRequest = useCallback(() => {
         setActiveTicket(null);
+        setSelectedService(null);
         setSelectedUserType(null);
         setIsPriority(false);
         // Em fullscreen, retorna para selecionar tipo de atendimento
@@ -132,6 +152,7 @@ const AppContent: React.FC = () => {
     
     const showHome = useCallback(() => {
         setSelectedUserType(null);
+        setSelectedService(null);
         setIsPriority(false);
         setCurrentScreen(fullscreenMode ? Screen.USER_TYPE_SELECTION : Screen.HOME);
     }, [fullscreenMode]);
@@ -172,6 +193,10 @@ const AppContent: React.FC = () => {
                 return <PrioritySelectionScreen onSelect={handlePrioritySelected} onBack={showUserTypeSelection} fullscreenMode={fullscreenMode} />;
             case Screen.SERVICE_SELECTION:
                 return <ServiceSelectionScreen onServiceSelected={handleServiceSelected} onBack={handleBackFromServiceSelection} fullscreenMode={fullscreenMode} />;
+            case Screen.NAME_INPUT:
+                return selectedService
+                    ? <NameInputScreen service={selectedService} onSubmit={handleAttendeeNameSubmitted} onBack={() => setCurrentScreen(Screen.SERVICE_SELECTION)} fullscreenMode={fullscreenMode} />
+                    : <ServiceSelectionScreen onServiceSelected={handleServiceSelected} onBack={handleBackFromServiceSelection} fullscreenMode={fullscreenMode} />;
             case Screen.TICKET:
                 return activeTicket ? <TicketScreen ticket={activeTicket} onNewTicket={handleNewTicketRequest} onExit={fullscreenMode ? exitFullscreen : undefined} fullscreenMode={fullscreenMode} /> : <HomeScreen onStart={handleStart} onAdminClick={showLogin} onPublicDisplayClick={showPublicDisplay} onFullscreenMode={requestFullscreen} />;
             case Screen.LOGIN:
