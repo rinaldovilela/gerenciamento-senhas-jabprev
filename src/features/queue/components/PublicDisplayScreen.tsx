@@ -47,7 +47,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
 
             // Pequeno delay de 800ms após campainha
             setTimeout(() => {
-                const text = `Senha, ${ticketNumber}, ${attendeeName}`;
+                const text = `Senha, ${ticketNumber}, ${attendeeName.toUpperCase()}`;
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'pt-BR';
                 utterance.rate = 0.9;
@@ -198,7 +198,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                                     {mainInProgressTicket.formatted_number}
                                 </p>
                                 <p className={`text-4xl sm:text-5xl md:text-6xl font-bold mb-3 ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-text-primary'}`}>
-                                    {mainInProgressTicket.attendee_name || 'Nome nao informado'}
+                                    {(mainInProgressTicket.attendee_name || 'Nome nao informado').toUpperCase()}
                                 </p>
                                 <div className={`flex items-center text-base md:text-2xl font-semibold border-4 rounded-lg px-4 md:px-5 py-2 border-blue-600/40 ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white border-transparent' : 'text-blue-600'}`}>
                                     <div className="w-3 h-3 bg-blue-600 rounded-full mr-2 animate-ping"></div>
@@ -221,7 +221,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                                                 >
                                                     <p className={`font-bold text-sm md:text-lg ${isNewlyCalled ? 'text-white' : 'text-panel-secondary'}`}>{getGuicheForTicket(ticket)}</p>
                                                     <p className={`font-bold text-4xl md:text-5xl my-1 tracking-tighter ${isNewlyCalled ? 'text-white' : 'text-panel-primary'}`}>{ticket.formatted_number}</p>
-                                                    <p className={`text-sm md:text-base font-semibold ${isNewlyCalled ? 'text-white' : 'text-text-primary'}`}>{ticket.attendee_name || 'Nome nao informado'}</p>
+                                                    <p className={`text-sm md:text-base font-semibold ${isNewlyCalled ? 'text-white' : 'text-text-primary'}`}>{(ticket.attendee_name || 'Nome nao informado').toUpperCase()}</p>
                                                 </div>
                                             );
                                         })}
@@ -243,7 +243,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                             <li key={ticket.id} className="flex items-center justify-between bg-white p-3 md:p-4 rounded-lg shadow-sm text-base md:text-2xl">
                                 <div>
                                     <span className="font-bold text-panel-primary block">{ticket.formatted_number}</span>
-                                    <span className="text-xs md:text-sm text-text-secondary block">{ticket.attendee_name || 'Nome nao informado'}</span>
+                                    <span className="text-xs md:text-sm text-text-secondary block">{(ticket.attendee_name || 'Nome nao informado').toUpperCase()}</span>
                                 </div>
                                 <div className="flex items-center gap-1 font-semibold capitalize text-xs md:text-sm">
                                    <UserTypeIcon userType={ticket.user_type} /> {ticket.user_type.replace('_', ' ')}
