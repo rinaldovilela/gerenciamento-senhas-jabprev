@@ -37,6 +37,26 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
     const [isFullscreen, setIsFullscreen] = useState(false);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const previousInProgressIds = useRef<Set<string>>(new Set());
+    const spokenTicketIds = useRef<Set<string>>(new Set());
+
+    // Função para ler senha e nome em voz alta
+    const speakTicket = (ticketNumber: string, attendeeName: string) => {
+        if ('speechSynthesis' in window) {
+            // Cancelar qualquer fala anterior
+            window.speechSynthesis.cancel();
+
+            // Pequeno delay de 800ms após campainha
+            setTimeout(() => {
+                const text = `Senha, ${ticketNumber}, ${attendeeName}`;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'pt-BR';
+                utterance.rate = 0.9;
+                utterance.pitch = 1;
+                utterance.volume = 1;
+                window.speechSynthesis.speak(utterance);
+            }, 800);
+        }
+    };
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -67,7 +87,9 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
         let timerId: number;
 
         const updateClock = () => {
-            setCurrentTime(new Date());
+            // Sincronizar com timezone de Jaboatão, Pernambuco (America/Recife - UTC-3)
+            const jaboataoTime = new Date(new Date().toLocaleString('pt-BR', { timeZone: 'America/Recife' }));
+            setCurrentTime(jaboataoTime);
             const now = Date.now();
             const delayToNextSecond = 1000 - (now % 1000);
             timerId = window.setTimeout(updateClock, delayToNextSecond);
@@ -105,6 +127,15 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
             
             if (PANEL_CONFIG.mostrarSons && audioRef.current) {
                 audioRef.current.play().catch(e => console.error("Error playing sound:", e));
+            }
+
+            // Ler senha e nome em voz alta (apenas uma vez por ticket)
+            if (!spokenTicketIds.current.has(latestCallId)) {
+                const ticket = inProgressTickets.find(t => t.id === latestCallId);
+                if (ticket && ticket.formatted_number && ticket.attendee_name) {
+                    speakTicket(ticket.formatted_number, ticket.attendee_name);
+                    spokenTicketIds.current.add(latestCallId);
+                }
             }
 
             setTimeout(() => {
