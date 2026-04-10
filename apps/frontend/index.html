@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>JaboatãoPrev - Gestão de Atendimentos</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;800&family=Open+Sans:wght@400;600&family=Poppins:wght@400;700&display=swap" rel="stylesheet">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'jaboatao-blue': '#204FA1',
+              'jaboatao-green-prev': '#2E8B57',
+              'jaboatao-green-flag': '#00853E',
+              'jaboatao-yellow': '#FFC000',
+              'jaboatao-orange': '#F8B133',
+              'text-primary': '#1A1A1A',
+              'text-secondary': '#555555',
+              'border-color': '#DADADA',
+              'app-bg': '#F4F6FA',
+              'panel-bg': '#E9EEF6',
+              'panel-primary': '#204FA1',
+              'panel-secondary': '#1E293B',
+              'panel-highlight': '#F7B500',
+            },
+            fontFamily: {
+              'sans': ['Open Sans', 'sans-serif'],
+              'montserrat': ['Montserrat', 'sans-serif'],
+              'poppins': ['Poppins', 'sans-serif'],
+            },
+            animation: {
+              'fade-in-up': 'fadeInUp 0.5s ease-out',
+              'border-pulse': 'borderPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            },
+            keyframes: {
+              fadeInUp: {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              },
+              borderPulse: {
+                '0%, 100%': { 'border-color': 'rgba(37, 99, 235, 0.4)' },
+                '50%': { 'border-color': 'rgba(37, 99, 235, 1)' },
+              },
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-app-bg">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
