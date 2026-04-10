@@ -45,8 +45,6 @@
   ],
   "exclude": [
     "backend",
-    "contexts",
-    "src/contexts",
     "docs",
     ".github",
     "dist",

@@ -1,26 +1,43 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Sistema de Gerenciamento de Filas - JABPREV
 
-# Run and deploy your AI Studio app
+Monorepo simples para operacao de fila em ambiente institucional/publico, com separacao explicita entre frontend e backend.
 
-This contains everything you need to run your app locally.
+## Estrutura
 
-View your app in AI Studio: https://ai.studio/apps/drive/1t9lI2YpKIvEu6PjS-QOcEAjdMvD-z-4a
+```
+apps/
+  frontend/   # React + Vite
+  backend/    # Node.js + Express + Socket.IO
+docs/         # Documentacao funcional, tecnica e governanca
+scripts/      # Scripts operacionais e de apoio
+supabase/     # Configuracoes e migracoes
+```
 
-## Run Locally
+## Como executar
 
-**Prerequisites:**  Node.js
+Pre-requisito: Node.js 20+
 
+1. Instale dependencias por app:
+   - `npm install --prefix apps/frontend`
+   - `npm install --prefix apps/backend`
+2. Rode o frontend:
+   - `npm run dev:frontend`
+3. Rode o backend:
+   - `npm run dev:backend`
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Scripts da raiz
 
-## Documentation
+- `npm run dev:frontend`
+- `npm run dev:backend`
+- `npm run build`
+- `npm run build:frontend`
+- `npm run build:backend`
+- `npm run typecheck`
 
-Centralized and chronological documentation index:
+## Documentacao
 
-- [docs/README.md](docs/README.md)
+- Indice geral: [docs/README.md](docs/README.md)
+- Organizacao e governanca: [docs/GOVERNANCA_E_ORGANIZACAO.md](docs/GOVERNANCA_E_ORGANIZACAO.md)
+- Planilha de requisitos contemplados: [docs/REQUISITOS_CONTEMPLADOS.md](docs/REQUISITOS_CONTEMPLADOS.md)
+- Guia de identidade visual: [docs/IDENTIDADE_VISUAL.md](docs/IDENTIDADE_VISUAL.md)
+- Runbook de incidente e continuidade: [docs/RUNBOOK_CONTINUIDADE_OPERACIONAL.md](docs/RUNBOOK_CONTINUIDADE_OPERACIONAL.md)

@@ -1,33 +1,13 @@
 {
-  "name": "sistema-de-gerenciamento-de-filas",
+  "name": "jabprev-queue-monorepo",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
-  "dependencies": {
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
-    "@mui/icons-material": "^7.3.9",
-    "@mui/material": "^7.3.9",
-    "@supabase/supabase-js": "^2.99.2",
-    "appwrite": "^23.0.0",
-    "date-fns": "^4.1.0",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "recharts": "^3.8.0",
-    "socket.io-client": "^4.7.2",
-    "zod": "^4.3.6"
-  },
-  "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "dev:frontend": "npm --prefix apps/frontend run dev",
+    "dev:backend": "npm --prefix apps/backend run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "npm --prefix apps/frontend run build",
+    "build:backend": "npm --prefix apps/backend run build",
+    "typecheck": "npm --prefix apps/backend run typecheck"
   }
 }

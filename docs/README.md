@@ -1,6 +1,13 @@
 # Documentacao do Projeto
 
-Este indice organiza os documentos por ordem cronologica de uso (do setup ao release).
+Este indice organiza os documentos por ordem de uso e governanca.
+
+## 0. Governanca e Operacao Institucional
+
+1. [GOVERNANCA_E_ORGANIZACAO.md](GOVERNANCA_E_ORGANIZACAO.md)
+2. [REQUISITOS_CONTEMPLADOS.md](REQUISITOS_CONTEMPLADOS.md)
+3. [IDENTIDADE_VISUAL.md](IDENTIDADE_VISUAL.md)
+4. [RUNBOOK_CONTINUIDADE_OPERACIONAL.md](RUNBOOK_CONTINUIDADE_OPERACIONAL.md)
 
 ## 1. Setup Inicial
 
