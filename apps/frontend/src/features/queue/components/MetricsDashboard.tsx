@@ -63,7 +63,7 @@ const KPICard: React.FC<{ title: string; value: string | number; description?: s
 );
 
 const MetricsDashboard: React.FC = () => {
-    const { tickets: allTickets, services } = useQueue();
+    const { tickets: allTickets, services, fetchTicketsByDateRange } = useQueue();
     const dashboardRef = useRef<HTMLDivElement>(null);
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
@@ -99,6 +99,13 @@ const MetricsDashboard: React.FC = () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    useEffect(() => {
+        const startDate = startOfDay(parseISO(filters.startDate));
+        const endDate = endOfDay(parseISO(filters.endDate));
+
+        void fetchTicketsByDateRange(startDate, endDate);
+    }, [fetchTicketsByDateRange, filters.startDate, filters.endDate]);
 
     const filteredTickets = useMemo(() => {
         const startDate = startOfDay(parseISO(filters.startDate));

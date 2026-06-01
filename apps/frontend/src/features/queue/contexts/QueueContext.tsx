@@ -9,7 +9,7 @@
  * - Consulta os campos existentes em tickets
  */
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@lib/supabase/client';
 import type { Ticket, Service } from '@shared/types';
 
@@ -27,6 +27,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const [services, setServices] = useState<Service[]>([]);
     const [tickets, setTickets] = useState<Ticket[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const latestTicketsRequestRef = useRef(0);
 
     /**
      * Carrega serviços
@@ -59,6 +60,8 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
      */
     const fetchTicketsByDateRange = useCallback(
         async (startDate: Date, endDate: Date): Promise<Ticket[]> => {
+            const requestId = ++latestTicketsRequestRef.current;
+
             try {
                 const startISO = startDate.toISOString();
                 const endISO = endDate.toISOString();
@@ -71,7 +74,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     `)
                     .gte('created_at', startISO)
                     .lte('created_at', endISO)
-                    .limit(500);
+                    .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
@@ -104,7 +107,9 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     };
                 });
 
-                setTickets(fetchedTickets);
+                if (requestId === latestTicketsRequestRef.current) {
+                    setTickets(fetchedTickets);
+                }
                 return fetchedTickets;
             } catch (error) {
                 console.error('[QueueContext] Erro ao carregar senhas por período:', error);
