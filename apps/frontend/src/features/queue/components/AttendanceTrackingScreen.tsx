@@ -33,7 +33,7 @@ const Toast: React.FC<{ message: string; show: boolean; onClose: () => void }> =
 };
 
 const AttendanceTrackingScreen: React.FC = () => {
-    const { todayTickets, updateTicketStatus, refreshTodayTickets } = useTodayQueue();
+    const { todayTickets, updateTicketStatus, refreshTodayTickets, recallTicket } = useTodayQueue();
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [toast, setToast] = useState({ show: false, message: '' });
     const [oldTicketAlerts, setOldTicketAlerts] = useState<ReturnType<typeof oldTicketNotificationManager.getOldTicketAlerts>>([]);
@@ -218,7 +218,10 @@ const AttendanceTrackingScreen: React.FC = () => {
                                                     <button onClick={() => handleUpdateStatus(ticket.id, 'in_progress')} className="py-1 px-3 text-xs font-semibold text-white bg-jaboatao-blue rounded-md hover:opacity-80 transition-opacity">Iniciar Atendimento</button>
                                                 )}
                                                 {ticket.status === 'in_progress' && (
-                                                     <button onClick={() => handleUpdateStatus(ticket.id, 'completed')} className="py-1 px-3 text-xs font-semibold text-white bg-jaboatao-green-prev rounded-md hover:opacity-80 transition-opacity">Finalizar</button>
+                                                     <>
+                                                         <button onClick={() => { recallTicket(ticket.id); showToast('Aviso disparado na TV'); }} className="py-1 px-3 text-xs font-semibold text-text-primary border border-border-color bg-slate-100 rounded-md hover:bg-slate-200 transition-colors" title="Chamar Novamente na TV">🔊 Chamar Novamente</button>
+                                                         <button onClick={() => handleUpdateStatus(ticket.id, 'completed')} className="py-1 px-3 text-xs font-semibold text-white bg-jaboatao-green-prev rounded-md hover:opacity-80 transition-opacity">Finalizar</button>
+                                                     </>
                                                 )}
                                                 {(ticket.status === 'waiting' || ticket.status === 'in_progress') && (
                                                     <>

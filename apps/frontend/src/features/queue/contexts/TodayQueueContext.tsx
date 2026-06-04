@@ -27,6 +27,7 @@ interface TodayQueueContextType {
     addTicket: (serviceId: string, userType: UserType, isPriority: boolean, attendeeName?: string) => Promise<Ticket | null>;
     callNextTicket: (serviceId: string) => Promise<void>;
     updateTicketStatus: (ticketId: string, status: TicketStatus, reason?: string) => Promise<void>;
+    recallTicket: (ticketId: string) => Promise<void>;
     
     // Métodos auxiliares
     refreshTodayTickets: () => Promise<void>;
@@ -446,6 +447,26 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         [updateTicketStatus, services, user]
     );
 
+    /**
+     * Dispara evento para chamar senha novamente no painel da TV
+     */
+    const recallTicket = useCallback(async (ticketId: string) => {
+        try {
+            console.log('[TodayQueueContext] Chamando senha novamente:', ticketId);
+            
+            // Usar o canal existente de live-updates para disparar o broadcast
+            await supabase.channel('tickets-live-updates').send({
+                type: 'broadcast',
+                event: 'ticket_recall',
+                payload: { ticketId }
+            });
+            
+        } catch (error) {
+            console.error('[TodayQueueContext] Erro ao chamar senha novamente:', error);
+            throw error;
+        }
+    }, []);
+
     return (
         <TodayQueueContext.Provider
             value={{
@@ -456,6 +477,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 addTicket,
                 callNextTicket,
                 updateTicketStatus,
+                recallTicket,
                 refreshTodayTickets: fetchTodayData,
                 getTodayTicketCount: () => todayTickets.length,
             }}
