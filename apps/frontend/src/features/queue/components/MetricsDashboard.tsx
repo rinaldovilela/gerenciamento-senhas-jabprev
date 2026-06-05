@@ -103,11 +103,19 @@ const MetricsDashboard: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        const startDate = startOfDay(parseISO(filters.startDate));
-        const endDate = endOfDay(parseISO(filters.endDate));
+        const fetchDashboardData = async () => {
+            try {
+                const startDate = startOfDay(parseISO(filters.startDate));
+                const endDate = endOfDay(parseISO(filters.endDate));
+                await fetchTicketsByDateRange(startDate, endDate);
+            } catch (error) {
+                console.error("Erro ao buscar dados do dashboard:", error);
+            }
+        };
 
-        void fetchTicketsByDateRange(startDate, endDate);
-    }, [fetchTicketsByDateRange, filters.startDate, filters.endDate]);
+        fetchDashboardData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filters.startDate, filters.endDate]);
 
     const operators = useMemo(() => {
         const opsMap = new Map<string, { id: string; name: string }>();

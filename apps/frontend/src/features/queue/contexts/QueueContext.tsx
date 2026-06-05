@@ -124,7 +124,7 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                 return [];
             }
         },
-        [services]
+        []
     );
 
     /**
