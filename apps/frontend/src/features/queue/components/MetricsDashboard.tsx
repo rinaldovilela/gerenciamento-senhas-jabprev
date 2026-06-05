@@ -144,11 +144,11 @@ const MetricsDashboard: React.FC = () => {
 
         const waitTimes = completed
             .map((t) => (new Date(t.started_at!).getTime() - new Date(t.created_at).getTime()) / (1000 * 60))
-            .filter((t) => t > 0);
+            .filter((t) => t >= 0);
 
         const serviceTimes = completed
             .map((t) => (new Date(t.completed_at!).getTime() - new Date(t.started_at!).getTime()) / (1000 * 60))
-            .filter((t) => t > 0);
+            .filter((t) => t >= 0);
 
         const avgWaitTime = waitTimes.length > 0 ? waitTimes.reduce((a, b) => a + b, 0) / waitTimes.length : 0;
         const avgServiceTime = serviceTimes.length > 0 ? serviceTimes.reduce((a, b) => a + b, 0) / serviceTimes.length : 0;
