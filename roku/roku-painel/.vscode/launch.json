@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "brightscript",
+      "request": "launch",
+      "name": "📺 Deploy JaboataoPrev na Roku",
+      "host": "10.0.0.74",
+      "password": "1234",
+      "rootDir": "${workspaceFolder}",
+      "files": [
+        "manifest",
+        "source/**/*",
+        "components/**/*"
+      ],
+      "enableDebuggerAutoRecovery": true,
+      "stopDebuggerOnAppExit": false,
+      "injectRdbOnDevChannel": true,
+      "logfilePath": "${workspaceFolder}/.roku-logs/debug.log"
+    }
+  ]
+}

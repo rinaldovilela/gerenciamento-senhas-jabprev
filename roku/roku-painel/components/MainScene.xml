@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="MainScene" extends="Scene">
+    <children>
+
+        <!-- FUNDO -->
+        <Rectangle id="bg" width="1920" height="1080" color="0xE8EDF5FF" />
+
+        <!-- ══════════════════ HEADER ══════════════════ -->
+        <Rectangle width="1920" height="100" color="0xFFFFFFDD" />
+
+        <Label id="logoA" text="JABOATÃO" color="0x0D3B8EFF"
+               font="font:LargeSystemFont" translation="[48, 28]" />
+        <Label id="logoB" text="PREV"     color="0x3BAD6AFF"
+               font="font:LargeSystemFont" translation="[222, 28]" />
+
+        <Label id="clockLabel" text="00:00:00" color="0x0D3B8EFF"
+               font="font:LargeSystemFont"
+               horizAlign="right" width="420" translation="[1460, 16]" />
+        <Label id="dateLabel" text="" color="0x6B7A99FF"
+               horizAlign="right" width="420" translation="[1460, 62]" />
+
+        <!-- indicador de conexão -->
+        <Label id="statusDot" text="⬤" color="0xFFAA00FF" translation="[1884, 38]" />
+
+        <!-- separador -->
+        <Rectangle width="1920" height="3" color="0x0D3B8E22" translation="[0, 100]" />
+
+        <!-- ══════════════════ PAINEL ESQUERDO — EM ATENDIMENTO ══════════════════ -->
+        <Rectangle id="leftPanel" width="1240" height="876"
+                   color="0xFFFFFFBB" translation="[24, 112]" />
+
+        <Label text="SENHAS EM ATENDIMENTO" color="0x0D3B8EFF"
+               font="font:LargeSystemFont" translation="[56, 132]" />
+        <Rectangle width="1176" height="4" color="0x0D3B8EFF" translation="[56, 176]" />
+
+        <!-- Card principal -->
+        <Rectangle id="mainCard" width="1176" height="456"
+                   color="0x3BAD6AFF" translation="[56, 192]" />
+
+        <Label id="mainGuiche" text="" color="0xFFFFFFCC"
+               font="font:MediumSystemFont"
+               horizAlign="center" width="1176" translation="[56, 248]" />
+
+        <Label id="mainNumber" text="---" color="0xFFFFFFFF"
+               font="font:HugeSystemFont"
+               horizAlign="center" width="1176" translation="[56, 300]" />
+
+        <Label id="mainName" text="" color="0xFFFFFFFF"
+               font="font:LargeSystemFont"
+               horizAlign="center" width="1176" translation="[56, 480]" />
+
+        <!-- badge Em Atendimento -->
+        <Rectangle id="badgeBg" width="380" height="52"
+                   color="0xFFFFFF22" translation="[454, 570]" />
+        <Label id="badgeLabel" text="● Em Atendimento" color="0xFFFFFFFF"
+               font="font:MediumSystemFont"
+               horizAlign="center" width="380" translation="[454, 583]" />
+
+        <!-- Título secundários -->
+        <Label id="othersTitle" text="Outras senhas em atendimento"
+               color="0x6B7A99FF" translation="[56, 668]" />
+
+        <!-- Card secundário 0 -->
+        <Rectangle id="sec0" width="368" height="192" color="0xFFFFFFFF" translation="[56,  700]" />
+        <Label id="sec0guiche" text="" color="0x6B7A99FF" horizAlign="center" width="368" translation="[56,  720]" />
+        <Label id="sec0num"   text="" color="0x0D3B8EFF" font="font:LargeSystemFont" horizAlign="center" width="368" translation="[56,  758]" />
+        <Label id="sec0name"  text="" color="0x3D4D6AFF" horizAlign="center" width="368" translation="[56,  856]" />
+
+        <!-- Card secundário 1 -->
+        <Rectangle id="sec1" width="368" height="192" color="0xFFFFFFFF" translation="[440, 700]" />
+        <Label id="sec1guiche" text="" color="0x6B7A99FF" horizAlign="center" width="368" translation="[440, 720]" />
+        <Label id="sec1num"   text="" color="0x0D3B8EFF" font="font:LargeSystemFont" horizAlign="center" width="368" translation="[440, 758]" />
+        <Label id="sec1name"  text="" color="0x3D4D6AFF" horizAlign="center" width="368" translation="[440, 856]" />
+
+        <!-- Card secundário 2 -->
+        <Rectangle id="sec2" width="368" height="192" color="0xFFFFFFFF" translation="[824, 700]" />
+        <Label id="sec2guiche" text="" color="0x6B7A99FF" horizAlign="center" width="368" translation="[824, 720]" />
+        <Label id="sec2num"   text="" color="0x0D3B8EFF" font="font:LargeSystemFont" horizAlign="center" width="368" translation="[824, 758]" />
+        <Label id="sec2name"  text="" color="0x3D4D6AFF" horizAlign="center" width="368" translation="[824, 856]" />
+
+        <!-- ══════════════════ PAINEL DIREITO — PRÓXIMAS SENHAS ══════════════════ -->
+        <Rectangle id="rightPanel" width="620" height="876"
+                   color="0xFFFFFFBB" translation="[1276, 112]" />
+
+        <Label text="PRÓXIMAS SENHAS" color="0x0D3B8EFF"
+               font="font:LargeSystemFont" translation="[1308, 132]" />
+        <Rectangle width="572" height="4" color="0x0D3B8EFF" translation="[1308, 176]" />
+
+        <!-- Itens da fila — 5 slots -->
+        <Rectangle id="w0" width="572" height="108" color="0xFFFFFFFF" translation="[1308, 192]" />
+        <Label id="w0num"  text="—" color="0x0D3B8EFF" font="font:MediumSystemFont" translation="[1328, 204]" />
+        <Label id="w0name" text=""  color="0x6B7A99FF" translation="[1328, 252]" />
+
+        <Rectangle id="w1" width="572" height="108" color="0xFFFFFFFF" translation="[1308, 312]" />
+        <Label id="w1num"  text="—" color="0x0D3B8EFF" font="font:MediumSystemFont" translation="[1328, 324]" />
+        <Label id="w1name" text=""  color="0x6B7A99FF" translation="[1328, 372]" />
+
+        <Rectangle id="w2" width="572" height="108" color="0xFFFFFFFF" translation="[1308, 432]" />
+        <Label id="w2num"  text="—" color="0x0D3B8EFF" font="font:MediumSystemFont" translation="[1328, 444]" />
+        <Label id="w2name" text=""  color="0x6B7A99FF" translation="[1328, 492]" />
+
+        <Rectangle id="w3" width="572" height="108" color="0xFFFFFFFF" translation="[1308, 552]" />
+        <Label id="w3num"  text="—" color="0x0D3B8EFF" font="font:MediumSystemFont" translation="[1328, 564]" />
+        <Label id="w3name" text=""  color="0x6B7A99FF" translation="[1328, 612]" />
+
+        <Rectangle id="w4" width="572" height="108" color="0xFFFFFFFF" translation="[1308, 672]" />
+        <Label id="w4num"  text="—" color="0x0D3B8EFF" font="font:MediumSystemFont" translation="[1328, 684]" />
+        <Label id="w4name" text=""  color="0x6B7A99FF" translation="[1328, 732]" />
+
+        <!-- ══════════════════ FOOTER ══════════════════ -->
+        <Rectangle width="1920" height="56" color="0x0D3B8EFF" translation="[0, 1024]" />
+        <Label text="JaboatãoPrev – Compromisso com o Futuro"
+               color="0xFFFFFFFF" font="font:MediumSystemFont"
+               horizAlign="center" width="1920" translation="[0, 1038]" />
+
+    </children>
+    <script type="text/brightscript" uri="pkg:/components/MainScene.brs" />
+</component>

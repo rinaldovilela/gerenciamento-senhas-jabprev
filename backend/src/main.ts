@@ -9,6 +9,7 @@ import { createRoutes } from './routes';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { Socket } from 'socket.io';
+import { mountRokuWs } from './roku.ws';
 
 async function createApplication(): Promise<{ app: Express; server: http.Server }> {
   // Create Express app
@@ -19,6 +20,9 @@ async function createApplication(): Promise<{ app: Express; server: http.Server 
 
   // Initialize Socket.IO
   const io = initializeSocket(server);
+
+  // Mount Roku WebSocket endpoint
+  mountRokuWs(server, io);
 
   // Socket.IO connection handler
   io.on('connection', (socket: Socket) => {

@@ -1,4 +1,4 @@
 @echo off
-cd /d "C:\Users\GerênciadeInvestimen\Desktop\gerenciamento-senhas-jabprev\backend"
-npm run dev
+cd /d "C:\Users\computador\Desktop\gerenciamento-senhas-jabprev\backend"
+npx tsx src/main.ts
 pause

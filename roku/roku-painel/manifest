@@ -1,0 +1,9 @@
+title=JaboataoPrev Painel
+subtitle=Painel Público de Atendimento
+major_version=1
+minor_version=0
+build_version=0
+splash_color=#0D3B8E
+splash_min_time=1000
+ui_resolutions=fhd
+bs_const=DEBUG=false

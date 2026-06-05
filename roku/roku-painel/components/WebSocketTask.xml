@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="WebSocketTask" extends="Task">
+    <interface>
+        <field id="wsUrl"   type="string" />
+        <field id="payload" type="assocarray" />
+        <field id="status"  type="string" value="connecting" />
+    </interface>
+    <script type="text/brightscript" uri="pkg:/components/WebSocketTask.brs" />
+</component>
