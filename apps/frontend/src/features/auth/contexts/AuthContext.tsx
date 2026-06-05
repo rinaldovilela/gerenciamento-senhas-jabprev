@@ -4,7 +4,9 @@ import type { User, UserRole } from '@shared/types/database';
 
 const AUTH_TOKEN_KEY = 'jabprev_auth_token';
 
-interface AuthUser extends User {}
+interface AuthUser extends User {
+  serviceIds?: string[];
+}
 
 interface AuthContextType {
     user: AuthUser | null;
@@ -20,7 +22,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const parseJwtPayload = (token: string): { id: string; email: string; role?: UserRole } | null => {
+    const parseJwtPayload = (token: string): { id: string; email: string; role?: UserRole; serviceIds?: string[] } | null => {
         try {
             const payload = token.split('.')[1];
             if (!payload) return null;
@@ -53,6 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             id: payload.id,
                             email: payload.email,
                             role,
+                            serviceIds: payload.serviceIds || [],
                         });
                     }
                 }
@@ -73,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsLoading(true);
             const response = await ApiClient.login(email, password) as {
                 token: string;
-                user: { id: string; email: string; role: UserRole };
+                user: { id: string; email: string; role: UserRole; serviceIds?: string[] };
             };
 
             if (!response?.token || !response?.user) {
@@ -87,6 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 id: response.user.id,
                 email: response.user.email,
                 role: response.user.role,
+                serviceIds: response.user.serviceIds || [],
             });
 
             return { success: true };

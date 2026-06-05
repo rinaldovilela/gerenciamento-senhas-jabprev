@@ -8,6 +8,7 @@ export interface User {
   name: string;
   role: string;
   status: string;
+  serviceIds?: string[];
 }
 
 export interface Dashboard {
@@ -45,6 +46,7 @@ export async function createUser(payload: {
   role: string;
   password: string;
   createdBy: string;
+  serviceIds?: string[];
 }): Promise<User> {
   const { data: existing } = await supabase
     .from('users')
@@ -76,14 +78,22 @@ export async function createUser(payload: {
     throw new AppError(500, 'Failed to create user');
   }
 
-  return mapToUser(user);
+  if (payload.serviceIds && payload.serviceIds.length > 0) {
+    const serviceInserts = payload.serviceIds.map((serviceId) => ({
+      user_id: user.id,
+      service_id: serviceId,
+    }));
+    await supabase.from('user_services').insert(serviceInserts);
+  }
+
+  return { ...mapToUser(user), serviceIds: payload.serviceIds || [] };
 }
 
 export async function listUsers(filters: {
   role?: string;
   status?: string;
 }): Promise<User[]> {
-  let query = supabase.from('users').select('*');
+  let query = supabase.from('users').select('*, user_services(service_id)');
 
   if (filters.role) {
     query = query.eq('role', filters.role);
@@ -99,7 +109,11 @@ export async function listUsers(filters: {
     throw new AppError(500, 'Failed to list users');
   }
 
-  return (users || []).map(mapToUser);
+  return (users || []).map((u) => {
+    const mapped = mapToUser(u);
+    mapped.serviceIds = u.user_services?.map((us: any) => us.service_id) || [];
+    return mapped;
+  });
 }
 
 export async function updateUser(
@@ -110,10 +124,11 @@ export async function updateUser(
     role?: string;
     status?: string;
     password?: string;
+    serviceIds?: string[];
     updatedBy: string;
   }
 ): Promise<User> {
-  const { name, email, role, status, password } = updates;
+  const { name, email, role, status, password, serviceIds } = updates;
   const updateData: Record<string, any> = {};
 
   if (name !== undefined) updateData.name = name;
@@ -124,22 +139,41 @@ export async function updateUser(
     updateData.password_hash = await bcrypt.hash(password, 10);
   }
 
-  if (Object.keys(updateData).length === 0) {
-    throw new AppError(400, 'No valid fields provided for update');
+  if (Object.keys(updateData).length > 0) {
+    const { error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', userId);
+
+    if (error) {
+      throw new AppError(500, 'Failed to update user');
+    }
   }
 
-  const { data: user, error } = await supabase
+  if (serviceIds !== undefined) {
+    await supabase.from('user_services').delete().eq('user_id', userId);
+    if (serviceIds.length > 0) {
+      const serviceInserts = serviceIds.map((serviceId) => ({
+        user_id: userId,
+        service_id: serviceId,
+      }));
+      await supabase.from('user_services').insert(serviceInserts);
+    }
+  }
+
+  const { data: user, error: fetchError } = await supabase
     .from('users')
-    .update(updateData)
+    .select('*, user_services(service_id)')
     .eq('id', userId)
-    .select()
     .single();
 
-  if (error || !user) {
-    throw new AppError(500, 'Failed to update user');
+  if (fetchError || !user) {
+    throw new AppError(500, 'Failed to fetch updated user');
   }
 
-  return mapToUser(user);
+  const mapped = mapToUser(user);
+  mapped.serviceIds = user.user_services?.map((us: any) => us.service_id) || [];
+  return mapped;
 }
 
 export async function deleteUser(userId: string, requestedBy: string): Promise<void> {

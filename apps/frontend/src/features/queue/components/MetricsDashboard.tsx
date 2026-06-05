@@ -20,8 +20,8 @@ import {
 import { format, subDays, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import { FileDownload, TrendingUp, Schedule } from '@mui/icons-material';
+import autoTable from 'jspdf-autotable';
+import { FileDownload, TrendingUp, Schedule, PersonSearch } from '@mui/icons-material';
 import Toast from '@shared/components/Toast';
 
 const language: Language = 'pt';
@@ -30,6 +30,7 @@ interface FilterState {
     startDate: string;
     endDate: string;
     serviceId: string;
+    operatorId: string;
     userType: 'all' | UserType;
     priorityType: 'all' | 'normal' | 'priority';
 }
@@ -82,6 +83,7 @@ const MetricsDashboard: React.FC = () => {
         startDate: defaultStartDate,
         endDate: defaultEndDate,
         serviceId: 'all',
+        operatorId: 'all',
         userType: 'all',
         priorityType: 'all',
     });
@@ -107,6 +109,16 @@ const MetricsDashboard: React.FC = () => {
         void fetchTicketsByDateRange(startDate, endDate);
     }, [fetchTicketsByDateRange, filters.startDate, filters.endDate]);
 
+    const operators = useMemo(() => {
+        const opsMap = new Map<string, { id: string; name: string }>();
+        allTickets.forEach(ticket => {
+            if (ticket.operator && ticket.operator_id) {
+                opsMap.set(ticket.operator_id, { id: ticket.operator.id, name: ticket.operator.name });
+            }
+        });
+        return Array.from(opsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+    }, [allTickets]);
+
     const filteredTickets = useMemo(() => {
         const startDate = startOfDay(parseISO(filters.startDate));
         const endDate = endOfDay(parseISO(filters.endDate));
@@ -116,6 +128,7 @@ const MetricsDashboard: React.FC = () => {
 
             if (ticketDate < startDate || ticketDate > endDate) return false;
             if (filters.serviceId !== 'all' && ticket.service_id !== filters.serviceId) return false;
+            if (filters.operatorId !== 'all' && ticket.operator_id !== filters.operatorId) return false;
             if (filters.userType !== 'all' && ticket.user_type !== filters.userType) return false;
             if (filters.priorityType === 'normal' && ticket.is_priority) return false;
             if (filters.priorityType === 'priority' && !ticket.is_priority) return false;
@@ -219,41 +232,77 @@ const MetricsDashboard: React.FC = () => {
         ].filter((d) => d.value > 0);
     }, [filteredTickets]);
 
-    const exportPDF = useCallback(async () => {
+    const exportPDF = useCallback(() => {
         setExportDropdownOpen(false);
-        if (!dashboardRef.current) return;
 
         try {
-            const canvas = await html2canvas(dashboardRef.current, {
-                allowTaint: true,
-                useCORS: true,
-                scale: 2,
+            const pdf = new jsPDF('landscape', 'mm', 'a4');
+            const pageWidth = pdf.internal.pageSize.getWidth();
+
+            pdf.setFontSize(18);
+            pdf.setTextColor(32, 79, 161); // Jaboatao Blue
+            pdf.text('Relatório de Métricas - Jaboatão Prev', pageWidth / 2, 15, { align: 'center' });
+
+            pdf.setFontSize(10);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text(`Período: ${format(parseISO(filters.startDate), 'dd/MM/yyyy')} a ${format(parseISO(filters.endDate), 'dd/MM/yyyy')}`, pageWidth / 2, 22, { align: 'center' });
+            pdf.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`, pageWidth / 2, 28, { align: 'center' });
+
+            const statsBody = [
+                ['Total Atendimentos', metrics.total.toString(), 'Tempo Médio Espera', `${metrics.avgWaitTime} min`],
+                ['Finalizados', metrics.completed.toString(), 'Tempo Médio Atend.', `${metrics.avgServiceTime} min`],
+                ['Cancelados/Não Compareceu', metrics.cancelled.toString(), 'Taxa Finalização', `${metrics.attendanceRate}%`],
+            ];
+
+            autoTable(pdf, {
+                startY: 35,
+                head: [['Métrica', 'Valor', 'Métrica', 'Valor']],
+                body: statsBody,
+                theme: 'grid',
+                headStyles: { fillColor: [32, 79, 161], textColor: [255, 255, 255] },
+                styles: { fontSize: 10, cellPadding: 3 },
             });
 
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
+            // Adicionar detalhes dos últimos atendimentos (ou todos os filtrados)
+            const headers = ['Senha', 'Tipo', 'Serviço', 'Operador', 'Status', 'T. Espera', 'T. Atend.', 'Data/Hora'];
+            
+            const rows = filteredTickets.map((t) => {
+                const waitTime = t.started_at ? ((new Date(t.started_at).getTime() - new Date(t.created_at).getTime()) / 60000).toFixed(1) + ' min' : '—';
+                const serviceTime = t.started_at && t.completed_at ? ((new Date(t.completed_at).getTime() - new Date(t.started_at).getTime()) / 60000).toFixed(1) + ' min' : '—';
+                
+                return [
+                    t.formatted_number,
+                    t.user_type,
+                    t.service?.name || '—',
+                    t.operator?.name || '—',
+                    t.status === 'completed' ? 'Finalizado' : t.status === 'cancelled' ? 'Cancelado' : t.status === 'waiting' ? 'Aguardando' : t.status,
+                    waitTime,
+                    serviceTime,
+                    format(parseISO(t.created_at), 'dd/MM/yyyy HH:mm')
+                ];
+            });
 
-            const imgWidth = 210;
-            const imgHeight = (canvas.height * imgWidth) / canvas.width;
-            let heightLeft = imgHeight;
-            let position = 0;
+            const finalY = (pdf as any).lastAutoTable.finalY || 40;
 
-            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-            heightLeft -= 297;
+            pdf.setFontSize(14);
+            pdf.setTextColor(0, 0, 0);
+            pdf.text('Detalhamento de Senhas', 14, finalY + 15);
 
-            while (heightLeft >= 0) {
-                position = heightLeft - imgHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-                heightLeft -= 297;
-            }
+            autoTable(pdf, {
+                startY: finalY + 20,
+                head: [headers],
+                body: rows,
+                theme: 'striped',
+                headStyles: { fillColor: [46, 139, 87], textColor: [255, 255, 255] }, // Jaboatao Green
+                styles: { fontSize: 8, cellPadding: 2 },
+            });
 
             pdf.save(`relatorio_metricas_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.pdf`);
         } catch (error) {
             console.error('Erro ao gerar PDF:', error);
             setToast({ show: true, message: 'Erro ao gerar relatorio PDF. Tente novamente.', type: 'error' });
         }
-    }, []);
+    }, [filteredTickets, filters, metrics]);
 
     const exportJSON = useCallback(() => {
         setExportDropdownOpen(false);
@@ -289,6 +338,7 @@ const MetricsDashboard: React.FC = () => {
                 t.user_type,
                 t.is_priority ? 'Sim' : 'Não',
                 t.service?.name || 'N/A',
+                t.operator?.name || 'N/A',
                 t.status,
                 t.created_at,
                 waitTime,
@@ -354,8 +404,11 @@ const MetricsDashboard: React.FC = () => {
 
                 {/* Filtros */}
                 <div className="bg-white p-6 rounded-xl shadow-lg border border-border-color">
-                    <h2 className="text-lg font-semibold text-text-primary mb-4">Filtros</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
+                        <PersonSearch sx={{ fontSize: 20 }} className="text-jaboatao-blue" />
+                        Filtros de Pesquisa
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
                         <div>
                             <label className="text-xs font-medium text-text-secondary block mb-2">Data Inicial</label>
                             <input
@@ -385,6 +438,21 @@ const MetricsDashboard: React.FC = () => {
                                 {services.map((s) => (
                                     <option key={s.id} value={s.id}>
                                         {s.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs font-medium text-text-secondary block mb-2">Operador</label>
+                            <select
+                                value={filters.operatorId}
+                                onChange={(e) => setFilters((f) => ({ ...f, operatorId: e.target.value }))}
+                                className="w-full p-2 border border-border-color rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50"
+                            >
+                                <option value="all">Todos</option>
+                                {operators.map((op) => (
+                                    <option key={op.id} value={op.id}>
+                                        {op.name}
                                     </option>
                                 ))}
                             </select>
@@ -528,6 +596,7 @@ const MetricsDashboard: React.FC = () => {
                                         <th className="p-3 font-semibold text-text-secondary">Senha</th>
                                         <th className="p-3 font-semibold text-text-secondary">Tipo</th>
                                         <th className="p-3 font-semibold text-text-secondary">Serviço</th>
+                                        <th className="p-3 font-semibold text-text-secondary">Operador</th>
                                         <th className="p-3 font-semibold text-text-secondary text-right">Tempo Espera</th>
                                         <th className="p-3 font-semibold text-text-secondary text-right">Tempo Atendimento</th>
                                         <th className="p-3 font-semibold text-text-secondary">Status</th>
@@ -556,6 +625,7 @@ const MetricsDashboard: React.FC = () => {
                                                         </span>
                                                     </td>
                                                     <td className="p-3 text-text-primary">{ticket.service?.name || '—'}</td>
+                                                    <td className="p-3 text-text-primary font-medium">{ticket.operator?.name || '—'}</td>
                                                     <td className="p-3 text-right text-text-primary">{waitTime} min</td>
                                                     <td className="p-3 text-right text-text-primary">{serviceTime} min</td>
                                                     <td className="p-3">

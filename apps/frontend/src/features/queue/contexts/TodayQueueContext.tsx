@@ -89,7 +89,8 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 .from('tickets')
                 .select(`
                     *,
-                    service:service_id(id, name, description, icon, created_at)
+                    service:service_id(id, name, description, icon, created_at),
+                    operator:operator_id(id, name, email)
                 `)
                 .gte('created_at', todayStartISO)
                 .lte('created_at', todayEndISO);
@@ -118,6 +119,13 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 status: doc.status,
                 is_priority: doc.is_priority,
                 operator_id: doc.operator_id || null,
+                operator: doc.operator
+                    ? {
+                          id: doc.operator.id,
+                          name: doc.operator.name,
+                          email: doc.operator.email,
+                      }
+                    : null,
                 created_at: doc.created_at,
                 started_at: doc.started_at || null,
                 completed_at: doc.completed_at || null,
@@ -391,7 +399,8 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     .from('tickets')
                     .select(`
                         *,
-                        service:service_id(id, name, description, icon, created_at)
+                        service:service_id(id, name, description, icon, created_at),
+                        operator:operator_id(id, name, email)
                     `)
                     .eq('service_id', serviceId)
                     .eq('status', 'waiting')
@@ -424,6 +433,13 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                         status: nextTicketDocument.status,
                         is_priority: nextTicketDocument.is_priority,
                         operator_id: nextTicketDocument.operator_id || null,
+                        operator: nextTicketDocument.operator
+                            ? {
+                                  id: nextTicketDocument.operator.id,
+                                  name: nextTicketDocument.operator.name,
+                                  email: nextTicketDocument.operator.email,
+                              }
+                            : null,
                         created_at: nextTicketDocument.created_at,
                         started_at: nextTicketDocument.started_at || null,
                         completed_at: nextTicketDocument.completed_at || null,

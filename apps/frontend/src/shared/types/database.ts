@@ -23,6 +23,11 @@ export interface Ticket {
     status: TicketStatus;
     is_priority: boolean;
     operator_id?: string | null;
+    operator?: {
+        id: string;
+        name: string;
+        email: string;
+    } | null;
     created_at: string; // Mapped from Appwrite's $createdAt
     started_at?: string | null;
     completed_at?: string | null;

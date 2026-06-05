@@ -22,13 +22,14 @@ export async function getMetrics(req: AuthRequest, res: Response, next: any) {
 
 export async function createUser(req: AuthRequest, res: Response, next: any) {
   try {
-    const { email, name, role, password } = req.body;
+    const { email, name, role, password, serviceIds } = req.body;
 
     const user = await AdminService.createUser({
       email,
       name,
       role: role || 'user',
       password,
+      serviceIds,
       createdBy: req.user!.id,
     });
 
@@ -55,7 +56,7 @@ export async function listUsers(req: AuthRequest, res: Response, next: any) {
 
 export async function updateUser(req: AuthRequest, res: Response, next: any) {
   try {
-    const { name, email, role, status, password } = req.body;
+    const { name, email, role, status, password, serviceIds } = req.body;
 
     const user = await AdminService.updateUser(req.params.id, {
       name,
@@ -63,6 +64,7 @@ export async function updateUser(req: AuthRequest, res: Response, next: any) {
       role,
       status,
       password,
+      serviceIds,
       updatedBy: req.user!.id,
     });
 

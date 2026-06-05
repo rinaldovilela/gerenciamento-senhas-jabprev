@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTodayQueue } from '@features/queue/contexts/TodayQueueContext';
 import { oldTicketNotificationManager } from '@shared/services/OldTicketNotificationManager';
 import ConfirmationModal from './ConfirmationModal';
+import { useAuth } from '@features/auth/contexts/AuthContext';
 import type { Ticket, TicketStatus } from '@shared/types';
 
 const RefreshIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>;
@@ -33,6 +34,7 @@ const Toast: React.FC<{ message: string; show: boolean; onClose: () => void }> =
 };
 
 const AttendanceTrackingScreen: React.FC = () => {
+    const { user } = useAuth();
     const { todayTickets, updateTicketStatus, refreshTodayTickets, recallTicket } = useTodayQueue();
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [toast, setToast] = useState({ show: false, message: '' });
@@ -98,7 +100,12 @@ const AttendanceTrackingScreen: React.FC = () => {
     };
 
     const sortedTickets = useMemo(() => {
-        return [...todayTickets].sort((a, b) => {
+        const allowedIds = user?.serviceIds || [];
+        const visibleTickets = user?.role === 'admin' 
+            ? todayTickets 
+            : todayTickets.filter(t => allowedIds.includes(t.service_id));
+
+        return [...visibleTickets].sort((a, b) => {
              const statusOrder = (status: TicketStatus) => {
                 switch(status) {
                     case 'in_progress': return 1;
@@ -111,7 +118,7 @@ const AttendanceTrackingScreen: React.FC = () => {
             }
             return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
         });
-    }, [todayTickets]);
+    }, [todayTickets, user]);
 
 
     return (

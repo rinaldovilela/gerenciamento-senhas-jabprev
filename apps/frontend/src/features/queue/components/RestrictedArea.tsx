@@ -5,6 +5,7 @@ import type { Language } from '@shared/types';
 import MetricsDashboard from './MetricsDashboard';
 import AttendanceTrackingScreen from './AttendanceTrackingScreen';
 import UserManagementScreen from './UserManagementScreen';
+import ServiceManagementScreen from './ServiceManagementScreen';
 
 const language: Language = 'pt';
 
@@ -18,6 +19,7 @@ const JaboataoPrevLogo: React.FC<{ className?: string }> = ({ className }) => (
 const MetricsIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8a2.3 2.3 0 0 0-3.4 0l-4.6 4.6a2.3 2.3 0 0 0 0 3.4l2.6 2.6a2.3 2.3 0 0 0 3.4 0l4.6-4.6a2.3 2.3 0 0 0 0-3.4Z"/></svg>;
 const TrackingIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>;
 const UsersIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>;
+const ServicesIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>;
 const LogoutIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
 
 const NavButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode; label: string; }> = ({ active, onClick, children, label }) => (
@@ -35,7 +37,7 @@ const NavButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
 
 const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
     const { user, logout } = useAuth();
-    const [view, setView] = useState<'tracking' | 'metrics' | 'users'>('tracking');
+    const [view, setView] = useState<'tracking' | 'metrics' | 'users' | 'services'>('tracking');
 
     const handleLogout = () => {
         logout();
@@ -69,6 +71,11 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                             <UsersIcon />
                         </NavButton>
                     )}
+                    {user.role === 'admin' && (
+                        <NavButton label="Gestão de Serviços" onClick={() => setView('services')} active={view === 'services'}>
+                            <ServicesIcon />
+                        </NavButton>
+                    )}
                 </nav>
 
                 <div className="border-t border-border-color pt-4">
@@ -88,6 +95,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                 {view === 'tracking' && <AttendanceTrackingScreen />}
                 {view === 'metrics' && user.role === 'admin' && <MetricsDashboard />}
                 {view === 'users' && user.role === 'admin' && <UserManagementScreen />}
+                {view === 'services' && user.role === 'admin' && <ServiceManagementScreen />}
             </main>
         </div>
     );

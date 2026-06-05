@@ -10,6 +10,7 @@ const createUserSchema = Joi.object({
   name: Joi.string().required(),
   role: Joi.string().valid('user', 'operator', 'admin').default('user'),
   password: Joi.string().min(8).required(),
+  serviceIds: Joi.array().items(Joi.string()).optional(),
 });
 
 const updateUserSchema = Joi.object({
@@ -18,6 +19,7 @@ const updateUserSchema = Joi.object({
   email: Joi.string().email(),
   status: Joi.string().valid('active', 'inactive', 'blocked'),
   password: Joi.string().min(8),
+  serviceIds: Joi.array().items(Joi.string()).optional(),
 }).min(1);
 
 router.get('/dashboard', authMiddleware, adminOnlyMiddleware, adminController.getDashboard);

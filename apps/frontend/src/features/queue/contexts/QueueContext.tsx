@@ -70,7 +70,8 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                     .from('tickets')
                     .select(`
                         *,
-                        service:service_id(id, name, description, icon, created_at)
+                        service:service_id(id, name, description, icon, created_at),
+                        operator:operator_id(id, name, email)
                     `)
                     .gte('created_at', startISO)
                     .lte('created_at', endISO)
@@ -100,6 +101,13 @@ export const QueueProvider: React.FC<{ children: React.ReactNode }> = ({ childre
                         status: doc.status,
                         is_priority: doc.is_priority,
                         operator_id: doc.operator_id || null,
+                        operator: doc.operator
+                            ? {
+                                  id: doc.operator.id,
+                                  name: doc.operator.name,
+                                  email: doc.operator.email,
+                              }
+                            : null,
                         created_at: doc.created_at,
                         started_at: doc.started_at || null,
                         completed_at: doc.completed_at || null,

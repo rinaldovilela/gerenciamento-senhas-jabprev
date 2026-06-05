@@ -1,12 +1,19 @@
 import React, { useMemo } from 'react';
 import { useTodayQueue } from '@features/queue/contexts/TodayQueueContext';
-import { SERVICES, TRANSLATIONS } from '@shared/constants';
+import { TRANSLATIONS } from '@shared/constants';
 import type { Ticket, Language, Service } from '@shared/types';
+
+import { useAuth } from '@features/auth/contexts/AuthContext';
 
 const language: Language = 'pt'; // Simplified for this component
 
 const OperatorPanel: React.FC = () => {
-    const { todayTickets: tickets, callNextTicket, calledTicket } = useTodayQueue();
+    const { user } = useAuth();
+    const { todayTickets: tickets, callNextTicket, services, updateTicketStatus } = useTodayQueue();
+
+    const myCurrentTicket = useMemo(() => {
+        return tickets.find(t => t.status === 'in_progress' && t.operator_id === user?.id);
+    }, [tickets, user]);
 
     const waitingByService = useMemo(() => {
         return tickets.reduce((acc, ticket) => {
@@ -18,14 +25,37 @@ const OperatorPanel: React.FC = () => {
         }, {} as Record<string, Ticket[]>);
     }, [tickets]);
     
+    const visibleServices = useMemo(() => {
+        if (user?.role === 'admin') return services;
+        const assignedIds = user?.serviceIds || [];
+        return services.filter((s) => assignedIds.includes(s.id));
+    }, [user, services]);
+    
     return (
         <div>
             <section className="mb-8 p-6 bg-white rounded-xl shadow-lg border border-border-color">
                 <h2 className="font-montserrat text-2xl font-semibold mb-4 text-jaboatao-blue">{TRANSLATIONS.currentlyServing[language]}</h2>
-                {calledTicket ? (
-                    <div className="text-center">
-                        <p className="text-6xl font-mono font-bold text-text-primary">{calledTicket.formattedNumber}</p>
-                        <p className="text-lg text-text-secondary">{calledTicket.service.name}</p>
+                {myCurrentTicket ? (
+                    <div className="flex flex-col items-center">
+                        <div className="text-center mb-4">
+                            <p className="text-6xl font-mono font-bold text-text-primary">{myCurrentTicket.formattedNumber}</p>
+                            <p className="text-lg text-text-secondary">{myCurrentTicket.service.name}</p>
+                            {myCurrentTicket.attendee_name && <p className="text-md text-text-secondary mt-1 uppercase font-semibold">{myCurrentTicket.attendee_name}</p>}
+                        </div>
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => updateTicketStatus(myCurrentTicket.id, 'completed', 'Atendimento finalizado')}
+                                className="px-6 py-2 bg-jaboatao-green-prev text-white font-bold rounded shadow hover:opacity-90"
+                            >
+                                Finalizar Atendimento
+                            </button>
+                            <button
+                                onClick={() => updateTicketStatus(myCurrentTicket.id, 'no_show', 'Não compareceu')}
+                                className="px-6 py-2 bg-red-600 text-white font-bold rounded shadow hover:opacity-90"
+                            >
+                                Não Compareceu
+                            </button>
+                        </div>
                     </div>
                 ) : (
                     <p className="text-center text-text-secondary">{TRANSLATIONS.noOneServing[language]}</p>
@@ -35,7 +65,7 @@ const OperatorPanel: React.FC = () => {
             <main>
                 <h2 className="font-montserrat text-2xl font-semibold mb-4 text-text-primary">{TRANSLATIONS.waitingQueue[language]}</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                    {SERVICES.map((service: Service) => {
+                    {visibleServices.map((service: Service) => {
                         const queue = (waitingByService[service.id] || []).sort((a,b) => a.number - b.number);
                         const waitingCount = queue.length;
                         return (

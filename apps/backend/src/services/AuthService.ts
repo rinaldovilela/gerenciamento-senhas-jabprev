@@ -8,6 +8,7 @@ export interface User {
   name: string;
   role: 'user' | 'operator' | 'admin';
   createdAt: string;
+  serviceIds?: string[];
 }
 
 export async function registerUser(
@@ -60,7 +61,7 @@ export async function authenticateUser(
 ): Promise<User> {
   const { data: user, error } = await supabase
     .from('users')
-    .select('*')
+    .select('*, user_services(service_id)')
     .eq('email', email)
     .single();
 
@@ -80,13 +81,14 @@ export async function authenticateUser(
     name: user.name,
     role: user.role,
     createdAt: user.created_at,
+    serviceIds: user.user_services?.map((us: any) => us.service_id) || [],
   };
 }
 
 export async function getUserById(userId: string): Promise<User> {
   const { data: user, error } = await supabase
     .from('users')
-    .select('*')
+    .select('*, user_services(service_id)')
     .eq('id', userId)
     .single();
 
@@ -100,5 +102,6 @@ export async function getUserById(userId: string): Promise<User> {
     name: user.name,
     role: user.role,
     createdAt: user.created_at,
+    serviceIds: user.user_services?.map((us: any) => us.service_id) || [],
   };
 }
