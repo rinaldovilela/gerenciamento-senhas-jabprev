@@ -248,27 +248,51 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
             .slice(0, 5);
     }, [tickets]);
 
-    // Lógica para disparar o Modo Takeover em Tela Cheia por 6 segundos
-    const triggerTakeover = (ticket: Ticket) => {
-        setActiveTakeoverTicket(ticket);
-        setLastCalledTicketId(ticket.id);
+    // Fila de chamadas para evitar atropelo ou cancelamento quando atendentes chamam simultaneamente
+    const callQueueRef = useRef<Ticket[]>([]);
+    const isProcessingQueueRef = useRef<boolean>(false);
 
-        if (PANEL_CONFIG.mostrarSons && audioRef.current) {
-            audioRef.current.currentTime = 0;
-            audioRef.current.play().catch(e => console.error("Erro ao reproduzir áudio:", e));
+    const processNextInQueue = () => {
+        if (isProcessingQueueRef.current || callQueueRef.current.length === 0) {
+            return;
         }
 
-        if (ticket.formatted_number && ticket.attendee_name) {
-            speakTicket(ticket);
+        isProcessingQueueRef.current = true;
+        const nextTicket = callQueueRef.current.shift();
+
+        if (nextTicket) {
+            setActiveTakeoverTicket(nextTicket);
+            setLastCalledTicketId(nextTicket.id);
+
+            if (PANEL_CONFIG.mostrarSons && audioRef.current) {
+                audioRef.current.currentTime = 0;
+                audioRef.current.play().catch(e => console.error("Erro ao reproduzir áudio:", e));
+            }
+
+            if (nextTicket.formatted_number && nextTicket.attendee_name) {
+                speakTicket(nextTicket);
+            }
+
+            // Exibe o modal takeover por 6 segundos na tela
+            setTimeout(() => {
+                setActiveTakeoverTicket(null);
+                setLastCalledTicketId(null);
+                isProcessingQueueRef.current = false;
+
+                // Pequeno intervalo de 500ms entre as chamadas para a voz/tela respirarem
+                setTimeout(() => {
+                    processNextInQueue();
+                }, 500);
+            }, 6000);
+        } else {
+            isProcessingQueueRef.current = false;
         }
+    };
 
-        // Fecha o overlay após 6 segundos (retorna ao slideshow)
-        const timeout = setTimeout(() => {
-            setActiveTakeoverTicket(null);
-            setLastCalledTicketId(null);
-        }, 6000);
-
-        return () => clearTimeout(timeout);
+    const enqueueTicket = (ticket: Ticket) => {
+        if (callQueueRef.current.some(t => t.id === ticket.id)) return;
+        callQueueRef.current.push(ticket);
+        processNextInQueue();
     };
 
     // Canal Supabase (Recall Manual)
@@ -279,7 +303,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
             if (ticketId) {
                 const ticket = tickets.find(t => t.id === ticketId);
                 if (ticket) {
-                    triggerTakeover(ticket);
+                    enqueueTicket(ticket);
                 }
             }
         }).subscribe();
@@ -295,12 +319,13 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
         const newCalls = [...currentInProgressIds].filter(id => !previousInProgressIds.current.has(id));
 
         if (newCalls.length > 0) {
-            const latestCallId = newCalls[0];
-            const ticket = inProgressTickets.find(t => t.id === latestCallId);
-            if (ticket && !spokenTicketIds.current.has(latestCallId)) {
-                spokenTicketIds.current.add(latestCallId);
-                triggerTakeover(ticket);
-            }
+            newCalls.forEach(id => {
+                const ticket = inProgressTickets.find(t => t.id === id);
+                if (ticket && !spokenTicketIds.current.has(id)) {
+                    spokenTicketIds.current.add(id);
+                    enqueueTicket(ticket);
+                }
+            });
         }
         previousInProgressIds.current = currentInProgressIds;
     }, [inProgressTickets]);
