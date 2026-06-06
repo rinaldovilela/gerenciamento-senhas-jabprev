@@ -20,11 +20,10 @@ const JaboataoPrevLogo: React.FC<{ className?: string; dark?: boolean }> = ({ cl
         </div>
         <div className="flex flex-col">
             <span className={`font-montserrat font-extrabold text-sm tracking-wider leading-none ${dark ? 'text-white' : 'text-[#204FA1]'}`}>JABOATÃO</span>
-            <span className={`font-poppins font-bold text-[10px] tracking-widest leading-none mt-1 ${dark ? 'text-amber-400' : 'text-slate-500'}`}>PREV</span>
+            <span className={`font-poppins font-bold text-[10px] tracking-widest leading-none mt-1 ${dark ? 'text-amber-400' : 'text-slate-505'}`}>PREV</span>
         </div>
     </div>
 );
-
 
 const MetricsIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8a2.3 2.3 0 0 0-3.4 0l-4.6 4.6a2.3 2.3 0 0 0 0 3.4l2.6 2.6a2.3 2.3 0 0 0 3.4 0l4.6-4.6a2.3 2.3 0 0 0 0-3.4Z"/></svg>;
 const TrackingIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>;
@@ -46,7 +45,6 @@ const NavButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
     </button>
 );
 
-
 const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
     const { user, logout } = useAuth();
     const [view, setView] = useState<'tracking' | 'metrics' | 'users' | 'services'>('tracking');
@@ -62,13 +60,15 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
     }
 
     return (
-        <div className="flex min-h-screen bg-slate-100/60 relative overflow-hidden">
-            {/* Decorações do Layout de Fundo */}
-            <div className="absolute top-[-30%] right-[-10%] w-[60%] h-[60%] rounded-full bg-jaboatao-blue/5 blur-[140px] pointer-events-none"></div>
-            <div className="absolute bottom-[-20%] left-[20%] w-[50%] h-[50%] rounded-full bg-jaboatao-green-prev/5 blur-[120px] pointer-events-none"></div>
+        <div 
+            className="flex min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden"
+            style={{ backgroundImage: 'url("/images/Bandeira/bandeira.jpeg")' }}
+        >
+            {/* Backdrop Blur + Dark Gradient Overlay */}
+            <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[6px] pointer-events-none z-0"></div>
 
             {/* Sidebar Flutuante */}
-            <aside className="w-80 bg-slate-900 text-white flex flex-col p-6 m-4 mr-0 rounded-3xl border border-slate-800 shadow-2xl z-10">
+            <aside className="w-80 shrink-0 bg-slate-950/75 backdrop-blur-md text-white flex flex-col p-6 m-4 mr-0 rounded-3xl border border-white/10 shadow-2xl z-10">
                 {/* Logo e Titulo */}
                 <div className="mb-10 px-2">
                     <JaboataoPrevLogo dark />
@@ -97,7 +97,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                 </nav>
 
                 {/* Perfil Operador e Logout */}
-                <div className="border-t border-slate-800/80 pt-6 mt-6">
+                <div className="border-t border-white/10 pt-6 mt-6">
                     <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/5 rounded-2xl mb-4">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] flex items-center justify-center font-bold text-white shadow-md">
                             {user.email.slice(0, 2).toUpperCase()}
@@ -121,8 +121,8 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-grow p-6 md:p-8 overflow-y-auto h-screen z-10 flex flex-col">
-                <div className="flex-grow bg-white/60 backdrop-blur-xl border border-white/80 rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgb(0,0,0,0.02)] flex flex-col overflow-y-auto">
+            <main className="flex-grow p-6 md:p-8 overflow-y-auto h-screen z-10 flex flex-col min-w-0">
+                <div className="flex-grow bg-white/70 backdrop-blur-xl border border-white/30 rounded-3xl p-6 sm:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.15)] flex flex-col overflow-y-auto">
                     {view === 'tracking' && <AttendanceTrackingScreen />}
                     {view === 'metrics' && user.role === 'admin' && <MetricsDashboard />}
                     {view === 'users' && user.role === 'admin' && <UserManagementScreen />}

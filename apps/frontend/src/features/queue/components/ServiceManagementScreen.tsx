@@ -3,6 +3,16 @@ import { supabase } from '@lib/supabase/client';
 import { useTodayQueue } from '@features/queue/contexts/TodayQueueContext';
 import ConfirmationModal from './ConfirmationModal';
 import type { Service } from '@shared/types';
+import { 
+  Add, 
+  Search, 
+  Refresh, 
+  Settings, 
+  Delete, 
+  Save, 
+  Close,
+  Category
+} from '@mui/icons-material';
 
 interface ServiceDraft {
   name: string;
@@ -11,16 +21,16 @@ interface ServiceDraft {
 }
 
 const ICON_OPTIONS = [
-  { value: '📋', label: '📋 Geral' },
-  { value: '💰', label: '💰 Financeiro' },
-  { value: '📄', label: '📄 Documentos' },
-  { value: '⚖️', label: '⚖️ Jurídico' },
-  { value: '🏥', label: '🏥 Saúde' },
-  { value: '👤', label: '👤 Cadastro' },
-  { value: '🔑', label: '🔑 Acesso' },
-  { value: '📊', label: '📊 Relatórios' },
-  { value: '🏠', label: '🏠 Imóveis' },
-  { value: '✉️', label: '✉️ Correspondência' },
+  { value: '📋', label: 'Geral' },
+  { value: '💰', label: 'Finanças' },
+  { value: '📄', label: 'Docs' },
+  { value: '⚖️', label: 'Jurídico' },
+  { value: '🏥', label: 'Saúde' },
+  { value: '👤', label: 'Cadastro' },
+  { value: '🔑', label: 'Acesso' },
+  { value: '📊', label: 'Análise' },
+  { value: '🏠', label: 'Imóveis' },
+  { value: '✉️', label: 'Social' },
 ];
 
 const Toast: React.FC<{ message: string; type: 'success' | 'error'; onClose: () => void }> = ({
@@ -35,22 +45,31 @@ const Toast: React.FC<{ message: string; type: 'success' | 'error'; onClose: () 
 
   return (
     <div
-      className={`fixed bottom-5 right-5 rounded-lg px-5 py-3 text-sm font-semibold text-white shadow-xl z-50 ${
-        type === 'success' ? 'bg-jaboatao-green-prev' : 'bg-red-600'
+      className={`fixed bottom-6 right-6 rounded-2xl px-6 py-3.5 text-sm font-semibold text-white shadow-2xl z-50 animate-fade-in-up flex items-center gap-2.5 ${
+        type === 'success' ? 'bg-[#1E7342] border border-emerald-600/30' : 'bg-red-600 border border-red-500/30'
       }`}
     >
-      {message}
+      <span>{message}</span>
+      <button onClick={onClose} className="p-0.5 hover:bg-white/10 rounded">
+        <Close sx={{ fontSize: 16 }} />
+      </button>
     </div>
   );
 };
 
 const ServiceManagementScreen: React.FC = () => {
-  const { services: contextServices, refreshTodayTickets } = useTodayQueue();
+  const { refreshTodayTickets } = useTodayQueue();
   const [services, setServices] = useState<Service[]>([]);
   const [draftsById, setDraftsById] = useState<Record<string, ServiceDraft>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingId, setIsSavingId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  
+  // HUD UI State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedServiceId, setSelectedServiceId] = useState<string | null>(null); // null means "Create Mode"
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
     message: '',
@@ -61,7 +80,6 @@ const ServiceManagementScreen: React.FC = () => {
     serviceId: '',
     serviceName: '',
   });
-  const [isDeleting, setIsDeleting] = useState(false);
 
   const [createForm, setCreateForm] = useState<ServiceDraft>({
     name: '',
@@ -109,7 +127,7 @@ const ServiceManagementScreen: React.FC = () => {
       setDraftsById(buildDraftMap(list));
     } catch (error) {
       console.error('Erro ao carregar servicos:', error);
-      showToast('Falha ao carregar servicos.', 'error');
+      showToast('Falha ao carregar serviços.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -119,15 +137,25 @@ const ServiceManagementScreen: React.FC = () => {
     loadServices();
   }, [loadServices]);
 
-  const sortedServices = useMemo(
-    () => [...services].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR')),
-    [services]
-  );
+  // Filter and search services
+  const filteredServices = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return services
+      .filter((s) => {
+        return (
+          s.name.toLowerCase().includes(query) ||
+          s.description.toLowerCase().includes(query)
+        );
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [services, searchQuery]);
 
-  const validateForm = (form: ServiceDraft): Record<string, string> => {
+  const validateDraft = (draft: ServiceDraft) => {
     const errors: Record<string, string> = {};
-    if (!form.name.trim() || form.name.trim().length < 2) {
-      errors.name = 'Nome deve ter ao menos 2 caracteres.';
+    if (!draft.name.trim()) {
+      errors.name = 'O nome do serviço é obrigatório.';
+    } else if (draft.name.trim().length < 3) {
+      errors.name = 'O nome deve ter no mínimo 3 caracteres.';
     }
     return errors;
   };
@@ -136,7 +164,7 @@ const ServiceManagementScreen: React.FC = () => {
     e.preventDefault();
     setFormErrors({});
 
-    const errors = validateForm(createForm);
+    const errors = validateDraft(createForm);
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
       return;
@@ -144,21 +172,24 @@ const ServiceManagementScreen: React.FC = () => {
 
     setIsCreating(true);
     try {
-      const { error } = await supabase.from('services').insert({
-        name: createForm.name.trim(),
-        description: createForm.description.trim(),
-        icon: createForm.icon,
-      });
+      const { error } = await supabase.from('services').insert([
+        {
+          name: createForm.name.trim(),
+          description: createForm.description.trim(),
+          icon: createForm.icon,
+        },
+      ]);
 
       if (error) throw error;
 
+      showToast('Serviço criado com sucesso.', 'success');
       setCreateForm({ name: '', description: '', icon: '📋' });
-      showToast('Servico criado com sucesso!', 'success');
       await loadServices();
       await refreshTodayTickets();
+      setSelectedServiceId(null);
     } catch (error) {
       console.error('Erro ao criar servico:', error);
-      showToast('Erro ao criar servico.', 'error');
+      showToast('Erro ao criar serviço.', 'error');
     } finally {
       setIsCreating(false);
     }
@@ -174,243 +205,382 @@ const ServiceManagementScreen: React.FC = () => {
     }));
   };
 
-  const handleSaveService = async (service: Service) => {
-    const draft = draftsById[service.id];
-    if (!draft) return;
+  const handleSaveService = async (serviceId: string) => {
+    const service = services.find(s => s.id === serviceId);
+    const draft = draftsById[serviceId];
+    if (!service || !draft) return;
 
-    const errors = validateForm(draft);
+    const errors = validateDraft(draft);
     if (Object.keys(errors).length > 0) {
-      showToast(Object.values(errors)[0], 'error');
+      showToast(errors.name || 'Erro nos campos informados.', 'error');
       return;
     }
 
-    const payload: Record<string, string> = {};
+    const payload: Partial<ServiceDraft> = {};
     if (draft.name.trim() !== service.name) payload.name = draft.name.trim();
-    if (draft.description.trim() !== (service.description || '')) payload.description = draft.description.trim();
+    if (draft.description.trim() !== (service.description || '')) {
+      payload.description = draft.description.trim();
+    }
     if (draft.icon !== (service.icon || '📋')) payload.icon = draft.icon;
 
     if (Object.keys(payload).length === 0) {
-      showToast('Nenhuma alteracao para salvar.', 'error');
+      showToast('Nenhuma alteração para salvar.', 'error');
       return;
     }
 
-    setIsSavingId(service.id);
+    setIsSavingId(serviceId);
     try {
       const { error } = await supabase
         .from('services')
         .update(payload)
-        .eq('id', service.id);
+        .eq('id', serviceId);
 
       if (error) throw error;
 
-      showToast('Servico atualizado com sucesso!', 'success');
+      showToast('Serviço atualizado com sucesso.', 'success');
       await loadServices();
       await refreshTodayTickets();
     } catch (error) {
       console.error('Erro ao atualizar servico:', error);
-      showToast('Erro ao atualizar servico.', 'error');
+      showToast('Erro ao atualizar o serviço.', 'error');
     } finally {
       setIsSavingId(null);
     }
   };
 
-  const handleDeleteService = async () => {
-    if (!deleteModal.serviceId) return;
+  const triggerDelete = (serviceId: string, serviceName: string) => {
+    setDeleteModal({
+      isOpen: true,
+      serviceId,
+      serviceName,
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    const serviceId = deleteModal.serviceId;
+    if (!serviceId) return;
 
     setIsDeleting(true);
     try {
       const { error } = await supabase
         .from('services')
         .delete()
-        .eq('id', deleteModal.serviceId);
+        .eq('id', serviceId);
 
       if (error) throw error;
 
-      showToast('Servico excluido com sucesso!', 'success');
-      setDeleteModal({ isOpen: false, serviceId: '', serviceName: '' });
+      showToast('Serviço excluído com sucesso.', 'success');
+      setSelectedServiceId(null);
       await loadServices();
       await refreshTodayTickets();
-    } catch (error: any) {
-      console.error('Erro ao excluir servico:', error);
-      if (error?.message?.includes('violates foreign key') || error?.code === '23503') {
-        showToast('Este servico possui senhas vinculadas e nao pode ser excluido.', 'error');
-      } else {
-        showToast('Erro ao excluir servico.', 'error');
-      }
+      setDeleteModal({ isOpen: false, serviceId: '', serviceName: '' });
+    } catch (error) {
+      console.error('Erro ao deletar servico:', error);
+      showToast('Não foi possível excluir o serviço.', 'error');
     } finally {
       setIsDeleting(false);
     }
   };
 
+  const activeService = useMemo(() => {
+    return services.find(s => s.id === selectedServiceId) || null;
+  }, [services, selectedServiceId]);
+
+  const activeDraft = useMemo(() => {
+    if (!selectedServiceId) return null;
+    return draftsById[selectedServiceId] || null;
+  }, [draftsById, selectedServiceId]);
+
   return (
-    <div className="fade-in space-y-6">
-      {toast.show && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast((prev) => ({ ...prev, show: false }))}
-        />
-      )}
+    <div className="flex flex-col h-full gap-6 w-full text-slate-800">
+      <Toast
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast((prev) => ({ ...prev, show: false }))}
+      />
 
       <ConfirmationModal
         isOpen={deleteModal.isOpen}
-        title="Excluir Servico"
-        message={`Tem certeza que deseja excluir o servico "${deleteModal.serviceName}"? Servicos com senhas vinculadas nao podem ser excluidos.`}
-        confirmText="Excluir"
+        title="Excluir Serviço"
+        message={`Tem certeza que deseja excluir permanentemente o serviço "${deleteModal.serviceName}"? Esta ação não pode ser desfeita e pode afetar a fila.`}
+        confirmText="Excluir Permanentemente"
         cancelText="Cancelar"
         isDangerous={true}
-        onConfirm={handleDeleteService}
+        onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteModal({ isOpen: false, serviceId: '', serviceName: '' })}
         isLoading={isDeleting}
       />
 
-      <header className="flex flex-wrap items-center justify-between gap-3">
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200/50 pb-5">
         <div>
-          <h1 className="font-montserrat text-3xl font-semibold text-text-primary">Gestao de Servicos</h1>
-          <p className="text-sm text-text-secondary">Cadastrar, editar e remover servicos de atendimento.</p>
+          <h1 className="font-montserrat text-3xl font-black text-slate-900 tracking-tight">
+            Configuração de Guichês
+          </h1>
+          <p className="text-sm text-slate-500 mt-1 font-semibold">
+            Gerencie os tipos de serviços disponíveis para emissão de senhas e atendimento.
+          </p>
         </div>
         <button
           onClick={loadServices}
-          className="rounded-lg border border-border-color bg-white px-4 py-2 text-sm font-semibold text-jaboatao-blue shadow-sm hover:bg-slate-50"
+          className="flex items-center gap-2 py-2.5 px-5 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:bg-slate-50 active:scale-95 transition-all duration-200 self-stretch sm:self-auto justify-center"
         >
+          <Refresh sx={{ fontSize: 18 }} />
           Atualizar Lista
         </button>
       </header>
 
-      {/* Criar novo servico */}
-      <section className="rounded-xl border border-border-color bg-white p-6 shadow-lg">
-        <h2 className="mb-4 text-xl font-semibold text-text-primary">Novo Servico</h2>
-        <form onSubmit={handleCreateService} className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-text-secondary">Nome do Servico *</label>
-            <input
-              value={createForm.name}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
-              className="w-full rounded-lg border border-border-color p-2 text-sm"
-              placeholder="Ex: Prova de Vida"
-            />
-            {formErrors.name && <p className="mt-1 text-xs text-red-600">{formErrors.name}</p>}
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-text-secondary">Descricao</label>
-            <input
-              value={createForm.description}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, description: e.target.value }))}
-              className="w-full rounded-lg border border-border-color p-2 text-sm"
-              placeholder="Descricao breve do servico"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-text-secondary">Icone</label>
-            <select
-              value={createForm.icon}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, icon: e.target.value }))}
-              className="w-full rounded-lg border border-border-color p-2 text-sm"
-            >
-              {ICON_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-end">
+      {/* Cockpit Asimétrico (Master-Detail Layout) */}
+      <div className="flex flex-col lg:flex-row gap-6 items-stretch flex-grow min-h-[500px]">
+        
+        {/* COLUNA ESQUERDA: Entity Deck */}
+        <div className="w-full lg:w-96 flex flex-col gap-4 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">
+              Serviços Habilitados ({filteredServices.length})
+            </h2>
             <button
-              type="submit"
-              disabled={isCreating}
-              className="rounded-lg bg-jaboatao-blue px-4 py-2 text-sm font-semibold text-white shadow-md hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 w-full"
+              onClick={() => setSelectedServiceId(null)}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase text-white bg-gradient-to-r from-jaboatao-blue to-[#2B6CB0] hover:shadow-md active:scale-95 rounded-xl transition-all duration-150"
             >
-              {isCreating ? 'Criando...' : 'Criar Servico'}
+              <Add sx={{ fontSize: 14 }} />
+              Novo
             </button>
           </div>
-        </form>
-      </section>
 
-      {/* Lista de servicos */}
-      <section className="rounded-xl border border-border-color bg-white p-6 shadow-lg">
-        <h2 className="mb-4 text-xl font-semibold text-text-primary">
-          Servicos Cadastrados
-          <span className="ml-2 text-sm font-normal text-text-secondary">({services.length})</span>
-        </h2>
-
-        {isLoading ? (
-          <p className="text-sm text-text-secondary">Carregando servicos...</p>
-        ) : sortedServices.length === 0 ? (
-          <p className="text-sm text-text-secondary">Nenhum servico cadastrado.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] text-left text-sm">
-              <thead className="border-b-2 border-border-color">
-                <tr>
-                  <th className="p-3 font-semibold text-text-secondary w-12">Icone</th>
-                  <th className="p-3 font-semibold text-text-secondary">Nome</th>
-                  <th className="p-3 font-semibold text-text-secondary">Descricao</th>
-                  <th className="p-3 font-semibold text-text-secondary text-center w-40">Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedServices.map((service) => {
-                  const draft = draftsById[service.id];
-                  if (!draft) return null;
-
-                  const saving = isSavingId === service.id;
-                  return (
-                    <tr key={service.id} className="border-b border-border-color last:border-0 hover:bg-slate-50 transition-colors">
-                      <td className="p-3">
-                        <select
-                          value={draft.icon}
-                          onChange={(e) => updateDraft(service.id, 'icon', e.target.value)}
-                          className="w-full rounded-md border border-border-color p-1.5 text-lg text-center"
-                        >
-                          {ICON_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.value}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="p-3">
-                        <input
-                          value={draft.name}
-                          onChange={(e) => updateDraft(service.id, 'name', e.target.value)}
-                          className="w-full rounded-md border border-border-color p-2 text-sm"
-                        />
-                      </td>
-                      <td className="p-3">
-                        <input
-                          value={draft.description}
-                          onChange={(e) => updateDraft(service.id, 'description', e.target.value)}
-                          className="w-full rounded-md border border-border-color p-2 text-sm"
-                          placeholder="Sem descricao"
-                        />
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleSaveService(service)}
-                            disabled={saving}
-                            className="rounded-md bg-jaboatao-blue px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {saving ? 'Salvando...' : 'Salvar'}
-                          </button>
-                          <button
-                            onClick={() => setDeleteModal({ isOpen: true, serviceId: service.id, serviceName: service.name })}
-                            disabled={saving}
-                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" sx={{ fontSize: 18 }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por nome ou descrição..."
+              className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/5 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+            />
           </div>
-        )}
-      </section>
+
+          {/* List Deck */}
+          <div className="flex-grow overflow-y-auto max-h-[500px] space-y-2 pr-1">
+            {isLoading ? (
+              <div className="py-16 text-center">
+                <div className="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-jaboatao-blue rounded-full mb-3"></div>
+                <p className="text-xs font-bold text-slate-400">Buscando canais...</p>
+              </div>
+            ) : filteredServices.length === 0 ? (
+              <p className="text-center text-slate-400 py-16 text-xs font-bold">Nenhum serviço registrado.</p>
+            ) : (
+              filteredServices.map((service) => {
+                const isSelected = selectedServiceId === service.id;
+                return (
+                  <button
+                    key={service.id}
+                    onClick={() => setSelectedServiceId(service.id)}
+                    className={`w-full text-left p-3.5 rounded-2xl border-2 flex items-center justify-between gap-4 transition-all duration-200 group active:scale-[0.97] ${
+                      isSelected 
+                        ? 'border-[#204FA1] bg-[#204FA1]/5 shadow-sm' 
+                        : 'border-slate-100/80 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-sm transition-colors ${
+                        isSelected 
+                          ? 'bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] text-white shadow-md' 
+                          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                      }`}>
+                        {service.icon || '📋'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-800 truncate">{service.name}</p>
+                        <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">{service.description || 'Sem descrição cadastrada.'}</p>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* COLUNA DIREITA: Control Console (Terminal de Operações) */}
+        <div className="flex-grow bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+          
+          {selectedServiceId && activeDraft && activeService ? (
+            /* ================= EDIT MODE ================= */
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-[#204FA1]/10 text-[#204FA1] rounded-xl">
+                    <Settings sx={{ fontSize: 20 }} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                      Parametrizar Canal de Atendimento
+                    </h3>
+                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">Configure o comportamento do guichê.</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedServiceId(null)}
+                  className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-800 rounded-xl transition-all"
+                  title="Fechar"
+                >
+                  <Close sx={{ fontSize: 20 }} />
+                </button>
+              </div>
+
+              {/* Form de Edição */}
+              <div className="space-y-5">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Nome do Guichê / Serviço</label>
+                  <input
+                    value={activeDraft.name}
+                    onChange={(e) => updateDraft(activeService.id, 'name', e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Descrição Operacional</label>
+                  <textarea
+                    rows={3}
+                    value={activeDraft.description}
+                    onChange={(e) => updateDraft(activeService.id, 'description', e.target.value)}
+                    placeholder="Descreva o escopo e público-alvo deste serviço..."
+                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 resize-none"
+                  />
+                </div>
+
+                {/* Seletor de Ícones */}
+                <div>
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-3">Identificador Visual (Ícone/Emoji)</label>
+                  <div className="grid grid-cols-5 sm:grid-cols-10 gap-2.5">
+                    {ICON_OPTIONS.map((opt) => {
+                      const isSelected = activeDraft.icon === opt.value;
+                      return (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => updateDraft(activeService.id, 'icon', opt.value)}
+                          className={`w-11 h-11 text-xl flex items-center justify-center rounded-xl border-2 transition-all duration-150 active:scale-90 shadow-sm ${
+                            isSelected 
+                              ? 'border-jaboatao-blue bg-jaboatao-blue/10 text-white scale-105 shadow-md shadow-blue-700/5' 
+                              : 'border-slate-100 hover:border-slate-200 bg-white hover:-translate-y-0.5'
+                          }`}
+                          title={opt.label}
+                        >
+                          {opt.value}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Botões de Ação */}
+              <div className="flex items-center justify-between border-t border-slate-100 pt-5 mt-6">
+                <button
+                  onClick={() => triggerDelete(activeService.id, activeService.name)}
+                  disabled={isSavingId !== null}
+                  className="flex items-center gap-2 py-3 px-5 text-xs font-black uppercase tracking-wider text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl active:scale-95 transition-all duration-150 disabled:opacity-50"
+                >
+                  <Delete sx={{ fontSize: 18 }} />
+                  Desabilitar Canal
+                </button>
+                <button
+                  onClick={() => handleSaveService(activeService.id)}
+                  disabled={isSavingId !== null}
+                  className="flex items-center gap-2 py-3 px-6 text-xs font-black uppercase tracking-wider text-white bg-[#2E8B57] hover:bg-[#20623A] rounded-xl shadow-lg shadow-emerald-700/10 active:scale-95 transition-all duration-150 disabled:opacity-50"
+                >
+                  <Save sx={{ fontSize: 18 }} />
+                  {isSavingId === activeService.id ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* ================= CREATE MODE ================= */
+            <form onSubmit={handleCreateService} className="space-y-6 flex flex-col justify-between h-full">
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                  <div className="p-2.5 bg-[#2E8B57]/10 text-jaboatao-green-prev rounded-xl">
+                    <Category sx={{ fontSize: 20 }} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                      Cadastrar Novo Serviço
+                    </h3>
+                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">Adicione um novo guichê de atendimento ao JaboatãoPrev.</p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Nome do Guichê / Serviço</label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.name}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Ex: Aposentadoria e Pensão"
+                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+                    />
+                    {formErrors.name && <p className="mt-1 text-[10px] font-bold text-rose-500">{formErrors.name}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Descrição Operacional</label>
+                    <textarea
+                      rows={3}
+                      value={createForm.description}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Descreva brevemente o propósito deste guichê..."
+                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 resize-none"
+                    />
+                  </div>
+
+                  {/* Seletor de Ícones */}
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-3">Identificador Visual (Ícone/Emoji)</label>
+                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-2.5">
+                      {ICON_OPTIONS.map((opt) => {
+                        const isSelected = createForm.icon === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setCreateForm(prev => ({ ...prev, icon: opt.value }))}
+                            className={`w-11 h-11 text-xl flex items-center justify-center rounded-xl border-2 transition-all duration-150 active:scale-90 shadow-sm ${
+                              isSelected 
+                                ? 'border-jaboatao-blue bg-jaboatao-blue/10 text-white scale-105 shadow-md shadow-blue-700/5' 
+                                : 'border-slate-100 hover:border-slate-200 bg-white hover:-translate-y-0.5'
+                            }`}
+                            title={opt.label}
+                          >
+                            {opt.value}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botão de Envio */}
+              <div className="border-t border-slate-100 pt-5 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isCreating}
+                  className="flex items-center gap-2 py-3.5 px-8 text-xs font-black uppercase tracking-wider text-white bg-[#204FA1] hover:bg-[#1C4690] rounded-xl shadow-lg shadow-blue-700/10 active:scale-95 transition-all duration-150 disabled:opacity-50"
+                >
+                  <Add sx={{ fontSize: 18 }} />
+                  {isCreating ? 'Adicionando...' : 'Habilitar Serviço'}
+                </button>
+              </div>
+            </form>
+          )}
+
+        </div>
+
+      </div>
     </div>
   );
 };

@@ -2,6 +2,20 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 import { ApiClient, ApiError } from '@lib/api';
 import { supabase } from '@lib/supabase/client';
+import { 
+    PersonAdd, 
+    Search, 
+    Refresh, 
+    Shield, 
+    CheckCircle, 
+    Block, 
+    Delete, 
+    Save, 
+    ArrowBack, 
+    AssignmentInd,
+    Close,
+    ManageAccounts
+} from '@mui/icons-material';
 
 interface AdminUser {
   id: string;
@@ -24,11 +38,23 @@ interface UserDraft {
 const roleOptions: Array<AdminUser['role']> = ['user', 'operator', 'admin'];
 const statusOptions: Array<AdminUser['status']> = ['active', 'inactive', 'blocked'];
 
+const ROLE_LABELS: Record<AdminUser['role'], string> = {
+  admin: 'Administrador',
+  operator: 'Operador',
+  user: 'Usuário',
+};
+
+const STATUS_CONFIG: Record<AdminUser['status'], { label: string; badge: string }> = {
+  active: { label: 'Ativo', badge: 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-600' },
+  inactive: { label: 'Inativo', badge: 'bg-slate-500/10 border border-slate-500/30 text-slate-500' },
+  blocked: { label: 'Bloqueado', badge: 'bg-rose-500/10 border border-rose-500/30 text-rose-600 font-bold animate-pulse' },
+};
+
 const createUserSchema = z.object({
   name: z.string().trim().min(2, 'Nome deve ter ao menos 2 caracteres.'),
-  email: z.string().trim().email('Informe um e-mail valido.'),
+  email: z.string().trim().email('Informe um e-mail válido.'),
   role: z.enum(roleOptions),
-  password: z.string().min(8, 'Senha deve ter no minimo 8 caracteres.'),
+  password: z.string().min(8, 'Senha deve ter no mínimo 8 caracteres.'),
   serviceIds: z.array(z.string()).optional(),
 });
 
@@ -36,7 +62,7 @@ const updatePasswordSchema = z
   .string()
   .trim()
   .refine((value) => value.length === 0 || value.length >= 8, {
-    message: 'Nova senha deve ter no minimo 8 caracteres.',
+    message: 'Nova senha deve ter no mínimo 8 caracteres.',
   });
 
 const Toast: React.FC<{ message: string; type: 'success' | 'error'; onClose: () => void }> = ({
@@ -51,11 +77,14 @@ const Toast: React.FC<{ message: string; type: 'success' | 'error'; onClose: () 
 
   return (
     <div
-      className={`fixed bottom-5 right-5 rounded-lg px-5 py-3 text-sm font-semibold text-white shadow-xl z-50 ${
-        type === 'success' ? 'bg-jaboatao-green-prev' : 'bg-red-600'
+      className={`fixed bottom-6 right-6 rounded-2xl px-6 py-3.5 text-sm font-semibold text-white shadow-2xl z-50 animate-fade-in-up flex items-center gap-2.5 ${
+        type === 'success' ? 'bg-[#1E7342] border border-emerald-600/30' : 'bg-red-600 border border-red-500/30'
       }`}
     >
-      {message}
+      <span>{message}</span>
+      <button onClick={onClose} className="p-0.5 hover:bg-white/10 rounded">
+        <Close sx={{ fontSize: 16 }} />
+      </button>
     </div>
   );
 };
@@ -70,6 +99,12 @@ const UserManagementScreen: React.FC = () => {
   const [loadingError, setLoadingError] = useState('');
   const [formError, setFormError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  
+  // HUD UI State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null); // null means "Create Mode"
+  const [isEditMode, setIsEditMode] = useState(false);
+
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
     message: '',
@@ -123,16 +158,24 @@ const UserManagementScreen: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [buildDraftMap]);
+  }, [buildDraftMap, showToast]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  const sortedUsers = useMemo(
-    () => [...users].sort((a, b) => a.email.localeCompare(b.email, 'pt-BR')),
-    [users]
-  );
+  // Filter & search users
+  const filteredUsers = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    return users
+      .filter((user) => {
+        return (
+          user.name.toLowerCase().includes(query) ||
+          user.email.toLowerCase().includes(query)
+        );
+      })
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [users, searchQuery]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,15 +198,16 @@ const UserManagementScreen: React.FC = () => {
     try {
       await ApiClient.createUser(parsed.data);
       setCreateForm({ name: '', email: '', role: 'operator', password: '', serviceIds: [] });
-      showToast('Usuario criado com sucesso.', 'success');
+      showToast('Usuário criado com sucesso.', 'success');
       await loadData();
+      setSelectedUserId(null); // Keep in create mode or select new
     } catch (error) {
       if (error instanceof ApiError && error.details?.length) {
         setFormError(error.details.join(' | '));
       } else {
-        setFormError(error instanceof Error ? error.message : 'Erro ao criar usuario.');
+        setFormError(error instanceof Error ? error.message : 'Erro ao criar usuário.');
       }
-      showToast('Nao foi possivel criar o usuario.', 'error');
+      showToast('Não foi possível criar o usuário.', 'error');
     } finally {
       setIsCreating(false);
     }
@@ -179,13 +223,14 @@ const UserManagementScreen: React.FC = () => {
     }));
   };
 
-  const handleSaveUser = async (user: AdminUser) => {
-    const draft = draftsById[user.id];
-    if (!draft) return;
+  const handleSaveUser = async (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    const draft = draftsById[userId];
+    if (!user || !draft) return;
 
     const parsedPassword = updatePasswordSchema.safeParse(draft.password);
     if (!parsedPassword.success) {
-      showToast(parsedPassword.error.issues[0]?.message || 'Senha invalida.', 'error');
+      showToast(parsedPassword.error.issues[0]?.message || 'Senha inválida.', 'error');
       return;
     }
 
@@ -200,42 +245,56 @@ const UserManagementScreen: React.FC = () => {
     }
 
     if (Object.keys(payload).length === 0) {
-      showToast('Nenhuma alteracao para salvar.', 'error');
+      showToast('Nenhuma alteração para salvar.', 'error');
       return;
     }
 
-    setIsSavingId(user.id);
+    setIsSavingId(userId);
     try {
-      await ApiClient.updateUser(user.id, payload);
-      showToast('Usuario atualizado com sucesso.', 'success');
+      await ApiClient.updateUser(userId, payload);
+      showToast('Usuário atualizado com sucesso.', 'success');
       await loadData();
+      updateDraft(userId, 'password', '');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao atualizar usuario.';
+      const message = error instanceof Error ? error.message : 'Erro ao atualizar usuário.';
       showToast(message, 'error');
     } finally {
       setIsSavingId(null);
     }
   };
 
-  const handleDeleteUser = async (user: AdminUser) => {
-    const confirmed = window.confirm(`Excluir usuario ${user.email}?`);
+  const handleDeleteUser = async (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    const confirmed = window.confirm(`Deseja realmente excluir o usuário ${user.email}?`);
     if (!confirmed) return;
 
-    setIsSavingId(user.id);
+    setIsSavingId(userId);
     try {
-      await ApiClient.deleteUser(user.id);
-      showToast('Usuario excluido.', 'success');
+      await ApiClient.deleteUser(userId);
+      showToast('Usuário excluído com sucesso.', 'success');
+      setSelectedUserId(null);
       await loadData();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Erro ao excluir usuario.';
+      const message = error instanceof Error ? error.message : 'Erro ao excluir usuário.';
       showToast(message, 'error');
     } finally {
       setIsSavingId(null);
     }
   };
 
+  const activeUser = useMemo(() => {
+    return users.find(u => u.id === selectedUserId) || null;
+  }, [users, selectedUserId]);
+
+  const activeDraft = useMemo(() => {
+    if (!selectedUserId) return null;
+    return draftsById[selectedUserId] || null;
+  }, [draftsById, selectedUserId]);
+
   return (
-    <div className="fade-in space-y-6">
+    <div className="flex flex-col h-full gap-6 w-full text-slate-800">
       {toast.show && (
         <Toast
           message={toast.message}
@@ -244,242 +303,385 @@ const UserManagementScreen: React.FC = () => {
         />
       )}
 
-      <header className="flex flex-wrap items-center justify-between gap-3">
+      {/* Header */}
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200/50 pb-5">
         <div>
-          <h1 className="font-montserrat text-3xl font-semibold text-text-primary">Gestao de Usuarios</h1>
-          <p className="text-sm text-text-secondary">Criar, editar role/status e redefinir senha.</p>
+          <h1 className="font-montserrat text-3xl font-black text-slate-900 tracking-tight">
+            Gestão de Credenciais
+          </h1>
+          <p className="text-sm text-slate-500 mt-1 font-semibold">
+            Cadastre novos operadores, configure níveis de acesso e vincule guichês.
+          </p>
         </div>
         <button
           onClick={loadData}
-          className="rounded-lg border border-border-color bg-white px-4 py-2 text-sm font-semibold text-jaboatao-blue shadow-sm hover:bg-slate-50"
+          className="flex items-center gap-2 py-2.5 px-5 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:bg-slate-50 active:scale-95 transition-all duration-200 self-stretch sm:self-auto justify-center"
         >
-          Atualizar Lista
+          <Refresh sx={{ fontSize: 18 }} />
+          Atualizar Fila
         </button>
       </header>
 
-      <section className="rounded-xl border border-border-color bg-white p-6 shadow-lg">
-        <h2 className="mb-4 text-xl font-semibold text-text-primary">Novo Usuario</h2>
-        <form onSubmit={handleCreateUser} className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-text-secondary">Nome</label>
-            <input
-              value={createForm.name}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, name: e.target.value }))}
-              className="w-full rounded-lg border border-border-color p-2 text-sm"
-              placeholder="Nome completo"
-            />
-            {fieldErrors.name && <p className="mt-1 text-xs text-red-600">{fieldErrors.name}</p>}
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-text-secondary">E-mail</label>
-            <input
-              value={createForm.email}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, email: e.target.value }))}
-              className="w-full rounded-lg border border-border-color p-2 text-sm"
-              placeholder="usuario@org.br"
-            />
-            {fieldErrors.email && <p className="mt-1 text-xs text-red-600">{fieldErrors.email}</p>}
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-text-secondary">Role</label>
-            <select
-              value={createForm.role}
-              onChange={(e) =>
-                setCreateForm((prev) => ({ ...prev, role: e.target.value as AdminUser['role'] }))
-              }
-              className="w-full rounded-lg border border-border-color p-2 text-sm"
+      {/* Cockpit Asimétrico (Master-Detail Layout) */}
+      <div className="flex flex-col lg:flex-row gap-6 items-stretch flex-grow min-h-[500px]">
+        
+        {/* COLUNA ESQUERDA: Entity Deck */}
+        <div className="w-full lg:w-96 flex flex-col gap-4 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+          <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">
+              Usuários cadastrados ({filteredUsers.length})
+            </h2>
+            <button
+              onClick={() => { setSelectedUserId(null); setIsEditMode(false); }}
+              className="flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase text-white bg-gradient-to-r from-jaboatao-blue to-[#2B6CB0] hover:shadow-md active:scale-95 rounded-xl transition-all duration-150"
             >
-              {roleOptions.map((role) => (
-                <option key={role} value={role}>
-                  {role}
-                </option>
-              ))}
-            </select>
-            {fieldErrors.role && <p className="mt-1 text-xs text-red-600">{fieldErrors.role}</p>}
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-semibold text-text-secondary">Senha Inicial</label>
-            <input
-              type="password"
-              value={createForm.password}
-              onChange={(e) => setCreateForm((prev) => ({ ...prev, password: e.target.value }))}
-              className="w-full rounded-lg border border-border-color p-2 text-sm"
-              placeholder="Minimo 8 caracteres"
-            />
-            {fieldErrors.password && <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>}
+              <PersonAdd sx={{ fontSize: 14 }} />
+              Novo
+            </button>
           </div>
 
-          {createForm.role === 'operator' && (
-            <div className="md:col-span-2 xl:col-span-4">
-              <label className="mb-1 block text-xs font-semibold text-text-secondary">Serviços Habilitados (Apenas Operador)</label>
-              <div className="flex flex-wrap gap-2 rounded-lg border border-border-color p-3">
-                {services.map(s => (
-                  <label key={s.id} className="flex items-center gap-1 text-sm bg-slate-50 border border-slate-200 px-2 py-1 rounded">
-                    <input
-                      type="checkbox"
-                      checked={createForm.serviceIds.includes(s.id)}
-                      onChange={(e) => {
-                        const checked = e.target.checked;
-                        setCreateForm(prev => ({
-                          ...prev,
-                          serviceIds: checked 
-                            ? [...prev.serviceIds, s.id] 
-                            : prev.serviceIds.filter(id => id !== s.id)
-                        }));
-                      }}
-                    />
-                    {s.name}
+          {/* Search bar */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" sx={{ fontSize: 18 }} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por nome ou e-mail..."
+              className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/5 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+            />
+          </div>
+
+          {/* List Deck */}
+          <div className="flex-grow overflow-y-auto max-h-[500px] space-y-2 pr-1">
+            {isLoading ? (
+              <div className="py-16 text-center">
+                <div className="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-jaboatao-blue rounded-full mb-3"></div>
+                <p className="text-xs font-bold text-slate-400">Carregando credenciais...</p>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <p className="text-center text-slate-400 py-16 text-xs font-bold">Nenhum operador encontrado.</p>
+            ) : (
+              filteredUsers.map((user) => {
+                const isSelected = selectedUserId === user.id;
+                const initials = user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
+                
+                return (
+                  <button
+                    key={user.id}
+                    onClick={() => { setSelectedUserId(user.id); setIsEditMode(true); }}
+                    className={`w-full text-left p-3.5 rounded-2xl border-2 flex items-center justify-between gap-4 transition-all duration-200 group active:scale-[0.97] ${
+                      isSelected 
+                        ? 'border-[#204FA1] bg-[#204FA1]/5 shadow-sm' 
+                        : 'border-slate-100/80 bg-white hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black shrink-0 shadow-sm transition-colors ${
+                        isSelected 
+                          ? 'bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] text-white' 
+                          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
+                      }`}>
+                        {initials || 'OP'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-800 truncate">{user.name}</p>
+                        <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">{user.email}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border ${STATUS_CONFIG[user.status].badge}`}>
+                        {STATUS_CONFIG[user.status].label}
+                      </span>
+                      <span className="text-[9px] font-black text-slate-400 group-hover:text-slate-800 transition-colors">
+                        {ROLE_LABELS[user.role]}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* COLUNA DIREITA: Control Console (Terminal de Operações) */}
+        <div className="flex-grow bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+          
+          {selectedUserId && activeDraft && activeUser ? (
+            /* ================= EDIT MODE ================= */
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-[#204FA1]/10 text-[#204FA1] rounded-xl">
+                    <Shield sx={{ fontSize: 20 }} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                      Painel de Controle do Usuário
+                    </h3>
+                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">{activeUser.email}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedUserId(null)}
+                  className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-800 rounded-xl transition-all"
+                  title="Fechar"
+                >
+                  <Close sx={{ fontSize: 20 }} />
+                </button>
+              </div>
+
+              {/* Form de Edição */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Nome Completo</label>
+                  <input
+                    value={activeDraft.name}
+                    onChange={(e) => updateDraft(activeUser.id, 'name', e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">E-mail Corporativo</label>
+                  <input
+                    value={activeDraft.email}
+                    onChange={(e) => updateDraft(activeUser.id, 'email', e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Perfil de Acesso</label>
+                  <select
+                    value={activeDraft.role}
+                    onChange={(e) => updateDraft(activeUser.id, 'role', e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                  >
+                    {roleOptions.map((role) => (
+                      <option key={role} value={role}>
+                        {ROLE_LABELS[role]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Status da Conta</label>
+                  <select
+                    value={activeDraft.status}
+                    onChange={(e) => updateDraft(activeUser.id, 'status', e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                  >
+                    {statusOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {STATUS_CONFIG[status].label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Nova Senha (Reset)</label>
+                  <input
+                    type="password"
+                    value={activeDraft.password}
+                    onChange={(e) => updateDraft(activeUser.id, 'password', e.target.value)}
+                    placeholder="Deixe em branco para manter a senha atual"
+                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs transition-all duration-200"
+                  />
+                </div>
+              </div>
+
+              {/* Serviços Vinculados (apenas se for operador) */}
+              {activeDraft.role === 'operator' && (
+                <div className="border-t border-slate-100 pt-5 mt-4">
+                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-3">
+                    Vincular Serviços a este Operador
                   </label>
-                ))}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                    {services.map(s => {
+                      const isLinked = activeDraft.serviceIds.includes(s.id);
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => {
+                            const currentList = [...activeDraft.serviceIds];
+                            if (isLinked) {
+                              updateDraft(activeUser.id, 'serviceIds', currentList.filter(id => id !== s.id));
+                            } else {
+                              updateDraft(activeUser.id, 'serviceIds', [...currentList, s.id]);
+                            }
+                          }}
+                          className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-left text-xs font-bold transition-all duration-150 active:scale-95 ${
+                            isLinked 
+                              ? 'border-jaboatao-blue bg-jaboatao-blue/5 text-[#204FA1]' 
+                              : 'border-slate-100 hover:border-slate-200 bg-white text-slate-600'
+                          }`}
+                        >
+                          <span className={`w-4 h-4 rounded-md flex items-center justify-center border text-[9px] ${isLinked ? 'bg-jaboatao-blue border-jaboatao-blue text-white' : 'border-slate-300 bg-white'}`}>
+                            {isLinked ? '✓' : ''}
+                          </span>
+                          <span className="truncate">{s.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Botões de Ação */}
+              <div className="flex items-center justify-between border-t border-slate-100 pt-5 mt-6">
+                <button
+                  onClick={() => handleDeleteUser(activeUser.id)}
+                  disabled={isSavingId !== null}
+                  className="flex items-center gap-2 py-3 px-5 text-xs font-black uppercase tracking-wider text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl active:scale-95 transition-all duration-150 disabled:opacity-50"
+                >
+                  <Delete sx={{ fontSize: 18 }} />
+                  Excluir Operador
+                </button>
+                <button
+                  onClick={() => handleSaveUser(activeUser.id)}
+                  disabled={isSavingId !== null}
+                  className="flex items-center gap-2 py-3 px-6 text-xs font-black uppercase tracking-wider text-white bg-[#2E8B57] hover:bg-[#20623A] rounded-xl shadow-lg shadow-emerald-700/10 active:scale-95 transition-all duration-150 disabled:opacity-50"
+                >
+                  <Save sx={{ fontSize: 18 }} />
+                  {isSavingId === activeUser.id ? 'Salvando...' : 'Salvar Alterações'}
+                </button>
               </div>
             </div>
+          ) : (
+            /* ================= CREATE MODE ================= */
+            <form onSubmit={handleCreateUser} className="space-y-6 flex flex-col justify-between h-full">
+              <div className="space-y-5">
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                  <div className="p-2.5 bg-[#2E8B57]/10 text-jaboatao-green-prev rounded-xl">
+                    <PersonAdd sx={{ fontSize: 20 }} />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                      Cadastrar Novo Usuário
+                    </h3>
+                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">Preencha as informações básicas de acesso.</p>
+                  </div>
+                </div>
+
+                {formError && (
+                  <div className="p-4 rounded-xl bg-rose-50 border-2 border-rose-100 text-xs font-bold text-rose-600">
+                    ⚠️ {formError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Nome Completo</label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.name}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
+                      placeholder="Ex: João da Silva"
+                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+                    />
+                    {fieldErrors.name && <p className="mt-1 text-[10px] font-bold text-rose-500">{fieldErrors.name}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">E-mail Corporativo</label>
+                    <input
+                      type="email"
+                      required
+                      value={createForm.email}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="nome@jaboataoprev.pe.gov.br"
+                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+                    />
+                    {fieldErrors.email && <p className="mt-1 text-[10px] font-bold text-rose-500">{fieldErrors.email}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Perfil de Acesso</label>
+                    <select
+                      value={createForm.role}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, role: e.target.value as any }))}
+                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                    >
+                      {roleOptions.map((role) => (
+                        <option key={role} value={role}>
+                          {ROLE_LABELS[role]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Senha Provisória</label>
+                    <input
+                      type="password"
+                      required
+                      value={createForm.password}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, password: e.target.value }))}
+                      placeholder="Mínimo 8 caracteres"
+                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs transition-all duration-200"
+                    />
+                    {fieldErrors.password && <p className="mt-1 text-[10px] font-bold text-rose-500">{fieldErrors.password}</p>}
+                  </div>
+                </div>
+
+                {/* Serviços Vinculados (apenas se for operador) */}
+                {createForm.role === 'operator' && (
+                  <div className="border-t border-slate-100 pt-5 mt-4">
+                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-3">
+                      Vincular Serviços Iniciais
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                      {services.map(s => {
+                        const isLinked = createForm.serviceIds.includes(s.id);
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            onClick={() => {
+                              const currentList = [...createForm.serviceIds];
+                              if (isLinked) {
+                                setCreateForm(prev => ({ ...prev, serviceIds: currentList.filter(id => id !== s.id) }));
+                              } else {
+                                setCreateForm(prev => ({ ...prev, serviceIds: [...currentList, s.id] }));
+                              }
+                            }}
+                            className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-left text-xs font-bold transition-all duration-150 active:scale-95 ${
+                              isLinked 
+                                ? 'border-jaboatao-blue bg-jaboatao-blue/5 text-[#204FA1]' 
+                                : 'border-slate-100 hover:border-slate-200 bg-white text-slate-600'
+                            }`}
+                          >
+                            <span className={`w-4 h-4 rounded-md flex items-center justify-center border text-[9px] ${isLinked ? 'bg-jaboatao-blue border-jaboatao-blue text-white' : 'border-slate-300 bg-white'}`}>
+                              {isLinked ? '✓' : ''}
+                            </span>
+                            <span className="truncate">{s.name}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Botão de Envio */}
+              <div className="border-t border-slate-100 pt-5 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isCreating}
+                  className="flex items-center gap-2 py-3.5 px-8 text-xs font-black uppercase tracking-wider text-white bg-[#204FA1] hover:bg-[#1C4690] rounded-xl shadow-lg shadow-blue-700/10 active:scale-95 transition-all duration-150 disabled:opacity-50"
+                >
+                  <Save sx={{ fontSize: 18 }} />
+                  {isCreating ? 'Cadastrando...' : 'Cadastrar Credencial'}
+                </button>
+              </div>
+            </form>
           )}
 
-          <div className="md:col-span-2 xl:col-span-4 flex items-center gap-3">
-            <button
-              type="submit"
-              disabled={isCreating}
-              className="rounded-lg bg-jaboatao-blue px-4 py-2 text-sm font-semibold text-white shadow-md hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isCreating ? 'Criando...' : 'Criar Usuario'}
-            </button>
-            {formError && <p className="text-sm text-red-600">{formError}</p>}
-          </div>
-        </form>
-      </section>
+        </div>
 
-      <section className="rounded-xl border border-border-color bg-white p-6 shadow-lg">
-        <h2 className="mb-4 text-xl font-semibold text-text-primary">Usuarios Cadastrados</h2>
-
-        {isLoading ? (
-          <p className="text-sm text-text-secondary">Carregando usuarios...</p>
-        ) : loadingError ? (
-          <p className="text-sm text-red-600">{loadingError}</p>
-        ) : sortedUsers.length === 0 ? (
-          <p className="text-sm text-text-secondary">Nenhum usuario encontrado.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left text-sm">
-              <thead className="border-b border-border-color">
-                <tr>
-                  <th className="p-2">Nome</th>
-                  <th className="p-2">E-mail</th>
-                  <th className="p-2">Role</th>
-                  <th className="p-2">Status</th>
-                  <th className="p-2">Nova Senha</th>
-                  <th className="p-2 text-center">Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedUsers.map((user) => {
-                  const draft = draftsById[user.id];
-                  if (!draft) return null;
-
-                  const saving = isSavingId === user.id;
-                  return (
-                    <React.Fragment key={user.id}>
-                      <tr className="border-b border-border-color last:border-0">
-                      <td className="p-2">
-                        <input
-                          value={draft.name}
-                          onChange={(e) => updateDraft(user.id, 'name', e.target.value)}
-                          className="w-full rounded-md border border-border-color p-2"
-                        />
-                      </td>
-                      <td className="p-2">
-                        <input
-                          value={draft.email}
-                          onChange={(e) => updateDraft(user.id, 'email', e.target.value)}
-                          className="w-full rounded-md border border-border-color p-2"
-                        />
-                      </td>
-                      <td className="p-2">
-                        <select
-                          value={draft.role}
-                          onChange={(e) => updateDraft(user.id, 'role', e.target.value)}
-                          className="w-full rounded-md border border-border-color p-2"
-                        >
-                          {roleOptions.map((role) => (
-                            <option key={role} value={role}>
-                              {role}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="p-2">
-                        <select
-                          value={draft.status}
-                          onChange={(e) => updateDraft(user.id, 'status', e.target.value)}
-                          className="w-full rounded-md border border-border-color p-2"
-                        >
-                          {statusOptions.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="p-2">
-                        <input
-                          type="password"
-                          value={draft.password}
-                          onChange={(e) => updateDraft(user.id, 'password', e.target.value)}
-                          className="w-full rounded-md border border-border-color p-2"
-                          placeholder="Opcional"
-                        />
-                      </td>
-                      <td className="p-2">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleSaveUser(user)}
-                            disabled={saving}
-                            className="rounded-md bg-jaboatao-blue px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            {saving ? 'Salvando...' : 'Salvar'}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(user)}
-                            disabled={saving}
-                            className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            Excluir
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    {draft.role === 'operator' && (
-                      <tr className="border-b border-border-color last:border-0 bg-slate-50/50">
-                        <td colSpan={6} className="p-3">
-                           <div className="text-xs font-semibold text-text-secondary mb-2">Serviços deste Operador:</div>
-                           <div className="flex flex-wrap gap-2">
-                             {services.map(s => (
-                               <label key={s.id} className="flex items-center gap-1 text-xs bg-white border border-slate-200 px-2 py-1 rounded cursor-pointer hover:bg-slate-50">
-                                 <input
-                                   type="checkbox"
-                                   checked={draft.serviceIds.includes(s.id)}
-                                   onChange={(e) => {
-                                      const checked = e.target.checked;
-                                      const nextIds = checked 
-                                        ? [...draft.serviceIds, s.id]
-                                        : draft.serviceIds.filter(id => id !== s.id);
-                                      updateDraft(user.id, 'serviceIds', nextIds);
-                                   }}
-                                 />
-                                 {s.name}
-                               </label>
-                             ))}
-                           </div>
-                        </td>
-                      </tr>
-                    )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      </div>
     </div>
   );
 };

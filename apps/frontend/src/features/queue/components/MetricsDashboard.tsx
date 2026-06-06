@@ -21,7 +21,7 @@ import { format, subDays, startOfDay, endOfDay, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { FileDownload, TrendingUp, Schedule, PersonSearch } from '@mui/icons-material';
+import { FileDownload, TrendingUp, Schedule, PersonSearch, SignalCellularAlt } from '@mui/icons-material';
 import Toast from '@shared/components/Toast';
 
 const language: Language = 'pt';
@@ -35,7 +35,14 @@ interface FilterState {
     priorityType: 'all' | 'normal' | 'priority';
 }
 
-const KPICard: React.FC<{ title: string; value: string | number; description?: string; icon?: React.ReactNode; trend?: 'up' | 'down' | 'neutral'; trenValue?: string }> = ({
+const KPICard: React.FC<{ 
+    title: string; 
+    value: string | number; 
+    description?: string; 
+    icon?: React.ReactNode; 
+    trend?: 'up' | 'down' | 'neutral'; 
+    trenValue?: string 
+}> = ({
     title,
     value,
     description,
@@ -43,23 +50,35 @@ const KPICard: React.FC<{ title: string; value: string | number; description?: s
     trend,
     trenValue,
 }) => (
-    <div className="bg-white p-6 rounded-xl shadow-lg border border-border-color hover:shadow-xl transition-shadow">
-        <div className="flex items-start justify-between">
+    <div className="bg-white/90 backdrop-blur-md p-6 rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-xl hover:scale-[1.01] transition-all duration-300 flex flex-col justify-between h-full group relative overflow-hidden">
+        {/* Subtle accent border */}
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-jaboatao-blue to-[#407BDE] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
-                <p className="text-sm font-medium text-text-secondary mb-1">{title}</p>
-                <h3 className="text-3xl font-bold text-text-primary">{value}</h3>
-                {description && <p className="text-xs text-text-secondary mt-2">{description}</p>}
-                {trenValue && (
-                    <div className={`flex items-center gap-1 mt-2 text-sm font-semibold ${trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-gray-600'}`}>
-                        {trend === 'up' && '↑'}
-                        {trend === 'down' && '↓'}
-                        {trend === 'neutral' && '→'}
-                        {trenValue}
-                    </div>
-                )}
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{title}</p>
+                <h3 className="text-3xl font-black text-slate-800 tracking-tight group-hover:text-jaboatao-blue transition-colors duration-200">{value}</h3>
+                {description && <p className="text-xs font-semibold text-slate-500 mt-1.5">{description}</p>}
             </div>
-            {icon && <div className="ml-4 text-jaboatao-blue">{icon}</div>}
+            {icon && (
+                <div className="p-3 bg-blue-500/10 border border-blue-100/30 text-jaboatao-blue rounded-2xl shadow-sm transition-transform duration-300 group-hover:scale-110">
+                    {icon}
+                </div>
+            )}
         </div>
+        {trenValue && (
+            <div className={`flex items-center gap-1.5 mt-4 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border w-fit ${
+                trend === 'up' 
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' 
+                    : trend === 'down' 
+                        ? 'bg-rose-500/10 border-rose-500/20 text-rose-600' 
+                        : 'bg-slate-500/10 border-slate-500/20 text-slate-500'
+            }`}>
+                {trend === 'up' && <span>↑</span>}
+                {trend === 'down' && <span>↓</span>}
+                {trend === 'neutral' && <span>→</span>}
+                <span>{trenValue}</span>
+            </div>
+        )}
     </div>
 );
 
@@ -179,183 +198,131 @@ const MetricsDashboard: React.FC = () => {
     }, [filteredTickets]);
 
     const timeSeriesData = useMemo(() => {
-        const dataByDay = new Map<string, { completed: number; waiting: number; cancelled: number; avgWait: number; avgService: number }>();
+        const dailyGroups = new Map<string, { date: string; esperas: number[]; atendimentos: number[]; completados: number; esperando: number; cancelados: number }>();
+        const startDate = startOfDay(parseISO(filters.startDate));
+        const endDate = endOfDay(parseISO(filters.endDate));
+
+        for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            const dateStr = format(d, 'dd/MM');
+            dailyGroups.set(dateStr, { date: dateStr, esperas: [], atendimentos: [], completados: 0, esperando: 0, cancelados: 0 });
+        }
 
         filteredTickets.forEach((ticket) => {
-            const day = format(parseISO(ticket.created_at), 'yyyy-MM-dd');
-            if (!dataByDay.has(day))
-                dataByDay.set(day, { completed: 0, waiting: 0, cancelled: 0, avgWait: 0, avgService: 0 });
-
-            const dayData = dataByDay.get(day)!;
-
-            if (ticket.status === 'completed') dayData.completed++;
-            else if (ticket.status === 'waiting') dayData.waiting++;
-            else if (ticket.status === 'cancelled' || ticket.status === 'no_show') dayData.cancelled++;
-
-            if (ticket.status === 'completed' && ticket.started_at && ticket.completed_at) {
-                const waitTime = (new Date(ticket.started_at).getTime() - new Date(ticket.created_at).getTime()) / (1000 * 60);
-                const serviceTime = (new Date(ticket.completed_at).getTime() - new Date(ticket.started_at).getTime()) / (1000 * 60);
-                dayData.avgWait += waitTime;
-                dayData.avgService += serviceTime;
+            const dateStr = format(parseISO(ticket.created_at), 'dd/MM');
+            if (dailyGroups.has(dateStr)) {
+                const group = dailyGroups.get(dateStr)!;
+                if (ticket.status === 'completed' && ticket.started_at && ticket.completed_at) {
+                    group.completados += 1;
+                    const wait = (new Date(ticket.started_at).getTime() - new Date(ticket.created_at).getTime()) / (1000 * 60);
+                    const service = (new Date(ticket.completed_at).getTime() - new Date(ticket.started_at).getTime()) / (1000 * 60);
+                    if (wait >= 0) group.esperas.push(wait);
+                    if (service >= 0) group.atendimentos.push(service);
+                } else if (ticket.status === 'waiting') {
+                    group.esperando += 1;
+                } else {
+                    group.cancelados += 1;
+                }
             }
         });
 
-        const sortedDays = Array.from(dataByDay.keys()).sort();
-        return sortedDays.map((day) => {
-            const data = dataByDay.get(day)!;
-            const completedCount = Math.max(data.completed, 1);
+        return Array.from(dailyGroups.values()).map((g) => {
+            const avgWait = g.esperas.length > 0 ? g.esperas.reduce((a, b) => a + b, 0) / g.esperas.length : 0;
+            const avgService = g.atendimentos.length > 0 ? g.atendimentos.reduce((a, b) => a + b, 0) / g.atendimentos.length : 0;
             return {
-                date: format(parseISO(day), 'dd/MM', { locale: ptBR }),
-                completados: data.completed,
-                esperando: data.waiting,
-                cancelados: data.cancelled,
-                'Tempo Espera': Number((data.avgWait / completedCount).toFixed(1)),
-                'Tempo Atendimento': Number((data.avgService / completedCount).toFixed(1)),
+                date: g.date,
+                'Tempo Espera': parseFloat(avgWait.toFixed(1)),
+                'Tempo Atendimento': parseFloat(avgService.toFixed(1)),
+                completados: g.completados,
+                esperando: g.esperando,
+                cancelados: g.cancelados,
             };
         });
-    }, [filteredTickets]);
+    }, [filteredTickets, filters]);
 
     const serviceDistribution = useMemo(() => {
-        const distribution = services
-            .map((service) => ({
-                name: service.name,
-                value: filteredTickets.filter((t) => t.service_id === service.id).length,
-            }))
-            .filter((d) => d.value > 0)
-            .sort((a, b) => b.value - a.value);
-
-        return distribution.slice(0, 8);
-    }, [filteredTickets, services]);
+        const distribution = new Map<string, number>();
+        filteredTickets.forEach((t) => {
+            const serviceName = t.service?.name || 'Não Informado';
+            distribution.set(serviceName, (distribution.get(serviceName) || 0) + 1);
+        });
+        return Array.from(distribution.entries()).map(([name, value]) => ({ name, value }));
+    }, [filteredTickets]);
 
     const userTypeDistribution = useMemo(() => {
-        const types = { aposentado: 0, pensionista: 0, servidor_ativo: 0 };
+        const distribution = new Map<string, number>();
         filteredTickets.forEach((t) => {
-            const type = t.user_type as 'aposentado' | 'pensionista' | 'servidor_ativo';
-            if (type in types) types[type]++;
+            const typeLabel = t.user_type === 'aposentado' ? 'Aposentado' : t.user_type === 'pensionista' ? 'Pensionista' : 'Servidor Ativo';
+            distribution.set(typeLabel, (distribution.get(typeLabel) || 0) + 1);
         });
-        return [
-            { name: 'Aposentado', value: types.aposentado, fill: '#204FA1' },
-            { name: 'Pensionista', value: types.pensionista, fill: '#2E8B57' },
-            { name: 'Servidor Ativo', value: types.servidor_ativo, fill: '#F59E0B' },
-        ].filter((d) => d.value > 0);
+        const colorsMap: Record<string, string> = {
+            'Aposentado': '#204FA1',
+            'Pensionista': '#F59E0B',
+            'Servidor Ativo': '#2E8B57',
+        };
+        return Array.from(distribution.entries()).map(([name, value]) => ({ name, value, fill: colorsMap[name] || '#8B5CF6' }));
     }, [filteredTickets]);
 
     const exportPDF = useCallback(() => {
-        setExportDropdownOpen(false);
-
         try {
-            const pdf = new jsPDF('landscape', 'mm', 'a4');
-            const pageWidth = pdf.internal.pageSize.getWidth();
+            const doc = new jsPDF();
+            doc.setFont('helvetica', 'normal');
+            doc.text('Relatório JaboatãoPrev - Métricas de Atendimento', 14, 15);
+            doc.setFontSize(10);
+            doc.text(`Período: ${format(parseISO(filters.startDate), 'dd/MM/yyyy')} a ${format(parseISO(filters.endDate), 'dd/MM/yyyy')}`, 14, 22);
 
-            pdf.setFontSize(18);
-            pdf.setTextColor(32, 79, 161); // Jaboatao Blue
-            pdf.text('Relatório de Métricas - Jaboatão Prev', pageWidth / 2, 15, { align: 'center' });
+            const tableRows = filteredTickets.map((t) => [
+                t.formatted_number,
+                t.service?.name || '—',
+                t.operator?.name || '—',
+                t.user_type.replace('_', ' ').toUpperCase(),
+                t.is_priority ? 'Sim' : 'Não',
+                t.status.toUpperCase(),
+                format(parseISO(t.created_at), 'dd/MM/yyyy HH:mm'),
+            ]);
 
-            pdf.setFontSize(10);
-            pdf.setTextColor(100, 100, 100);
-            pdf.text(`Período: ${format(parseISO(filters.startDate), 'dd/MM/yyyy')} a ${format(parseISO(filters.endDate), 'dd/MM/yyyy')}`, pageWidth / 2, 22, { align: 'center' });
-            pdf.text(`Gerado em: ${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}`, pageWidth / 2, 28, { align: 'center' });
-
-            const statsBody = [
-                ['Total Atendimentos', metrics.total.toString(), 'Tempo Médio Espera', `${metrics.avgWaitTime} min`],
-                ['Finalizados', metrics.completed.toString(), 'Tempo Médio Atend.', `${metrics.avgServiceTime} min`],
-                ['Cancelados/Não Compareceu', metrics.cancelled.toString(), 'Taxa Finalização', `${metrics.attendanceRate}%`],
-            ];
-
-            autoTable(pdf, {
-                startY: 35,
-                head: [['Métrica', 'Valor', 'Métrica', 'Valor']],
-                body: statsBody,
-                theme: 'grid',
-                headStyles: { fillColor: [32, 79, 161], textColor: [255, 255, 255] },
-                styles: { fontSize: 10, cellPadding: 3 },
+            autoTable(doc, {
+                head: [['Senha', 'Serviço', 'Operador', 'Vínculo', 'Prioridade', 'Status', 'Data/Hora']],
+                body: tableRows,
+                startY: 28,
             });
 
-            // Adicionar detalhes dos últimos atendimentos (ou todos os filtrados)
-            const headers = ['Senha', 'Tipo', 'Serviço', 'Operador', 'Status', 'T. Espera', 'T. Atend.', 'Data/Hora'];
-
-            const rows = filteredTickets.map((t) => {
-                const waitTime = t.started_at ? ((new Date(t.started_at).getTime() - new Date(t.created_at).getTime()) / 60000).toFixed(1) + ' min' : '—';
-                const serviceTime = t.started_at && t.completed_at ? ((new Date(t.completed_at).getTime() - new Date(t.started_at).getTime()) / 60000).toFixed(1) + ' min' : '—';
-
-                return [
-                    t.formatted_number,
-                    t.user_type,
-                    t.service?.name || '—',
-                    t.operator?.name || '—',
-                    t.status === 'completed' ? 'Finalizado' : t.status === 'cancelled' ? 'Cancelado' : t.status === 'waiting' ? 'Aguardando' : t.status,
-                    waitTime,
-                    serviceTime,
-                    format(parseISO(t.created_at), 'dd/MM/yyyy HH:mm')
-                ];
-            });
-
-            const finalY = (pdf as any).lastAutoTable.finalY || 40;
-
-            pdf.setFontSize(14);
-            pdf.setTextColor(0, 0, 0);
-            pdf.text('Detalhamento de Senhas', 14, finalY + 15);
-
-            autoTable(pdf, {
-                startY: finalY + 20,
-                head: [headers],
-                body: rows,
-                theme: 'striped',
-                headStyles: { fillColor: [46, 139, 87], textColor: [255, 255, 255] }, // Jaboatao Green
-                styles: { fontSize: 8, cellPadding: 2 },
-            });
-
-            pdf.save(`relatorio_metricas_${format(new Date(), 'yyyy-MM-dd_HH-mm-ss')}.pdf`);
-        } catch (error) {
-            console.error('Erro ao gerar PDF:', error);
-            setToast({ show: true, message: 'Erro ao gerar relatorio PDF. Tente novamente.', type: 'error' });
+            doc.save(`relatorio_metricas_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+            setToast({ show: true, message: 'Relatório PDF gerado com sucesso!', type: 'success' });
+        } catch (e) {
+            console.error('Erro export PDF:', e);
+            setToast({ show: true, message: 'Não foi possível exportar para PDF.', type: 'error' });
         }
-    }, [filteredTickets, filters, metrics]);
+    }, [filteredTickets, filters]);
 
     const exportJSON = useCallback(() => {
-        setExportDropdownOpen(false);
-        const dataToExport = {
-            periodo: { inicio: filters.startDate, fim: filters.endDate },
-            metricas: metrics,
-            tickets: filteredTickets,
-            geradoEm: new Date().toISOString(),
-        };
-
-        const filename = `relatorio_metricas_${format(new Date(), 'yyyy-MM-dd')}`;
-        const fileContent = JSON.stringify(dataToExport, null, 2);
-        const blob = new Blob([fileContent], { type: 'application/json' });
-        const href = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = href;
-        link.download = `${filename}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(href);
-    }, [filteredTickets, filters, metrics]);
+        const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(filteredTickets, null, 2))}`;
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute('href', jsonString);
+        downloadAnchor.setAttribute('download', `relatorio_metricas_${format(new Date(), 'yyyy-MM-dd')}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+        setToast({ show: true, message: 'Relatório JSON gerado com sucesso!', type: 'success' });
+    }, [filteredTickets]);
 
     const exportCSV = useCallback(() => {
-        setExportDropdownOpen(false);
-        const headers = ['Senha', 'Tipo Usuário', 'Prioritário', 'Serviço', 'Status', 'Data Criação', 'Tempo Espera (min)', 'Tempo Atendimento (min)'];
-        const rows = filteredTickets.map((t) => {
-            const waitTime = t.started_at ? ((new Date(t.started_at).getTime() - new Date(t.created_at).getTime()) / 60000).toFixed(2) : 'N/A';
-            const serviceTime = t.started_at && t.completed_at ? ((new Date(t.completed_at).getTime() - new Date(t.started_at).getTime()) / 60000).toFixed(2) : 'N/A';
+        const csvRows = [
+            ['Senha', 'Servico', 'Operador', 'Vinculo', 'Prioridade', 'Status', 'Data Criacao'],
+        ];
 
-            return [
+        filteredTickets.forEach((t) => {
+            csvRows.push([
                 t.formatted_number,
+                t.service?.name || '',
+                t.operator?.name || '',
                 t.user_type,
-                t.is_priority ? 'Sim' : 'Não',
-                t.service?.name || 'N/A',
-                t.operator?.name || 'N/A',
+                t.is_priority ? 'Sim' : 'Nao',
                 t.status,
                 t.created_at,
-                waitTime,
-                serviceTime,
-            ];
+            ]);
         });
 
-        const csvContent = [headers, ...rows].map((row) => row.map((cell) => `"${cell}"`).join(',')).join('\n');
-
+        const csvContent = csvRows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const href = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -365,300 +332,303 @@ const MetricsDashboard: React.FC = () => {
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(href);
+        setToast({ show: true, message: 'Relatório CSV gerado com sucesso!', type: 'success' });
     }, [filteredTickets]);
 
     const COLORS = ['#204FA1', '#2E8B57', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#14B8A6'];
 
     return (
-        <div className="fade-in min-h-screen bg-cover bg-center bg-no-repeat relative p-6 md:p-8" style={{ backgroundImage: "url('/images/Bandeira/bandeira.jpeg')" }}>
-            {/* Overlay de cor suave para manter contraste e legibilidade */}
-            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-0"></div>
+        <div ref={dashboardRef} className="space-y-8 max-w-[1600px] mx-auto w-full text-slate-800">
             <Toast
                 show={toast.show}
                 message={toast.message}
                 type={toast.type}
                 onClose={() => setToast((prev) => ({ ...prev, show: false }))}
             />
-
-            <div ref={dashboardRef} className="space-y-8 relative z-10">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-                    <div>
-                        <h1 className="font-montserrat text-3xl md:text-4xl font-bold text-text-primary mb-2">Painel de Métricas</h1>
-                        <p className="text-text-secondary text-sm">Análise completa de atendimentos e performance</p>
-                    </div>
-
-                    <div className="relative" ref={exportRef}>
-                        <button
-                            onClick={() => setExportDropdownOpen((prev) => !prev)}
-                            disabled={filteredTickets.length === 0}
-                            className="flex items-center gap-2 py-2 px-4 text-sm font-semibold text-white bg-jaboatao-green-prev rounded-lg shadow-md hover:bg-[#267347] transition-all duration-200 transform hover:scale-105 disabled:bg-slate-400 disabled:cursor-not-allowed"
-                        >
-                            <FileDownload sx={{ fontSize: 18 }} />
-                            Exportar Relatório
-                        </button>
-                        {exportDropdownOpen && (
-                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10 border border-border-color animate-fade-in-up">
-                                <button onClick={exportPDF} className="w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-slate-100">
-                                    📄 Exportar como PDF
-                                </button>
-                                <button onClick={exportJSON} className="w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-slate-100">
-                                    📋 Exportar como JSON
-                                </button>
-                                <button onClick={exportCSV} className="w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-slate-100">
-                                    📊 Exportar como CSV
-                                </button>
-                            </div>
-                        )}
-                    </div>
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-2 border-b border-slate-200/50">
+                <div>
+                    <h1 className="font-montserrat text-3xl font-black text-slate-900 tracking-tight">
+                        Painel de Métricas
+                    </h1>
+                    <p className="text-slate-500 text-sm font-semibold mt-1">Análise inteligente de performance, tempo de fila e atendimentos.</p>
                 </div>
 
-                {/* Filtros */}
-                <div className="bg-white p-6 rounded-xl shadow-lg border border-border-color">
-                    <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center gap-2">
-                        <PersonSearch sx={{ fontSize: 20 }} className="text-jaboatao-blue" />
-                        Filtros de Pesquisa
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-                        <div>
-                            <label className="text-xs font-medium text-text-secondary block mb-2">Data Inicial</label>
-                            <input
-                                type="date"
-                                value={filters.startDate}
-                                onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value }))}
-                                className="w-full p-2 border border-border-color rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-text-secondary block mb-2">Data Final</label>
-                            <input
-                                type="date"
-                                value={filters.endDate}
-                                onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value }))}
-                                className="w-full p-2 border border-border-color rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-text-secondary block mb-2">Serviço</label>
-                            <select
-                                value={filters.serviceId}
-                                onChange={(e) => setFilters((f) => ({ ...f, serviceId: e.target.value }))}
-                                className="w-full p-2 border border-border-color rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50"
-                            >
-                                <option value="all">Todos</option>
-                                {services.map((s) => (
-                                    <option key={s.id} value={s.id}>
-                                        {s.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-text-secondary block mb-2">Operador</label>
-                            <select
-                                value={filters.operatorId}
-                                onChange={(e) => setFilters((f) => ({ ...f, operatorId: e.target.value }))}
-                                className="w-full p-2 border border-border-color rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50"
-                            >
-                                <option value="all">Todos</option>
-                                {operators.map((op) => (
-                                    <option key={op.id} value={op.id}>
-                                        {op.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-text-secondary block mb-2">Tipo Usuário</label>
-                            <select
-                                value={filters.userType}
-                                onChange={(e) => setFilters((f) => ({ ...f, userType: e.target.value as any }))}
-                                className="w-full p-2 border border-border-color rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50"
-                            >
-                                <option value="all">Todos</option>
-                                <option value="aposentado">Aposentado</option>
-                                <option value="pensionista">Pensionista</option>
-                                <option value="servidor_ativo">Servidor Ativo</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs font-medium text-text-secondary block mb-2">Tipo Atendimento</label>
-                            <select
-                                value={filters.priorityType}
-                                onChange={(e) => setFilters((f) => ({ ...f, priorityType: e.target.value as any }))}
-                                className="w-full p-2 border border-border-color rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-jaboatao-blue/50"
-                            >
-                                <option value="all">Todos</option>
-                                <option value="normal">Normal</option>
-                                <option value="priority">Prioritário</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                {/* KPIs principais */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <KPICard title="Total de Atendimentos" value={metrics.total} icon={<TrendingUp />} description="No período selecionado" />
-                    <KPICard title="Tempo Médio Espera" value={`${metrics.avgWaitTime} min`} icon={<Schedule />} description="Até início do atendimento" trend="up" trenValue={`${metrics.medianWaitTime} min (mediana)`} />
-                    <KPICard title="Tempo Médio Atendimento" value={`${metrics.avgServiceTime} min`} description="Duração do serviço" trend="neutral" />
-                    <KPICard title="Taxa Finalização" value={`${metrics.attendanceRate}%`} description={`${metrics.completed} de ${metrics.total} atendimentos`} trend={Number(metrics.attendanceRate) > 80 ? 'up' : 'down'} />
-                    <KPICard title="Máximo Tempo Espera" value={`${metrics.maxWaitTime} min`} description="Maior tempo registrado" />
-                    <KPICard title="Atendimentos Prioritários" value={metrics.priorityCount} description="Atendimentos com prioridade" />
-                    <KPICard title="Aguardando" value={metrics.waiting} description="Na fila de atendimento" />
-                    <KPICard title="Cancelados/Não Compareceram" value={metrics.cancelled} description={`${((metrics.cancelled / metrics.total) * 100).toFixed(1)}% do total`} trend="down" />
-                </div>
-
-                {/* Gráficos */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {timeSeriesData.length > 0 && (
-                        <div className="bg-white p-6 rounded-xl shadow-lg border border-border-color">
-                            <h2 className="text-lg font-semibold text-text-primary mb-4">Tendência de Tempos</h2>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <LineChart data={timeSeriesData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                                    <XAxis dataKey="date" stroke="#6B7280" />
-                                    <YAxis stroke="#6B7280" />
-                                    <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E5E7EB' }} />
-                                    <Legend />
-                                    <Line type="monotone" dataKey="Tempo Espera" stroke="#204FA1" strokeWidth={2} dot={{ r: 4 }} />
-                                    <Line type="monotone" dataKey="Tempo Atendimento" stroke="#2E8B57" strokeWidth={2} dot={{ r: 4 }} />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-                    )}
-
-                    {timeSeriesData.length > 0 && (
-                        <div className="bg-white p-6 rounded-xl shadow-lg border border-border-color">
-                            <h2 className="text-lg font-semibold text-text-primary mb-4">Atendimentos por Dia</h2>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <RechartsBarChart data={timeSeriesData}>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                                    <XAxis dataKey="date" stroke="#6B7280" />
-                                    <YAxis stroke="#6B7280" />
-                                    <Tooltip contentStyle={{ backgroundColor: '#fff', border: '1px solid #E5E7EB' }} />
-                                    <Legend />
-                                    <Bar dataKey="completados" stackId="a" fill="#2E8B57" />
-                                    <Bar dataKey="esperando" stackId="a" fill="#F59E0B" />
-                                    <Bar dataKey="cancelados" stackId="a" fill="#EF4444" />
-                                </RechartsBarChart>
-                            </ResponsiveContainer>
-                        </div>
-                    )}
-
-                    {serviceDistribution.length > 0 && (
-                        <div className="bg-white p-6 rounded-xl shadow-lg border border-border-color">
-                            <h2 className="text-lg font-semibold text-text-primary mb-4">Distribuição por Serviço</h2>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={serviceDistribution}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ name, value }) => `${name}: ${value}`}
-                                        outerRadius={80}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {serviceDistribution.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                        </div>
-                    )}
-
-                    {userTypeDistribution.length > 0 && (
-                        <div className="bg-white p-6 rounded-xl shadow-lg border border-border-color">
-                            <h2 className="text-lg font-semibold text-text-primary mb-4">Distribuição por Tipo de Usuário</h2>
-                            <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={userTypeDistribution}
-                                        cx="50%"
-                                        cy="50%"
-                                        labelLine={false}
-                                        label={({ name, value }) => `${name}: ${value}`}
-                                        outerRadius={80}
-                                        fill="#8884d8"
-                                        dataKey="value"
-                                    >
-                                        {userTypeDistribution.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
+                <div className="relative self-stretch sm:self-auto" ref={exportRef}>
+                    <button
+                        onClick={() => setExportDropdownOpen((prev) => !prev)}
+                        disabled={filteredTickets.length === 0}
+                        className="flex items-center justify-center gap-2 py-3.5 px-6 text-xs font-black uppercase tracking-wider text-white bg-[#2E8B57] hover:bg-[#20623A] rounded-xl shadow-lg shadow-emerald-700/10 hover:shadow-xl active:scale-95 transition-all duration-200 w-full sm:w-auto disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
+                    >
+                        <FileDownload sx={{ fontSize: 20 }} />
+                        Exportar Relatório
+                    </button>
+                    {exportDropdownOpen && (
+                        <div className="absolute right-0 mt-3 w-56 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl z-20 border border-slate-200/80 p-2 animate-fade-in-up">
+                            <button onClick={exportPDF} className="flex items-center gap-3 w-full text-left px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 rounded-xl transition-all duration-150">
+                                <span className="text-lg">📄</span> PDF
+                            </button>
+                            <button onClick={exportJSON} className="flex items-center gap-3 w-full text-left px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 rounded-xl transition-all duration-150">
+                                <span className="text-lg">📋</span> JSON
+                            </button>
+                            <button onClick={exportCSV} className="flex items-center gap-3 w-full text-left px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 rounded-xl transition-all duration-150">
+                                <span className="text-lg">📊</span> CSV
+                            </button>
                         </div>
                     )}
                 </div>
-
-                {/* Tabela de últimos atendimentos */}
-                <div className="bg-white p-6 rounded-xl shadow-lg border border-border-color">
-                    <h2 className="text-lg font-semibold text-text-primary mb-4">Últimos Atendimentos Finalizados</h2>
-                    <div className="overflow-x-auto">
-                        {filteredTickets.filter((t) => t.status === 'completed').length > 0 ? (
-                            <table className="w-full text-left text-sm">
-                                <thead className="border-b border-border-color bg-slate-50">
-                                    <tr>
-                                        <th className="p-3 font-semibold text-text-secondary">Senha</th>
-                                        <th className="p-3 font-semibold text-text-secondary">Tipo</th>
-                                        <th className="p-3 font-semibold text-text-secondary">Serviço</th>
-                                        <th className="p-3 font-semibold text-text-secondary">Operador</th>
-                                        <th className="p-3 font-semibold text-text-secondary text-right">Tempo Espera</th>
-                                        <th className="p-3 font-semibold text-text-secondary text-right">Tempo Atendimento</th>
-                                        <th className="p-3 font-semibold text-text-secondary">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredTickets
-                                        .filter((t) => t.status === 'completed')
-                                        .sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime())
-                                        .slice(0, 10)
-                                        .map((ticket) => {
-                                            const waitTime = ticket.started_at
-                                                ? ((new Date(ticket.started_at).getTime() - new Date(ticket.created_at).getTime()) / 60000).toFixed(1)
-                                                : '—';
-                                            const serviceTime =
-                                                ticket.started_at && ticket.completed_at
-                                                    ? ((new Date(ticket.completed_at).getTime() - new Date(ticket.started_at).getTime()) / 60000).toFixed(1)
-                                                    : '—';
-
-                                            return (
-                                                <tr key={ticket.id} className="border-b border-border-color hover:bg-slate-50">
-                                                    <td className="p-3 font-mono font-bold text-text-primary">{ticket.formatted_number}</td>
-                                                    <td className="p-3 text-text-secondary">
-                                                        <span className={`inline-block px-2 py-1 rounded text-xs font-semibold ${ticket.is_priority ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
-                                                            {ticket.is_priority ? 'Prioritário' : 'Normal'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-3 text-text-primary">{ticket.service?.name || '—'}</td>
-                                                    <td className="p-3 text-text-primary font-medium">{ticket.operator?.name || '—'}</td>
-                                                    <td className="p-3 text-right text-text-primary">{waitTime} min</td>
-                                                    <td className="p-3 text-right text-text-primary">{serviceTime} min</td>
-                                                    <td className="p-3">
-                                                        <span className="inline-block px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-700">Finalizado</span>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })}
-                                </tbody>
-                            </table>
-                        ) : (
-                            <p className="text-center text-text-secondary py-8">Nenhum atendimento finalizado para os filtros selecionados.</p>
-                        )}
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <footer className="text-center text-xs text-text-secondary pt-4 border-t border-border-color">
-                    <p>Última atualização: {format(lastUpdated, 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}</p>
-                    <p className="mt-1">Período: {format(parseISO(filters.startDate), 'dd/MM/yyyy', { locale: ptBR })} a {format(parseISO(filters.endDate), 'dd/MM/yyyy', { locale: ptBR })}</p>
-                </footer>
             </div>
+
+            {/* Filtros */}
+            <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+                <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
+                    <PersonSearch sx={{ fontSize: 22 }} className="text-jaboatao-blue" />
+                    Filtros da Fila
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
+                    <div>
+                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Data Inicial</label>
+                        <input
+                            type="date"
+                            value={filters.startDate}
+                            onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value }))}
+                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Data Final</label>
+                        <input
+                            type="date"
+                            value={filters.endDate}
+                            onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value }))}
+                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+                        />
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Serviço</label>
+                        <select
+                            value={filters.serviceId}
+                            onChange={(e) => setFilters((f) => ({ ...f, serviceId: e.target.value }))}
+                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                        >
+                            <option value="all">Todos os Serviços</option>
+                            {services.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                    {s.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Operador</label>
+                        <select
+                            value={filters.operatorId}
+                            onChange={(e) => setFilters((f) => ({ ...f, operatorId: e.target.value }))}
+                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                        >
+                            <option value="all">Todos os Operadores</option>
+                            {operators.map((op) => (
+                                <option key={op.id} value={op.id}>
+                                    {op.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Vínculo</label>
+                        <select
+                            value={filters.userType}
+                            onChange={(e) => setFilters((f) => ({ ...f, userType: e.target.value as any }))}
+                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                        >
+                            <option value="all">Todos os Vínculos</option>
+                            <option value="aposentado">Aposentado</option>
+                            <option value="pensionista">Pensionista</option>
+                            <option value="servidor_ativo">Servidor Ativo</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Fila</label>
+                        <select
+                            value={filters.priorityType}
+                            onChange={(e) => setFilters((f) => ({ ...f, priorityType: e.target.value as any }))}
+                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                        >
+                            <option value="all">Fila Geral</option>
+                            <option value="normal">Normal</option>
+                            <option value="priority">Prioritário</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            {/* KPIs principais */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <KPICard title="Total de Atendimentos" value={metrics.total} icon={<TrendingUp />} description="No período filtrado" />
+                <KPICard title="Tempo Médio Espera" value={`${metrics.avgWaitTime} min`} icon={<Schedule />} description="Média até ser chamado" trend="up" trenValue={`${metrics.medianWaitTime} min (mediana)`} />
+                <KPICard title="Tempo Médio Atendimento" value={`${metrics.avgServiceTime} min`} description="Tempo em guichê" trend="neutral" />
+                <KPICard title="Taxa Finalização" value={`${metrics.attendanceRate}%`} description={`${metrics.completed} de ${metrics.total} atendimentos`} trend={Number(metrics.attendanceRate) > 80 ? 'up' : 'down'} />
+                <KPICard title="Máximo Tempo Espera" value={`${metrics.maxWaitTime} min`} description="Maior fila registrada" />
+                <KPICard title="Atendimentos Prioritários" value={metrics.priorityCount} description="Prioridade garantida" />
+                <KPICard title="Aguardando" value={metrics.waiting} description="Senhas ativas na fila" />
+                <KPICard title="Cancelados/Não Compareceram" value={metrics.cancelled} description={`${metrics.total > 0 ? ((metrics.cancelled / metrics.total) * 100).toFixed(1) : 0}% do total`} trend="down" />
+            </div>
+
+            {/* Gráficos Modernos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {timeSeriesData.length > 0 && (
+                    <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+                        <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6">Tendência de Tempos (Espera vs Atendimento)</h2>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <LineChart data={timeSeriesData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                                <XAxis dataKey="date" stroke="#94A3B8" fontSize={11} fontWeight={700} tickLine={false} />
+                                <YAxis stroke="#94A3B8" fontSize={11} fontWeight={700} tickLine={false} axisLine={false} />
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.98)', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', fontFamily: 'Inter, sans-serif' }} />
+                                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
+                                <Line type="monotone" dataKey="Tempo Espera" stroke="#204FA1" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6 }} />
+                                <Line type="monotone" dataKey="Tempo Atendimento" stroke="#2E8B57" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6 }} />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+
+                {timeSeriesData.length > 0 && (
+                    <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+                        <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6">Volume de Atendimentos por Dia</h2>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <RechartsBarChart data={timeSeriesData}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                                <XAxis dataKey="date" stroke="#94A3B8" fontSize={11} fontWeight={700} tickLine={false} />
+                                <YAxis stroke="#94A3B8" fontSize={11} fontWeight={700} tickLine={false} axisLine={false} />
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.98)', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', fontFamily: 'Inter, sans-serif' }} />
+                                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
+                                <Bar dataKey="completados" name="Completados" stackId="a" fill="#2E8B57" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="esperando" name="Aguardando" stackId="a" fill="#F59E0B" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="cancelados" name="Cancelados" stackId="a" fill="#EF4444" radius={[4, 4, 0, 0]} />
+                            </RechartsBarChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+
+                {serviceDistribution.length > 0 && (
+                    <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+                        <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6">Distribuição por Serviço</h2>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie
+                                    data={serviceDistribution}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                    outerRadius={80}
+                                    innerRadius={45}
+                                    paddingAngle={3}
+                                    dataKey="value"
+                                >
+                                    {serviceDistribution.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.98)', borderRadius: '16px', border: '1px solid #E2E8F0' }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+
+                {userTypeDistribution.length > 0 && (
+                    <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+                        <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6">Distribuição por Tipo de Usuário</h2>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <PieChart>
+                                <Pie
+                                    data={userTypeDistribution}
+                                    cx="50%"
+                                    cy="50%"
+                                    labelLine={false}
+                                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                    outerRadius={80}
+                                    innerRadius={45}
+                                    paddingAngle={3}
+                                    dataKey="value"
+                                >
+                                    {userTypeDistribution.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    ))}
+                                </Pie>
+                                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.98)', borderRadius: '16px', border: '1px solid #E2E8F0' }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                )}
+            </div>
+
+            {/* Tabela de últimos atendimentos */}
+            <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)] overflow-hidden">
+                <div className="p-6 sm:p-8 border-b border-slate-200/50">
+                    <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                        <SignalCellularAlt sx={{ fontSize: 20 }} className="text-jaboatao-blue" />
+                        Histórico Geral de Senhas
+                    </h2>
+                </div>
+                <div className="overflow-x-auto">
+                    {filteredTickets.length > 0 ? (
+                        <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                            <thead>
+                                <tr className="border-b border-slate-200/50 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">
+                                    <th className="px-6 py-4">Senha</th>
+                                    <th className="px-6 py-4">Serviço</th>
+                                    <th className="px-6 py-4">Operador</th>
+                                    <th className="px-6 py-4">Vínculo</th>
+                                    <th className="px-6 py-4">Prioridade</th>
+                                    <th className="px-6 py-4">Status</th>
+                                    <th className="px-6 py-4">Data/Hora Emissão</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
+                                {filteredTickets.map((ticket) => (
+                                    <tr key={ticket.id} className="hover:bg-slate-50/50 transition-colors duration-150">
+                                        <td className="px-6 py-4 font-mono font-black text-[#204FA1]">{ticket.formatted_number}</td>
+                                        <td className="px-6 py-4">{ticket.service?.name || '—'}</td>
+                                        <td className="px-6 py-4">{ticket.operator?.name || '—'}</td>
+                                        <td className="px-6 py-4 uppercase text-[10px] font-black">{ticket.user_type.replace('_', ' ')}</td>
+                                        <td className="px-6 py-4">
+                                            {ticket.is_priority ? (
+                                                <span className="px-2 py-1 bg-amber-500/10 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-wider">Sim</span>
+                                            ) : (
+                                                <span className="px-2 py-1 bg-slate-100 text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-wider">Não</span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <span className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${
+                                                ticket.status === 'completed'
+                                                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+                                                    : ticket.status === 'waiting'
+                                                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-500'
+                                                        : 'bg-rose-500/10 border-rose-500/20 text-rose-600'
+                                            }`}>
+                                                {ticket.status === 'completed' ? 'Finalizada' : ticket.status === 'waiting' ? 'Aguardando' : ticket.status === 'no_show' ? 'Ausente' : 'Cancelada'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-slate-400 font-normal">
+                                            {format(parseISO(ticket.created_at), 'dd/MM/yyyy HH:mm')}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <p className="text-center text-slate-400 py-20 font-bold text-sm">Nenhum atendimento finalizado para os filtros selecionados.</p>
+                    )}
+                </div>
+            </div>
+
+            {/* Footer */}
+            <footer className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400 pt-6 border-t border-slate-200/50">
+                <p>Última atualização automática: {format(lastUpdated, 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}</p>
+                <p className="mt-1 text-slate-300">Período de Dados: {format(parseISO(filters.startDate), 'dd/MM/yyyy', { locale: ptBR })} a {format(parseISO(filters.endDate), 'dd/MM/yyyy', { locale: ptBR })}</p>
+            </footer>
         </div>
     );
 };
