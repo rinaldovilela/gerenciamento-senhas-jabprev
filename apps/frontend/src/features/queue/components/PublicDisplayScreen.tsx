@@ -121,6 +121,27 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
     const previousInProgressIds = useRef<Set<string>>(new Set());
     const spokenTicketIds = useRef<Set<string>>(new Set());
 
+    // Refs de Controle Concorrente para Evitar Bugs de Modal e Sobreposição de Voz
+    const activeTakeoverTicketRef = useRef<Ticket | null>(null);
+    const speechTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const safetyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+    // Limpeza de timers e referências de voz no desmonte do componente
+    useEffect(() => {
+        return () => {
+            if (speechTimeoutRef.current) clearTimeout(speechTimeoutRef.current);
+            if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+            if (activeUtteranceRef.current) {
+                activeUtteranceRef.current.onend = null;
+                activeUtteranceRef.current.onerror = null;
+            }
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+        };
+    }, []);
+
     // Prefetch de vozes para navegadores modernos
     useEffect(() => {
         if ('speechSynthesis' in window) {
@@ -135,19 +156,31 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
 
     const speakTicket = (ticket: Ticket, onComplete: () => void) => {
         if ('speechSynthesis' in window) {
+            // Cancelar falas anteriores e forçar liberação do mecanismo em navegadores baseados no Chromium
             window.speechSynthesis.cancel();
+            if (window.speechSynthesis.paused) {
+                window.speechSynthesis.resume();
+            }
             
-            setTimeout(() => {
+            if (speechTimeoutRef.current) {
+                clearTimeout(speechTimeoutRef.current);
+            }
+            
+            speechTimeoutRef.current = setTimeout(() => {
                 const ticketNumber = ticket.formatted_number;
                 // Espaçar letras da senha para que o sintetizador soe de forma perfeitamente soletrada
                 const formattedSpeechNumber = ticketNumber.replace('-', ' ').split('').join(' ');
                 
-                const attendeeName = ticket.attendee_name || 'Cidadão';
+                const attendeeName = ticket.attendee_name?.trim();
                 const serviceName = ticket.service?.name || 'Atendimento Geral';
                 const operatorName = ticket.operator?.name || null;
                 const guicheText = getGuicheForTicket(ticket);
 
-                let text = `Senha, número ${formattedSpeechNumber}. Solicitante, ${attendeeName}. Assunto, ${serviceName}.`;
+                let text = `Senha, número ${formattedSpeechNumber}.`;
+                if (attendeeName) {
+                    text += ` Solicitante, ${attendeeName}.`;
+                }
+                text += ` Assunto, ${serviceName}.`;
                 if (operatorName) {
                     text += ` Atendimento com ${operatorName}.`;
                 } else {
@@ -175,21 +208,30 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 const handleFinish = () => {
                     if (!hasFinished) {
                         hasFinished = true;
+                        activeUtteranceRef.current = null;
                         onComplete();
                     }
                 };
 
                 utterance.onend = handleFinish;
-                utterance.onerror = handleFinish; // Avança a fila mesmo se houver falha de voz
+                utterance.onerror = (e) => {
+                    console.error('[Speech Error]', e);
+                    handleFinish();
+                };
+
+                // Manter referência ativa para evitar que o Garbage Collector limpe o objeto no Chrome mid-speech
+                activeUtteranceRef.current = utterance;
 
                 window.speechSynthesis.speak(utterance);
             }, 800);
         } else {
             // Se não houver suporte a TTS, chama o callback imediatamente com um delay padrão
-            setTimeout(onComplete, 6000);
+            if (speechTimeoutRef.current) {
+                clearTimeout(speechTimeoutRef.current);
+            }
+            speechTimeoutRef.current = setTimeout(onComplete, 6000);
         }
     };
-
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -275,6 +317,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
 
         if (nextTicket) {
             setActiveTakeoverTicket(nextTicket);
+            activeTakeoverTicketRef.current = nextTicket;
             setLastCalledTicketId(nextTicket.id);
 
             if (PANEL_CONFIG.mostrarSons && audioRef.current) {
@@ -282,12 +325,24 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 audioRef.current.play().catch(e => console.error("Erro ao reproduzir áudio:", e));
             }
 
-            let safetyTimeoutId: NodeJS.Timeout;
+            if (safetyTimeoutRef.current) {
+                clearTimeout(safetyTimeoutRef.current);
+            }
 
             // Callback para quando a fala terminar ou o tempo de segurança estourar
             const handleSpeechEnded = () => {
-                clearTimeout(safetyTimeoutId);
+                if (safetyTimeoutRef.current) {
+                    clearTimeout(safetyTimeoutRef.current);
+                }
+
+                // Guard contra concorrência: só fecha se este callback pertence ao ticket ativo no takeover
+                if (activeTakeoverTicketRef.current?.id !== nextTicket.id) {
+                    console.log(`[Queue Control] Ignorando encerramento antigo para ticket ${nextTicket.formatted_number}`);
+                    return;
+                }
+
                 setActiveTakeoverTicket(null);
+                activeTakeoverTicketRef.current = null;
                 setLastCalledTicketId(null);
                 isProcessingQueueRef.current = false;
 
@@ -297,18 +352,18 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 }, 500);
             };
 
-            if (nextTicket.formatted_number && nextTicket.attendee_name) {
+            if (nextTicket.formatted_number) {
                 // Fala a senha e avança para a próxima chamada somente após a conclusão da voz
                 speakTicket(nextTicket, handleSpeechEnded);
             } else {
                 // Se o ticket estiver incompleto, encerra após 6 segundos por segurança
-                safetyTimeoutId = setTimeout(handleSpeechEnded, 6000);
+                safetyTimeoutRef.current = setTimeout(handleSpeechEnded, 6000);
                 return;
             }
 
             // Timeout de segurança máximo de 15 segundos para garantir que a fila nunca trave
             // caso o navegador bloqueie a fala ou o evento onend falhe em ser disparado
-            safetyTimeoutId = setTimeout(handleSpeechEnded, 15000);
+            safetyTimeoutRef.current = setTimeout(handleSpeechEnded, 15000);
         } else {
             isProcessingQueueRef.current = false;
         }
@@ -362,9 +417,65 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
 
     return (
         <div 
-            className="flex flex-col w-full h-screen overflow-hidden p-4 sm:p-5 bg-cover bg-center bg-no-repeat relative text-white select-none"
+            className="public-display-container flex flex-col w-full h-screen overflow-hidden p-4 sm:p-5 bg-cover bg-center bg-no-repeat relative text-white select-none"
             style={{ backgroundImage: 'url("/images/Bandeira/bandeira.jpeg")' }}
         >
+            {/* Custom stylesheet for responsive layout preservation during browser zoom */}
+            <style dangerouslySetInnerHTML={{__html: `
+                /* Reduções de Layout em Telas Menores ou com Zoom Alto */
+                @media (max-height: 850px) {
+                    .public-display-container {
+                        padding: 10px !important;
+                    }
+                    .public-display-main {
+                        gap: 12px !important;
+                        margin-bottom: 8px !important;
+                    }
+                    .slideshow-container {
+                        padding: 16px !important;
+                    }
+                    .slideshow-content {
+                        margin-top: auto !important;
+                        margin-bottom: auto !important;
+                        padding-top: 4px !important;
+                        padding-bottom: 4px !important;
+                    }
+                    .slideshow-description {
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                        font-size: 0.825rem !important;
+                    }
+                    .history-section {
+                        display: none !important;
+                    }
+                    .takeover-guiche {
+                        font-size: 0.875rem !important;
+                        padding: 4px 12px !important;
+                    }
+                    .takeover-title {
+                        font-size: 1.75rem !important;
+                    }
+                }
+                
+                @media (max-height: 640px) {
+                    .slideshow-container {
+                        display: none !important;
+                    }
+                    .ticker-container {
+                        padding-top: 6px !important;
+                        padding-bottom: 6px !important;
+                    }
+                    .takeover-title {
+                        font-size: 1.25rem !important;
+                    }
+                    .takeover-service {
+                        display: none !important;
+                    }
+                }
+            `}} />
+
             {/* Backdrop Blur + Dark Gradient Overlay */}
             <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-[8px] pointer-events-none z-0"></div>
 
@@ -406,13 +517,13 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
             </header>
 
             {/* Main Bento Grid */}
-            <main className="flex-grow min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-5 z-10 relative mb-4">
+            <main className="public-display-main flex-grow min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-5 z-10 relative mb-4">
                 
                 {/* COLUNA ESQUERDA (2/3): Atendimento Ativo & Slideshow */}
                 <section className="lg:col-span-2 flex flex-col gap-5 min-h-0">
                     
                     {/* Slideshow Informativo JaboatãoPrev */}
-                    <div className="flex-grow border border-white/10 bg-slate-900/40 backdrop-blur-md rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[300px]">
+                    <div className="slideshow-container flex-grow border border-white/10 bg-slate-900/40 backdrop-blur-md rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between min-h-0">
                         <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
                         
                         {/* Slide Tag */}
@@ -427,7 +538,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                         </div>
 
                         {/* Slide Content */}
-                        <div className="my-auto py-4 flex flex-col sm:flex-row items-center gap-6 transition-all duration-500">
+                        <div className="slideshow-content my-auto py-4 flex flex-col sm:flex-row items-center gap-6 transition-all duration-500">
                             <div className="p-5 bg-white/5 border border-white/10 rounded-2xl shadow-inner shrink-0">
                                 {INFO_SLIDES[currentSlideIndex].icon}
                             </div>
@@ -435,7 +546,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                                 <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
                                     {INFO_SLIDES[currentSlideIndex].title}
                                 </h2>
-                                <p className="text-sm sm:text-base font-semibold text-slate-300 leading-relaxed max-w-xl">
+                                <p className="slideshow-description text-sm sm:text-base font-semibold text-slate-300 leading-relaxed max-w-xl">
                                     {INFO_SLIDES[currentSlideIndex].description}
                                 </p>
                             </div>
@@ -554,7 +665,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
             <section className="flex flex-col gap-3.5 z-10 relative flex-shrink-0">
                 {/* Últimos atendimentos */}
                 {historyTickets.length > 0 && (
-                    <div className="border border-white/10 bg-slate-900/40 backdrop-blur-md rounded-3xl p-3.5">
+                    <div className="history-section border border-white/10 bg-slate-900/40 backdrop-blur-md rounded-3xl p-3.5">
                         <div className="flex items-center gap-2 mb-2">
                             <History sx={{ fontSize: 15 }} className="text-blue-400" />
                             <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Últimos Atendimentos</h3>
@@ -577,7 +688,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 )}
 
                 {/* News Ticker Letreiro de Notícias */}
-                <div className="w-full bg-[#204FA1] border border-blue-700/30 rounded-2xl py-3 px-4 overflow-hidden relative flex items-center gap-4 shadow-lg">
+                <div className="ticker-container w-full bg-[#204FA1] border border-blue-700/30 rounded-2xl py-3 px-4 overflow-hidden relative flex items-center gap-4 shadow-lg">
                     <span className="bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg shrink-0 z-10 shadow-sm">
                         Informativo
                     </span>
@@ -609,25 +720,25 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                     {/* Giant Box display */}
                     <div className="my-auto flex flex-col items-center justify-center text-center z-10 space-y-4 max-h-[75vh]">
                         {/* Guichê / Atendente Badge */}
-                        <div className="px-6 py-2 bg-gradient-to-r from-jaboatao-blue to-[#2B6CB0] rounded-full border border-blue-400/30 text-white text-base sm:text-xl font-black uppercase tracking-widest shadow-2xl animate-bounce">
+                        <div className="takeover-guiche px-6 py-2 bg-gradient-to-r from-jaboatao-blue to-[#2B6CB0] rounded-full border border-blue-400/30 text-white text-base sm:text-xl font-black uppercase tracking-widest shadow-2xl animate-bounce">
                             {getAtendenteOrGuiche(activeTakeoverTicket)}
                         </div>
 
                         {/* Number Display */}
                         <div className="takeover-glow bg-white/5 border border-white/10 rounded-[30px] px-8 py-4 sm:px-14 sm:py-6 max-w-3xl w-full flex items-center justify-center animate-pulse">
-                            <h1 className="font-montserrat font-black text-[5.5rem] sm:text-[8rem] md:text-[10rem] lg:text-[11.5rem] text-emerald-400 tracking-tighter leading-none select-none whitespace-nowrap">
+                            <h1 className="font-montserrat font-black text-[12vw] md:text-[15vh] lg:text-[18vh] text-emerald-400 tracking-tighter leading-none select-none whitespace-nowrap">
                                 {activeTakeoverTicket.formatted_number}
                             </h1>
                         </div>
 
                         {/* Attendee Name */}
-                        <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight uppercase truncate max-w-4xl px-4 mt-2">
+                        <h2 className="takeover-title text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight uppercase truncate max-w-4xl px-4 mt-2">
                             {(activeTakeoverTicket.attendee_name || 'Cidadão').toUpperCase()}
                         </h2>
 
                         {/* Service Name */}
                         {activeTakeoverTicket.service?.name && (
-                            <p className="text-lg sm:text-2xl font-bold text-slate-300 tracking-wide mt-1">
+                            <p className="takeover-service text-lg sm:text-2xl font-bold text-slate-300 tracking-wide mt-1">
                                 {activeTakeoverTicket.service.name}
                             </p>
                         )}
