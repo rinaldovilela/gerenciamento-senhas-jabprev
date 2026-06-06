@@ -42,3 +42,26 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(100, 116, 139, 0.4);
 }
+
+/* GPU-accelerated horizontal ticker animation */
+@keyframes ticker-infinite {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-33.333%, 0, 0);
+  }
+}
+
+.gpu-ticker {
+  display: inline-block;
+  white-space: nowrap;
+  animation: ticker-infinite 35s linear infinite;
+  will-change: transform;
+}
+
+/* Custom glow effect for called ticket modal */
+.takeover-glow {
+  box-shadow: 0 0 80px -10px rgba(16, 185, 129, 0.45);
+}
+

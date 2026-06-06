@@ -1,21 +1,44 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useTodayQueue } from '@features/queue/contexts/TodayQueueContext';
 import { supabase } from '@lib/supabase/client';
 import { PANEL_CONFIG } from '@shared/constants';
 import type { Ticket, UserType } from '@shared/types';
+import { 
+  VolumeUp, 
+  Fullscreen, 
+  FullscreenExit, 
+  ArrowBack,
+  AccessTime,
+  QueuePlayNext,
+  History,
+  MeetingRoom,
+  Campaign,
+  Shield,
+  Devices,
+  Favorite
+} from '@mui/icons-material';
 
-const JaboataoPrevLogo: React.FC<{ className?: string }> = ({ className }) => (
-    <div className={`flex items-center ${className}`}>
-        <img src="/logo-jabprev.png" alt="JaboatãoPrev" className="h-20 w-auto object-contain" />
+const JaboataoPrevLogo: React.FC<{ className?: string; dark?: boolean }> = ({ className, dark }) => (
+    <div className={`flex items-center gap-3 ${className}`}>
+        <div className={`p-2.5 rounded-xl border transition-all duration-300 ${dark ? 'bg-white/10 border-white/10' : 'bg-slate-100 border-slate-200'}`}>
+            <img 
+                src="/logo-jabprev.png" 
+                alt="JaboatãoPrev" 
+                className={`h-9 w-auto object-contain transition-all duration-300 ${dark ? 'brightness-0 invert' : ''}`} 
+            />
+        </div>
+        <div className="flex flex-col">
+            <span className={`font-montserrat font-extrabold text-sm tracking-wider leading-none ${dark ? 'text-white' : 'text-[#204FA1]'}`}>JABOATÃO</span>
+            <span className={`font-poppins font-bold text-[10px] tracking-widest leading-none mt-1 ${dark ? 'text-amber-400' : 'text-slate-500'}`}>PREV</span>
+        </div>
     </div>
 );
 
 const UserTypeIcon: React.FC<{ userType: UserType }> = ({ userType }) => {
     switch (userType) {
-        case 'aposentado': return <span title="Aposentado">👴</span>;
-        case 'pensionista': return <span title="Pensionista">👵</span>;
-        case 'servidor_ativo': return <span title="Servidor Ativo">👨‍💼</span>;
+        case 'aposentado': return <span className="text-xl" title="Aposentado">👴</span>;
+        case 'pensionista': return <span className="text-xl" title="Pensionista">👵</span>;
+        case 'servidor_ativo': return <span className="text-xl" title="Servidor Ativo">👨‍💼</span>;
         default: return null;
     }
 };
@@ -24,8 +47,59 @@ const notificationSound = '/sounds/campainha_geren_senhas_jabprev.mp3';
 
 const getGuicheForTicket = (ticket: Ticket): string => {
     if (ticket.is_priority) return 'Guichê 1 (Prioritário)';
-    return 'Geral';
+    return 'Guichê 2 (Geral)';
 };
+
+const getAtendenteOrGuiche = (ticket: Ticket): string => {
+    if (ticket.operator?.name) {
+        return `Atendente: ${ticket.operator.name}`;
+    }
+    return getGuicheForTicket(ticket);
+};
+
+
+// Slides corporativos super leves (substituem player de vídeo pesado)
+interface SlideItem {
+    id: number;
+    title: string;
+    description: string;
+    tag: string;
+    icon: React.ReactNode;
+    color: string;
+}
+
+const INFO_SLIDES: SlideItem[] = [
+    {
+        id: 1,
+        title: "Prova de Vida Automática",
+        description: "Agora realizada de forma eletrônica cruzando dados do Governo Federal. Sem filas, sem preocupações.",
+        tag: "Inovação JaboatãoPrev",
+        icon: <Shield sx={{ fontSize: 40 }} className="text-amber-400" />,
+        color: "from-blue-900/60 to-indigo-950/60"
+    },
+    {
+        id: 2,
+        title: "Portal do Segurado",
+        description: "Acesse seus contracheques, informes de rendimento e dê entrada em serviços online: jabprev.jaboatao.pe.gov.br",
+        tag: "Serviço Digital",
+        icon: <Devices sx={{ fontSize: 40 }} className="text-emerald-400" />,
+        color: "from-teal-900/60 to-emerald-950/60"
+    },
+    {
+        id: 3,
+        title: "Prevenção e Qualidade de Vida",
+        description: "Mantenha hábitos saudáveis e realize exames preventivos periódicos. Cuidar de você é o nosso compromisso.",
+        tag: "Dica de Saúde",
+        icon: <Favorite sx={{ fontSize: 40 }} className="text-rose-400" />,
+        color: "from-rose-900/60 to-slate-950/60"
+    }
+];
+
+const NEWS_TICKER_TEXTS = [
+    "Atenção: A Prova de Vida agora é realizada de forma automática pelo JaboatãoPrev através de cruzamento de dados federais.",
+    "Acesse o Portal do Segurado: jabprev.jaboatao.pe.gov.br e consulte seu contracheque e informe de rendimentos.",
+    "JaboatãoPrev — Compromisso com o Futuro e Acessibilidade do Servidor."
+];
 
 interface PublicDisplayScreenProps {
     onBack: () => void;
@@ -34,30 +108,75 @@ interface PublicDisplayScreenProps {
 const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => {
     const { todayTickets: tickets } = useTodayQueue();
     const [currentTime, setCurrentTime] = useState(new Date());
+    
+    // Controle do Takeover (Senha Chamada)
+    const [activeTakeoverTicket, setActiveTakeoverTicket] = useState<Ticket | null>(null);
     const [lastCalledTicketId, setLastCalledTicketId] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    
+    // Controle do Carrossel de Mídia
+    const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const previousInProgressIds = useRef<Set<string>>(new Set());
     const spokenTicketIds = useRef<Set<string>>(new Set());
 
-    // Função para ler senha e nome em voz alta
-    const speakTicket = (ticketNumber: string, attendeeName: string) => {
+    // Prefetch de vozes para navegadores modernos
+    useEffect(() => {
         if ('speechSynthesis' in window) {
-            // Cancelar qualquer fala anterior
-            window.speechSynthesis.cancel();
+            window.speechSynthesis.getVoices();
+            const handleVoicesChanged = () => {
+                window.speechSynthesis.getVoices();
+            };
+            window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
+            return () => window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
+        }
+    }, []);
 
-            // Pequeno delay de 800ms após campainha
+    // Leitura nativa e pausada de senhas
+    const speakTicket = (ticket: Ticket) => {
+        if ('speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+            
             setTimeout(() => {
-                const text = `Senha, ${ticketNumber}, ${attendeeName.toUpperCase()}`;
+                const ticketNumber = ticket.formatted_number;
+                // Espaçar letras da senha para que o sintetizador soe de forma perfeitamente soletrada
+                const formattedSpeechNumber = ticketNumber.replace('-', ' ').split('').join(' ');
+                
+                const attendeeName = ticket.attendee_name || 'Cidadão';
+                const serviceName = ticket.service?.name || 'Atendimento Geral';
+                const operatorName = ticket.operator?.name || null;
+                const guicheText = getGuicheForTicket(ticket);
+
+                let text = `Senha, número ${formattedSpeechNumber}. Solicitante, ${attendeeName}. Assunto, ${serviceName}.`;
+                if (operatorName) {
+                    text += ` Atendimento com ${operatorName}.`;
+                } else {
+                    text += ` Dirija-se ao ${guicheText}.`;
+                }
+
                 const utterance = new SpeechSynthesisUtterance(text);
                 utterance.lang = 'pt-BR';
-                utterance.rate = 0.9;
-                utterance.pitch = 1;
-                utterance.volume = 1;
+                
+                // Escolha da melhor voz em português (priorizando vozes femininas de alta fidelidade como Google/Microsoft)
+                const voices = window.speechSynthesis.getVoices();
+                const bestVoice = voices.find(v => v.lang.startsWith('pt') && 
+                    (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural'))
+                ) || voices.find(v => v.lang.startsWith('pt'));
+
+                if (bestVoice) {
+                    utterance.voice = bestVoice;
+                }
+
+                utterance.rate = 0.82; // Velocidade ligeiramente pausada para clareza e acessibilidade (idosos)
+                utterance.pitch = 1.0;  // Tom de voz institucional natural
+                utterance.volume = 1.0; // Volume máximo
+                
                 window.speechSynthesis.speak(utterance);
             }, 800);
         }
     };
+
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -80,24 +199,30 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
     useEffect(() => {
         if (PANEL_CONFIG.mostrarSons) {
             audioRef.current = new Audio(notificationSound);
-            audioRef.current.volume = 0.8;
+            audioRef.current.volume = 0.95;
         }
     }, []);
 
+    // Relógio
     useEffect(() => {
         let timerId: number;
-
         const updateClock = () => {
-            // Sincronizar com timezone de Jaboatão, Pernambuco (America/Recife - UTC-3)
             const jaboataoTime = new Date(new Date().toLocaleString('pt-BR', { timeZone: 'America/Recife' }));
             setCurrentTime(jaboataoTime);
             const now = Date.now();
             const delayToNextSecond = 1000 - (now % 1000);
             timerId = window.setTimeout(updateClock, delayToNextSecond);
         };
-
         updateClock();
         return () => window.clearTimeout(timerId);
+    }, []);
+
+    // Timer do Carrossel de Mídia (8 segundos por slide)
+    useEffect(() => {
+        const slideTimer = setInterval(() => {
+            setCurrentSlideIndex(prev => (prev + 1) % INFO_SLIDES.length);
+        }, 8000);
+        return () => clearInterval(slideTimer);
     }, []);
 
     const inProgressTickets = useMemo(() => {
@@ -116,36 +241,46 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
             .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
     }, [tickets]);
 
-    // Histórico: senhas já atendidas (completed) do dia
     const historyTickets = useMemo(() => {
         return tickets
             .filter(t => t.status === 'completed' && t.started_at)
             .sort((a, b) => new Date(b.started_at!).getTime() - new Date(a.started_at!).getTime())
-            .slice(0, 15);
+            .slice(0, 5);
     }, [tickets]);
 
-    // Ouve o evento de chamar novamente (ticket_recall)
+    // Lógica para disparar o Modo Takeover em Tela Cheia por 6 segundos
+    const triggerTakeover = (ticket: Ticket) => {
+        setActiveTakeoverTicket(ticket);
+        setLastCalledTicketId(ticket.id);
+
+        if (PANEL_CONFIG.mostrarSons && audioRef.current) {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch(e => console.error("Erro ao reproduzir áudio:", e));
+        }
+
+        if (ticket.formatted_number && ticket.attendee_name) {
+            speakTicket(ticket);
+        }
+
+        // Fecha o overlay após 6 segundos (retorna ao slideshow)
+        const timeout = setTimeout(() => {
+            setActiveTakeoverTicket(null);
+            setLastCalledTicketId(null);
+        }, 6000);
+
+        return () => clearTimeout(timeout);
+    };
+
+    // Canal Supabase (Recall Manual)
     useEffect(() => {
         const channel = supabase.channel('tickets-live-updates');
-
         channel.on('broadcast', { event: 'ticket_recall' }, (payload) => {
             const ticketId = payload.payload?.ticketId;
             if (ticketId) {
-                setLastCalledTicketId(ticketId);
-
-                if (PANEL_CONFIG.mostrarSons && audioRef.current) {
-                    audioRef.current.currentTime = 0;
-                    audioRef.current.play().catch(e => console.error("Error playing sound:", e));
-                }
-
                 const ticket = tickets.find(t => t.id === ticketId);
-                if (ticket && ticket.formatted_number && ticket.attendee_name) {
-                    speakTicket(ticket.formatted_number, ticket.attendee_name);
+                if (ticket) {
+                    triggerTakeover(ticket);
                 }
-
-                setTimeout(() => {
-                    setLastCalledTicketId(null);
-                }, 5000);
             }
         }).subscribe();
 
@@ -154,191 +289,307 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
         };
     }, [tickets]);
 
+    // Chamadas automáticas de novas senhas
     useEffect(() => {
         const currentInProgressIds = new Set(inProgressTickets.map(t => t.id));
-
-        // Find newly added tickets to "in_progress"
         const newCalls = [...currentInProgressIds].filter(id => !previousInProgressIds.current.has(id));
 
         if (newCalls.length > 0) {
             const latestCallId = newCalls[0];
-            setLastCalledTicketId(latestCallId);
-
-            if (PANEL_CONFIG.mostrarSons && audioRef.current) {
-                audioRef.current.play().catch(e => console.error("Error playing sound:", e));
+            const ticket = inProgressTickets.find(t => t.id === latestCallId);
+            if (ticket && !spokenTicketIds.current.has(latestCallId)) {
+                spokenTicketIds.current.add(latestCallId);
+                triggerTakeover(ticket);
             }
-
-            // Ler senha e nome em voz alta (apenas uma vez por ticket)
-            if (!spokenTicketIds.current.has(latestCallId)) {
-                const ticket = inProgressTickets.find(t => t.id === latestCallId);
-                if (ticket && ticket.formatted_number && ticket.attendee_name) {
-                    speakTicket(ticket.formatted_number, ticket.attendee_name);
-                    spokenTicketIds.current.add(latestCallId);
-                }
-            }
-
-            setTimeout(() => {
-                setLastCalledTicketId(null);
-            }, 5000);
         }
-
         previousInProgressIds.current = currentInProgressIds;
     }, [inProgressTickets]);
 
+    // Combina os textos do News Ticker em uma única string
+    const fullTickerText = useMemo(() => {
+        return NEWS_TICKER_TEXTS.join("  •  ");
+    }, []);
+
     return (
-        <div className="flex flex-col w-full h-screen overflow-hidden p-3 sm:p-4 md:p-6 bg-panel-bg font-poppins text-panel-secondary">
-            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4">
+        <div 
+            className="flex flex-col w-full h-screen overflow-hidden p-4 sm:p-5 bg-cover bg-center bg-no-repeat relative text-white select-none"
+            style={{ backgroundImage: 'url("/images/Bandeira/bandeira.jpeg")' }}
+        >
+            {/* Backdrop Blur + Dark Gradient Overlay */}
+            <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-[8px] pointer-events-none z-0"></div>
+
+            {/* Header */}
+            <header className="flex justify-between items-center mb-4 z-10 relative border-b border-white/10 pb-3">
                 <div className="flex items-center gap-4">
                     <button
                         onClick={onBack}
-                        className="p-2 sm:p-3 rounded-full bg-white/80 hover:bg-white transition-colors border border-border-color shadow-sm"
-                        aria-label="Voltar para a tela inicial"
+                        className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 shadow-sm active:scale-95 flex items-center justify-center"
+                        aria-label="Voltar"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-panel-primary"><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></svg>
+                        <ArrowBack sx={{ fontSize: 20, color: 'white' }} />
                     </button>
-                    <JaboataoPrevLogo />
+                    <JaboataoPrevLogo dark />
                 </div>
-                <div className="flex items-center gap-3">
-                    <div className="text-right text-sm sm:text-base">
-                        <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-panel-primary">{currentTime.toLocaleTimeString('pt-BR')}</p>
-                        <p className="text-xs sm:text-sm md:text-base text-panel-secondary">{currentTime.toLocaleDateString('pt-BR', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+
+                <div className="flex items-center gap-6">
+                    <div className="text-right">
+                        <p className="text-3xl sm:text-4xl font-black text-white tracking-tight flex items-center gap-2 justify-end">
+                            <AccessTime sx={{ fontSize: 26 }} className="text-amber-400" />
+                            {currentTime.toLocaleTimeString('pt-BR')}
+                        </p>
+                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mt-0.5">
+                            {currentTime.toLocaleDateString('pt-BR', { weekday: 'long', month: 'long', day: 'numeric' })}
+                        </p>
                     </div>
+
                     <button
                         onClick={toggleFullscreen}
-                        title={isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}
-                        aria-label={isFullscreen ? 'Sair da tela cheia' : 'Entrar em tela cheia'}
-                        className="p-2 sm:p-3 rounded-full bg-white/80 hover:bg-white transition-colors border border-border-color shadow-sm flex-shrink-0"
+                        className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 shadow-sm flex-shrink-0 active:scale-95 flex items-center justify-center"
                     >
                         {isFullscreen ? (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-panel-primary"><path d="M8 3v3a2 2 0 0 1-2 2H3" /><path d="M21 8h-3a2 2 0 0 1-2-2V3" /><path d="M3 16h3a2 2 0 0 1 2 2v3" /><path d="M16 21v-3a2 2 0 0 1 2-2h3" /></svg>
+                            <FullscreenExit sx={{ fontSize: 22, color: 'white' }} />
                         ) : (
-                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-panel-primary"><path d="M8 3H5a2 2 0 0 0-2 2v3" /><path d="M21 8V5a2 2 0 0 0-2-2h-3" /><path d="M3 16v3a2 2 0 0 0 2 2h3" /><path d="M16 21h3a2 2 0 0 0 2-2v-3" /></svg>
+                            <Fullscreen sx={{ fontSize: 22, color: 'white' }} />
                         )}
                     </button>
                 </div>
             </header>
 
-            <main className="flex-grow min-h-0 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                <section className="md:col-span-2 bg-white/70 p-4 md:p-6 rounded-2xl shadow-lg min-h-0 overflow-hidden">
-                    <h2 className="font-poppins text-2xl sm:text-3xl md:text-4xl font-bold text-panel-primary mb-3 md:mb-4 border-b-4 border-panel-primary pb-2">SENHAS EM ATENDIMENTO</h2>
-                    {mainInProgressTicket ? (
-                        <>
-                            <div
-                                className={`flex flex-col justify-center items-center p-6 md:p-8 rounded-2xl transition-all duration-300 mb-4 md:mb-6 min-h-[280px] md:min-h-[360px] ${mainInProgressTicket.id === lastCalledTicketId
-                                    ? 'bg-jaboatao-green-prev/80 text-white shadow-2xl animate-pulse'
-                                    : 'bg-white shadow-xl'
-                                    }`}
-                            >
-                                <p className={`font-bold text-xl md:text-3xl ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-panel-secondary'}`}>
-                                    {getGuicheForTicket(mainInProgressTicket)}
-                                </p>
-                                <p className={`font-bold text-5xl sm:text-6xl md:text-7xl my-2 tracking-tighter ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-panel-primary'}`}>
-                                    {mainInProgressTicket.formatted_number}
-                                </p>
-                                <p className={`text-4xl sm:text-5xl md:text-6xl font-bold mb-1 ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white' : 'text-text-primary'}`}>
-                                    {(mainInProgressTicket.attendee_name || 'Nome nao informado').toUpperCase()}
-                                </p>
-                                {mainInProgressTicket.service?.name && (
-                                    <p className={`text-lg md:text-2xl font-medium mb-3 ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white/80' : 'text-panel-secondary'}`}>
-                                        {mainInProgressTicket.service.name}
-                                    </p>
-                                )}
-                                <div className={`flex items-center text-base md:text-2xl font-semibold border-4 rounded-lg px-4 md:px-5 py-2 border-blue-600/40 ${mainInProgressTicket.id === lastCalledTicketId ? 'text-white border-transparent' : 'text-blue-600'}`}>
-                                    <div className="w-3 h-3 bg-blue-600 rounded-full mr-2 animate-ping"></div>
-                                    Em Atendimento
-                                </div>
-                            </div>
+            {/* Main Bento Grid */}
+            <main className="flex-grow min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-5 z-10 relative mb-4">
+                
+                {/* COLUNA ESQUERDA (2/3): Atendimento Ativo & Slideshow */}
+                <section className="lg:col-span-2 flex flex-col gap-5 min-h-0">
+                    
+                    {/* Slideshow Informativo JaboatãoPrev */}
+                    <div className="flex-grow border border-white/10 bg-slate-900/40 backdrop-blur-md rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[300px]">
+                        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                        
+                        {/* Slide Tag */}
+                        <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                            <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
+                                <Campaign sx={{ fontSize: 18 }} />
+                                Informativo JaboatãoPrev
+                            </span>
+                            <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/5 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                                {INFO_SLIDES[currentSlideIndex].tag}
+                            </span>
+                        </div>
 
-                            {secondaryInProgressTickets.length > 0 && (
-                                <div>
-                                    <p className="text-sm md:text-base font-semibold text-panel-secondary mb-2">Outras senhas em atendimento</p>
-                                    <div className="flex gap-3 overflow-x-auto pb-2">
-                                        {secondaryInProgressTickets.map(ticket => {
-                                            const isNewlyCalled = ticket.id === lastCalledTicketId;
-                                            return (
-                                                <div
-                                                    key={ticket.id}
-                                                    className={`flex-shrink-0 min-w-[220px] md:min-w-[260px] flex flex-col justify-center items-center p-4 rounded-xl transition-all duration-300 ${isNewlyCalled ? 'bg-jaboatao-green-prev/80 text-white shadow-xl animate-pulse' : 'bg-white shadow-md'
-                                                        }`}
-                                                >
-                                                    <p className={`font-bold text-sm md:text-lg ${isNewlyCalled ? 'text-white' : 'text-panel-secondary'}`}>{getGuicheForTicket(ticket)}</p>
-                                                    <p className={`font-bold text-4xl md:text-5xl my-1 tracking-tighter ${isNewlyCalled ? 'text-white' : 'text-panel-primary'}`}>{ticket.formatted_number}</p>
-                                                    <p className={`text-sm md:text-base font-semibold ${isNewlyCalled ? 'text-white' : 'text-text-primary'}`}>{(ticket.attendee_name || 'Nome nao informado').toUpperCase()}</p>
-                                                    {ticket.service?.name && <p className={`text-xs md:text-sm ${isNewlyCalled ? 'text-white/70' : 'text-panel-secondary'}`}>{ticket.service.name}</p>}
-                                                </div>
-                                            );
-                                        })}
+                        {/* Slide Content */}
+                        <div className="my-auto py-4 flex flex-col sm:flex-row items-center gap-6 transition-all duration-500">
+                            <div className="p-5 bg-white/5 border border-white/10 rounded-2xl shadow-inner shrink-0">
+                                {INFO_SLIDES[currentSlideIndex].icon}
+                            </div>
+                            <div className="space-y-2.5 text-center sm:text-left">
+                                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+                                    {INFO_SLIDES[currentSlideIndex].title}
+                                </h2>
+                                <p className="text-sm sm:text-base font-semibold text-slate-300 leading-relaxed max-w-xl">
+                                    {INFO_SLIDES[currentSlideIndex].description}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Slide Dots */}
+                        <div className="flex justify-center gap-2 border-t border-white/5 pt-3">
+                            {INFO_SLIDES.map((slide, idx) => (
+                                <button
+                                    key={slide.id}
+                                    onClick={() => setCurrentSlideIndex(idx)}
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${
+                                        currentSlideIndex === idx ? 'w-6 bg-amber-400' : 'w-2 bg-white/20'
+                                    }`}
+                                />
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Senha em Atendimento Ativa (Abaixo da Mídia) */}
+                    <div className="flex-shrink-0 border border-white/10 bg-slate-900/60 backdrop-blur-md rounded-3xl p-5 flex items-center justify-between gap-6 shadow-xl">
+                        {mainInProgressTicket ? (
+                            <>
+                                <div className="min-w-0 flex items-center gap-5">
+                                    <div className="w-14 h-14 bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] text-white font-montserrat font-black rounded-2xl flex items-center justify-center text-xl shadow-md shadow-blue-950/20 shrink-0">
+                                        {mainInProgressTicket.formatted_number.charAt(0)}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Última Senha Chamada</p>
+                                        <h3 className="font-montserrat font-black text-3xl text-white tracking-tighter mt-1">{mainInProgressTicket.formatted_number}</h3>
+                                        <p className="text-xs font-bold text-slate-300 truncate mt-0.5">{(mainInProgressTicket.attendee_name || 'Cidadão').toUpperCase()}</p>
                                     </div>
                                 </div>
-                            )}
+                                <div className="text-right">
+                                    <span className="px-3.5 py-1.5 bg-jaboatao-blue/20 border border-jaboatao-blue/30 text-[#407BDE] text-[10px] font-black uppercase tracking-wider rounded-xl">
+                                        {getAtendenteOrGuiche(mainInProgressTicket)}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 justify-end mt-2 text-[10px] font-black text-emerald-400 uppercase tracking-wider">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></div>
+                                        Ativo
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <p className="text-xs font-bold text-slate-400 text-center w-full py-4">Nenhuma senha ativa em atendimento.</p>
+                        )}
+                    </div>
 
-                            {/* Imagem Institucional */}
-                            <div className="mt-4 rounded-xl overflow-hidden shadow-md flex justify-center bg-white/50">
-                                <img src="/images/Logo/logo-longa.png" alt="Fachada JaboatãoPrev" className="max-h-[200px] w-auto object-cover" />
-                            </div>
-                        </>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center min-h-[300px]">
-                            <p className="text-base md:text-2xl text-center text-text-secondary mb-8">
-                                Nenhuma senha em atendimento no momento.
-                            </p>
-                            <div className="rounded-xl overflow-hidden shadow-md">
-                                <img src="/images/Logo/logo-longa.png" alt="Fachada JaboatãoPrev" className="max-h-[300px] w-auto object-cover" />
+                    {/* Secondary in-progress Tickets (Outros guichês) */}
+                    {secondaryInProgressTickets.length > 0 && (
+                        <div className="flex-shrink-0">
+                            <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2.5">Atendimentos Simultâneos</h3>
+                            <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-none">
+                                {secondaryInProgressTickets.map(ticket => (
+                                    <div
+                                        key={ticket.id}
+                                        className="flex-shrink-0 min-w-[220px] p-4 rounded-2xl border border-white/5 bg-slate-900/50 backdrop-blur-md flex items-center justify-between gap-4"
+                                    >
+                                        <div>
+                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider">{getAtendenteOrGuiche(ticket)}</p>
+                                            <p className="font-montserrat font-black text-xl text-white tracking-tighter mt-0.5">{ticket.formatted_number}</p>
+                                            <p className="text-[10px] font-bold text-slate-300 truncate max-w-[130px] mt-0.5">{(ticket.attendee_name || 'Cidadão').toUpperCase()}</p>
+                                        </div>
+                                        <span className="px-2 py-1 bg-white/5 border border-white/5 rounded-lg text-[8px] font-black uppercase text-slate-400">
+                                            {ticket.user_type.replace('_', ' ')}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
                 </section>
 
-                <aside className="md:col-span-1 bg-white/70 p-4 md:p-6 rounded-2xl shadow-lg flex flex-col h-full min-h-0 overflow-hidden">
-                    <h2 className="font-poppins text-2xl sm:text-3xl md:text-3xl font-bold text-panel-primary mb-3 md:mb-4 border-b-4 border-panel-primary pb-2">PRÓXIMAS SENHAS</h2>
-                    <ul className="space-y-3 flex-grow overflow-y-auto min-h-0">
-                        {waitingTickets.length > 0 ? waitingTickets.map(ticket => (
-                            <li key={ticket.id} className="flex items-center justify-between bg-white p-3 md:p-4 rounded-lg shadow-sm text-base md:text-2xl">
-                                <div>
-                                    <span className="font-bold text-panel-primary block">{ticket.formatted_number}</span>
-                                    <span className="text-xs md:text-sm text-text-secondary block">{(ticket.attendee_name || 'Nome nao informado').toUpperCase()}</span>
-                                    {ticket.service?.name && <span className="text-[10px] md:text-xs text-panel-secondary block">{ticket.service.name}</span>}
+                {/* COLUNA DIREITA (1/3): Próximas Senhas na Fila */}
+                <aside className="lg:col-span-1 border border-white/10 bg-slate-900/60 backdrop-blur-md rounded-3xl p-5 shadow-2xl flex flex-col h-full min-h-0">
+                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3.5 flex items-center gap-2 border-b border-white/10 pb-2.5">
+                        <QueuePlayNext sx={{ fontSize: 16 }} className="text-amber-400" />
+                        Próximas Senhas
+                    </h2>
+                    
+                    <div className="flex-grow overflow-y-auto min-h-0 space-y-2.5 pr-1 scrollbar-none">
+                        {waitingTickets.length > 0 ? (
+                            waitingTickets.map((ticket, idx) => (
+                                <div 
+                                    key={ticket.id} 
+                                    className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-200 ${
+                                        idx === 0 
+                                            ? 'border-amber-500/30 bg-amber-500/5 shadow-sm shadow-amber-500/5' 
+                                            : 'border-white/5 bg-slate-900/40'
+                                    }`}
+                                >
+                                    <div className="min-w-0">
+                                        <span className={`font-montserrat font-black text-xl tracking-tighter ${idx === 0 ? 'text-amber-400' : 'text-white'}`}>
+                                            {ticket.formatted_number}
+                                        </span>
+                                        <span className="text-[9px] font-bold text-slate-400 block truncate uppercase mt-0.5">
+                                            {(ticket.attendee_name || 'Cidadão').toUpperCase()}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-1 px-2.5 py-1 bg-white/5 rounded-xl border border-white/5 text-[8px] font-black uppercase text-slate-300">
+                                        <UserTypeIcon userType={ticket.user_type} />
+                                        {ticket.user_type.replace('servidor_ativo', 'Servidor')}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-1 font-semibold capitalize text-xs md:text-sm">
-                                    <UserTypeIcon userType={ticket.user_type} /> {ticket.user_type.replace('_', ' ')}
-                                </div>
-                            </li>
-                        )) : <p className="text-sm md:text-xl text-center self-center text-text-secondary">Aguardando novas senhas...</p>}
-                    </ul>
+                            ))
+                        ) : (
+                            <div className="h-full flex flex-col items-center justify-center text-center py-20">
+                                <p className="text-xs font-bold text-slate-500">Nenhuma senha aguardando.</p>
+                            </div>
+                        )}
+                    </div>
                 </aside>
             </main>
 
-            {/* Histórico horizontal de atendimentos anteriores */}
-            {historyTickets.length > 0 && (
-                <section className="mt-3 bg-white/70 rounded-2xl shadow-lg p-3 md:p-4 flex-shrink-0">
-                    <h3 className="font-poppins text-sm md:text-base font-bold text-panel-primary mb-2 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" /><path d="M3 3v5h5" /><path d="M12 7v5l4 2" /></svg>
-                        ATENDIMENTOS ANTERIORES
-                    </h3>
-                    <div className="flex gap-3 overflow-x-auto pb-1">
-                        {historyTickets.map(ticket => (
-                            <div
-                                key={ticket.id}
-                                className="flex-shrink-0 bg-white rounded-xl shadow-sm border border-border-color px-4 py-2 min-w-[160px] md:min-w-[200px]"
-                            >
-                                <p className="font-bold text-lg md:text-xl text-panel-primary tracking-tight">{ticket.formatted_number}</p>
-                                <p className="text-xs md:text-sm text-text-secondary truncate">{(ticket.attendee_name || 'Nome nao informado').toUpperCase()}</p>
-                                {ticket.service?.name && <p className="text-[10px] md:text-xs text-panel-secondary truncate">{ticket.service.name}</p>}
-                                <div className="flex items-center justify-between mt-1">
-                                    <span className="text-[10px] md:text-xs text-jaboatao-green-prev font-semibold">✔ Finalizado</span>
-                                    <span className="flex items-center gap-0.5 text-[10px] md:text-xs text-panel-secondary capitalize">
-                                        <UserTypeIcon userType={ticket.user_type} /> {ticket.user_type.replace('_', ' ')}
-                                    </span>
+            {/* Rodapé: Histórico + News Ticker */}
+            <section className="flex flex-col gap-3.5 z-10 relative flex-shrink-0">
+                {/* Últimos atendimentos */}
+                {historyTickets.length > 0 && (
+                    <div className="border border-white/10 bg-slate-900/40 backdrop-blur-md rounded-3xl p-3.5">
+                        <div className="flex items-center gap-2 mb-2">
+                            <History sx={{ fontSize: 15 }} className="text-blue-400" />
+                            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Últimos Atendimentos</h3>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto pb-0.5 scrollbar-none">
+                            {historyTickets.map(ticket => (
+                                <div
+                                    key={ticket.id}
+                                    className="flex-shrink-0 bg-slate-950/40 border border-white/5 rounded-2xl px-4 py-2 min-w-[170px]"
+                                >
+                                    <div className="flex justify-between items-center gap-2">
+                                        <span className="font-montserrat font-black text-sm text-slate-200 tracking-tight">{ticket.formatted_number}</span>
+                                        <span className="text-[7px] font-black text-emerald-400 uppercase tracking-widest">Atendido</span>
+                                    </div>
+                                    <p className="text-[9px] font-bold text-slate-400 truncate mt-1">{(ticket.attendee_name || 'Cidadão').toUpperCase()}</p>
                                 </div>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
-                </section>
-            )}
+                )}
 
-            <footer className="w-full bg-panel-primary text-white text-center text-sm sm:text-base md:text-xl font-semibold p-2 md:p-3 mt-3 rounded-t-lg shadow-inner flex-shrink-0">
-                JaboatãoPrev – Compromisso com o Futuro
-            </footer>
+                {/* News Ticker Letreiro de Notícias */}
+                <div className="w-full bg-[#204FA1] border border-blue-700/30 rounded-2xl py-3 px-4 overflow-hidden relative flex items-center gap-4 shadow-lg">
+                    <span className="bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg shrink-0 z-10 shadow-sm">
+                        Informativo
+                    </span>
+                    <div className="relative flex-grow overflow-hidden whitespace-nowrap mask-gradient w-full">
+                        <div className="gpu-ticker text-xs font-bold text-white tracking-wide">
+                            {fullTickerText} &nbsp;&nbsp;•&nbsp;&nbsp; {fullTickerText} &nbsp;&nbsp;•&nbsp;&nbsp; {fullTickerText}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            {/* ============================================================ */}
+            {/* FULL-SCREEN TAKEOVER OVERLAY: Ativado quando nova senha chama */}
+            {/* ============================================================ */}
+            {activeTakeoverTicket && (
+                <div className="fixed inset-0 bg-slate-950/95 z-[999] flex flex-col justify-between p-8 sm:p-14 animate-fade-in transition-all duration-300">
+                    {/* Glowing Accent background light */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-[#204FA1]/10 via-transparent to-transparent pointer-events-none"></div>
+
+                    {/* Logo & Clock header */}
+                    <div className="flex justify-between items-center z-10 border-b border-white/10 pb-4">
+                        <JaboataoPrevLogo dark />
+                        <div className="text-right">
+                            <p className="text-xs uppercase font-black tracking-widest text-amber-400">Nova Senha Chamada</p>
+                            <p className="text-sm font-bold text-slate-400 mt-0.5">Dirija-se ao atendimento</p>
+                        </div>
+                    </div>
+
+                    {/* Giant Box display */}
+                    <div className="my-auto flex flex-col items-center justify-center text-center z-10 space-y-4 max-h-[75vh]">
+                        {/* Guichê / Atendente Badge */}
+                        <div className="px-6 py-2 bg-gradient-to-r from-jaboatao-blue to-[#2B6CB0] rounded-full border border-blue-400/30 text-white text-base sm:text-xl font-black uppercase tracking-widest shadow-2xl animate-bounce">
+                            {getAtendenteOrGuiche(activeTakeoverTicket)}
+                        </div>
+
+                        {/* Number Display */}
+                        <div className="takeover-glow bg-white/5 border border-white/10 rounded-[30px] px-8 py-4 sm:px-14 sm:py-6 max-w-3xl w-full flex items-center justify-center animate-pulse">
+                            <h1 className="font-montserrat font-black text-[5.5rem] sm:text-[8rem] md:text-[10rem] lg:text-[11.5rem] text-emerald-400 tracking-tighter leading-none select-none whitespace-nowrap">
+                                {activeTakeoverTicket.formatted_number}
+                            </h1>
+                        </div>
+
+                        {/* Attendee Name */}
+                        <h2 className="text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight uppercase truncate max-w-4xl px-4 mt-2">
+                            {(activeTakeoverTicket.attendee_name || 'Cidadão').toUpperCase()}
+                        </h2>
+
+                        {/* Service Name */}
+                        {activeTakeoverTicket.service?.name && (
+                            <p className="text-lg sm:text-2xl font-bold text-slate-300 tracking-wide mt-1">
+                                {activeTakeoverTicket.service.name}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Ticker footer sound notification label */}
+                    <div className="flex justify-center items-center gap-2 z-10 text-xs font-black uppercase tracking-widest text-slate-500">
+                        <VolumeUp className="text-emerald-400 animate-ping" />
+                        Chamada Sonora Ativa
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

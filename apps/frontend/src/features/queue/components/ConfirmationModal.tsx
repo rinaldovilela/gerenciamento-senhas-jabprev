@@ -34,28 +34,28 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     };
 
     return (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
-            <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-slate-100 p-6 sm:p-8 max-w-md w-full shadow-2xl animate-fade-in-up flex flex-col gap-6">
-                <div className="flex flex-col gap-2">
-                    <h2 className="text-lg font-black text-text-primary tracking-tight">{title}</h2>
-                    <p className="text-sm font-semibold text-text-secondary/90 leading-relaxed">{message}</p>
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+            <div className="bg-white/95 backdrop-blur-xl rounded-3xl border border-slate-200/60 p-6 sm:p-8 max-w-md w-full shadow-2xl animate-fade-in-up flex flex-col gap-6 text-slate-800">
+                <div className="flex flex-col gap-2.5">
+                    <h2 className="text-xl font-black text-slate-900 tracking-tight">{title}</h2>
+                    <p className="text-sm font-semibold text-slate-500 leading-relaxed">{message}</p>
                 </div>
                 
                 <div className="flex gap-3 justify-end items-center">
                     <button
                         onClick={onCancel}
                         disabled={isLoading}
-                        className="px-5 py-2.5 text-xs font-bold text-text-primary bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-5 py-3 text-xs font-black uppercase tracking-widest text-slate-600 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         {cancelText}
                     </button>
                     <button
                         onClick={handleConfirm}
                         disabled={isLoading}
-                        className={`px-5 py-2.5 text-xs font-bold text-white rounded-xl shadow-md hover:shadow-lg active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
+                        className={`px-6 py-3 text-xs font-black uppercase tracking-widest text-white rounded-xl shadow-lg active:scale-95 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed ${
                             isDangerous
-                                ? 'bg-red-500 hover:bg-red-600 shadow-red-500/10'
-                                : 'bg-jaboatao-blue hover:bg-[#1C4690] shadow-jaboatao-blue/15'
+                                ? 'bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 shadow-rose-950/15'
+                                : 'bg-gradient-to-r from-jaboatao-blue to-[#2B6CB0] hover:shadow-xl shadow-blue-950/15'
                         }`}
                     >
                         {isLoading ? 'Processando...' : confirmText}
