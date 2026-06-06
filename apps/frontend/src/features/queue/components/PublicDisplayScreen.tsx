@@ -133,8 +133,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
         }
     }, []);
 
-    // Leitura nativa e pausada de senhas
-    const speakTicket = (ticket: Ticket) => {
+    const speakTicket = (ticket: Ticket, onComplete: () => void) => {
         if ('speechSynthesis' in window) {
             window.speechSynthesis.cancel();
             
@@ -172,8 +171,22 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 utterance.pitch = 1.0;  // Tom de voz institucional natural
                 utterance.volume = 1.0; // Volume máximo
                 
+                let hasFinished = false;
+                const handleFinish = () => {
+                    if (!hasFinished) {
+                        hasFinished = true;
+                        onComplete();
+                    }
+                };
+
+                utterance.onend = handleFinish;
+                utterance.onerror = handleFinish; // Avança a fila mesmo se houver falha de voz
+
                 window.speechSynthesis.speak(utterance);
             }, 800);
+        } else {
+            // Se não houver suporte a TTS, chama o callback imediatamente com um delay padrão
+            setTimeout(onComplete, 6000);
         }
     };
 
@@ -269,12 +282,11 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 audioRef.current.play().catch(e => console.error("Erro ao reproduzir áudio:", e));
             }
 
-            if (nextTicket.formatted_number && nextTicket.attendee_name) {
-                speakTicket(nextTicket);
-            }
+            let safetyTimeoutId: NodeJS.Timeout;
 
-            // Exibe o modal takeover por 6 segundos na tela
-            setTimeout(() => {
+            // Callback para quando a fala terminar ou o tempo de segurança estourar
+            const handleSpeechEnded = () => {
+                clearTimeout(safetyTimeoutId);
                 setActiveTakeoverTicket(null);
                 setLastCalledTicketId(null);
                 isProcessingQueueRef.current = false;
@@ -283,7 +295,20 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 setTimeout(() => {
                     processNextInQueue();
                 }, 500);
-            }, 6000);
+            };
+
+            if (nextTicket.formatted_number && nextTicket.attendee_name) {
+                // Fala a senha e avança para a próxima chamada somente após a conclusão da voz
+                speakTicket(nextTicket, handleSpeechEnded);
+            } else {
+                // Se o ticket estiver incompleto, encerra após 6 segundos por segurança
+                safetyTimeoutId = setTimeout(handleSpeechEnded, 6000);
+                return;
+            }
+
+            // Timeout de segurança máximo de 15 segundos para garantir que a fila nunca trave
+            // caso o navegador bloqueie a fala ou o evento onend falhe em ser disparado
+            safetyTimeoutId = setTimeout(handleSpeechEnded, 15000);
         } else {
             isProcessingQueueRef.current = false;
         }
