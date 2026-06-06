@@ -1,42 +1,98 @@
-
 import React from 'react';
-import { ArrowBack } from '@mui/icons-material';
+import { ArrowBack, Help } from '@mui/icons-material';
+import { JaboataoPrevLogo } from '@shared/components/Logo';
 
 interface PrioritySelectionScreenProps {
     onSelect: (isPriority: boolean) => void;
     onBack: () => void;
     fullscreenMode?: boolean;
+    theme?: 'light' | 'dark';
 }
 
-const PrioritySelectionScreen: React.FC<PrioritySelectionScreenProps> = ({ onSelect, onBack, fullscreenMode }) => {
+const PrioritySelectionScreen: React.FC<PrioritySelectionScreenProps> = ({ 
+    onSelect, 
+    onBack, 
+    fullscreenMode,
+    theme = 'dark'
+}) => {
+    const isDark = theme === 'dark';
+
     return (
-        <div className="flex flex-col w-full h-screen md:min-h-screen p-3 sm:p-4 md:p-8 landscape:p-2 landscape:h-screen bg-app-bg text-text-primary overflow-hidden">
-            <header className="flex items-center mb-6 sm:mb-8 landscape:mb-2 justify-between flex-shrink-0">
-                <button 
-                    onClick={onBack} 
-                    className={`p-2 sm:p-3 landscape:p-1.5 rounded-full bg-white hover:bg-slate-100 transition-colors mr-3 sm:mr-4 landscape:mr-2 border border-border-color ${
-                        fullscreenMode ? 'hidden landscape:hidden portrait:flex' : 'hidden lg:flex'
-                    }`}
-                    title="Voltar"
-                >
-                    <ArrowBack sx={{ fontSize: 20, color: '#005696' }} />
-                </button>
-                <h1 className="font-montserrat text-xl sm:text-2xl md:text-3xl lg:text-4xl landscape:text-lg font-semibold text-jaboatao-blue text-center flex-1">Atendimento Servidor Ativo</h1>
+        <div className={`flex flex-col w-full min-h-screen p-6 md:p-12 relative overflow-hidden select-none transition-colors duration-500 ${
+            isDark 
+                ? 'bg-gradient-to-tr from-[#081325] via-[#0c1a30] to-[#050b14] text-white' 
+                : 'bg-gradient-to-tr from-[#f8fafc] via-[#e2e8f0] to-[#cbd5e1] text-slate-800'
+        }`}>
+            {/* Background glowing ambient light */}
+            <div className={`absolute top-[-20%] left-[-20%] w-[60%] h-[60%] rounded-full blur-[150px] pointer-events-none transition-colors duration-500 ${
+                isDark ? 'bg-blue-500/10' : 'bg-blue-200/40'
+            }`}></div>
+            <div className={`absolute bottom-[-20%] right-[-20%] w-[60%] h-[60%] rounded-full blur-[150px] pointer-events-none transition-colors duration-500 ${
+                isDark ? 'bg-emerald-500/10' : 'bg-emerald-250/20'
+            }`}></div>
+
+            <header className="flex items-center mb-8 md:mb-12 justify-between z-10">
+                <div className="flex items-center gap-4">
+                    <button 
+                        onClick={onBack} 
+                        className={`p-3 rounded-2xl active:scale-90 transition-all duration-155 border flex items-center justify-center shadow-lg ${
+                            isDark 
+                                ? 'bg-white/5 hover:bg-white/10 border-white/10 text-blue-400' 
+                                : 'bg-white hover:bg-slate-50 border-slate-200 text-[#204FA1]'
+                        }`}
+                        title="Voltar"
+                    >
+                        <ArrowBack sx={{ fontSize: 22 }} />
+                    </button>
+                    <JaboataoPrevLogo theme={theme} className="hidden sm:flex" />
+                </div>
+                <h1 className={`font-montserrat text-xl sm:text-2xl md:text-3xl font-black text-right transition-colors duration-500 ${
+                    isDark ? 'text-white' : 'text-slate-900'
+                }`}>
+                    Servidor Ativo
+                </h1>
             </header>
             
-            <main className="flex-grow flex items-center justify-center overflow-hidden">
-                <div className="w-full max-w-2xl text-center bg-[#E9EEF6] border-2 border-[#204FA1] p-4 sm:p-6 md:p-8 landscape:p-3 rounded-2xl shadow-lg">
-                    <h2 className="text-lg sm:text-2xl md:text-3xl landscape:text-base font-semibold text-text-primary mb-3 sm:mb-6 md:mb-8 landscape:mb-2">O atendimento é prioritário?</h2>
-                    <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 md:gap-6 landscape:gap-2">
+            <main className="flex-grow flex items-center justify-center z-10 w-full px-4">
+                <div className={`w-full max-w-2xl backdrop-blur-2xl p-8 sm:p-12 rounded-[40px] text-center flex flex-col items-center transition-all duration-500 ${
+                    isDark 
+                        ? 'bg-slate-900/60 border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.5)]' 
+                        : 'bg-white/85 border border-slate-200/80 shadow-[0_30px_60px_rgba(30,41,59,0.12)]'
+                }`}>
+                    <div className={`w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-inner animate-pulse transition-colors duration-500 ${
+                        isDark 
+                            ? 'bg-amber-500/10 border border-amber-400/20' 
+                            : 'bg-amber-50 border border-amber-200'
+                    }`}>
+                        <Help className={isDark ? "text-amber-400" : "text-amber-600"} sx={{ fontSize: 40 }} />
+                    </div>
+
+                    <h2 className={`font-montserrat text-2xl sm:text-3xl font-black mb-8 tracking-tight transition-colors duration-500 ${
+                        isDark ? 'text-white' : 'text-slate-800'
+                    }`}>
+                        O seu atendimento é prioritário?
+                    </h2>
+
+                    <div className="flex flex-col sm:flex-row justify-center gap-6 w-full max-w-md">
+                        {/* Sim Card (Green/Priority) */}
                         <button 
                             onClick={() => onSelect(true)}
-                            className="w-full sm:w-48 md:w-52 landscape:w-32 py-3 sm:py-4 md:py-5 landscape:py-2 text-base sm:text-lg md:text-2xl landscape:text-sm font-bold bg-[#2E8B57] text-white rounded-xl shadow-md hover:opacity-90 transition-opacity transform hover:scale-105"
+                            className={`flex-1 py-5 px-8 rounded-2xl border text-xl font-black uppercase tracking-wider active:scale-[0.96] transition-all duration-150 shadow-lg ${
+                                isDark 
+                                    ? 'border-emerald-500/30 bg-gradient-to-r from-emerald-950/20 to-emerald-900/10 hover:to-emerald-900/30 text-emerald-400 hover:shadow-[0_10px_30px_rgba(16,185,129,0.2)]' 
+                                    : 'border-emerald-300 bg-emerald-50 hover:bg-emerald-100/80 text-emerald-700 hover:shadow-[0_10px_30px_rgba(4,120,87,0.1)]'
+                            }`}
                         >
                             Sim
                         </button>
+                        {/* Não Card (Gray/Normal) */}
                         <button 
                             onClick={() => onSelect(false)}
-                            className="w-full sm:w-48 md:w-52 landscape:w-32 py-3 sm:py-4 md:py-5 landscape:py-2 text-base sm:text-lg md:text-2xl landscape:text-sm font-bold bg-[#A0AEC0] text-white rounded-xl shadow-md hover:opacity-90 transition-opacity transform hover:scale-105"
+                            className={`flex-1 py-5 px-8 rounded-2xl border text-xl font-black uppercase tracking-wider active:scale-[0.96] transition-all duration-150 shadow-lg ${
+                                isDark 
+                                    ? 'border-white/10 bg-white/5 hover:bg-white/10 text-slate-300' 
+                                    : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700'
+                            }`}
                         >
                             Não
                         </button>

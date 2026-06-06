@@ -24,6 +24,18 @@ const AppContent: React.FC = () => {
     const [isPriority, setIsPriority] = useState<boolean>(false);
     const [fullscreenMode, setFullscreenMode] = useState<boolean>(false);
     const [isGeneratingTicket, setIsGeneratingTicket] = useState<boolean>(false);
+    const [totemTheme, setTotemTheme] = useState<'light' | 'dark'>(() => {
+        return (localStorage.getItem('totemTheme') as 'light' | 'dark') || 'dark';
+    });
+
+    const toggleTheme = useCallback(() => {
+        setTotemTheme(prev => {
+            const next = prev === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('totemTheme', next);
+            return next;
+        });
+    }, []);
+
     const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
         show: false,
         message: '',
@@ -195,24 +207,24 @@ const AppContent: React.FC = () => {
     const renderScreen = () => {
         // Em fullscreen, nunca mostra Home - vai direto para UserTypeSelection
         if (fullscreenMode && currentScreen === Screen.HOME) {
-            return <UserTypeSelectionScreen onSelect={handleUserTypeSelected} onBack={exitFullscreen} />;
+            return <UserTypeSelectionScreen onSelect={handleUserTypeSelected} onBack={exitFullscreen} theme={totemTheme} />;
         }
 
         switch (currentScreen) {
             case Screen.HOME:
-                return <HomeScreen onStart={handleStart} onAdminClick={showLogin} onPublicDisplayClick={showPublicDisplay} onFullscreenMode={requestFullscreen} />;
+                return <HomeScreen onStart={handleStart} onAdminClick={showLogin} onPublicDisplayClick={showPublicDisplay} onFullscreenMode={requestFullscreen} theme={totemTheme} onToggleTheme={toggleTheme} />;
             case Screen.USER_TYPE_SELECTION:
-                return <UserTypeSelectionScreen onSelect={handleUserTypeSelected} onBack={fullscreenMode ? exitFullscreen : showHome} fullscreenMode={fullscreenMode} />;
+                return <UserTypeSelectionScreen onSelect={handleUserTypeSelected} onBack={fullscreenMode ? exitFullscreen : showHome} fullscreenMode={fullscreenMode} theme={totemTheme} />;
             case Screen.PRIORITY_SELECTION:
-                return <PrioritySelectionScreen onSelect={handlePrioritySelected} onBack={showUserTypeSelection} fullscreenMode={fullscreenMode} />;
+                return <PrioritySelectionScreen onSelect={handlePrioritySelected} onBack={showUserTypeSelection} fullscreenMode={fullscreenMode} theme={totemTheme} />;
             case Screen.SERVICE_SELECTION:
-                return <ServiceSelectionScreen onServiceSelected={handleServiceSelected} onBack={handleBackFromServiceSelection} fullscreenMode={fullscreenMode} />;
+                return <ServiceSelectionScreen onServiceSelected={handleServiceSelected} onBack={handleBackFromServiceSelection} fullscreenMode={fullscreenMode} theme={totemTheme} />;
             case Screen.NAME_INPUT:
                 return selectedService
-                    ? <NameInputScreen service={selectedService} onSubmit={handleAttendeeNameSubmitted} onBack={() => setCurrentScreen(Screen.SERVICE_SELECTION)} fullscreenMode={fullscreenMode} />
-                    : <ServiceSelectionScreen onServiceSelected={handleServiceSelected} onBack={handleBackFromServiceSelection} fullscreenMode={fullscreenMode} />;
+                    ? <NameInputScreen service={selectedService} onSubmit={handleAttendeeNameSubmitted} onBack={() => setCurrentScreen(Screen.SERVICE_SELECTION)} fullscreenMode={fullscreenMode} theme={totemTheme} />
+                    : <ServiceSelectionScreen onServiceSelected={handleServiceSelected} onBack={handleBackFromServiceSelection} fullscreenMode={fullscreenMode} theme={totemTheme} />;
             case Screen.TICKET:
-                return activeTicket ? <TicketScreen ticket={activeTicket} onNewTicket={handleNewTicketRequest} onExit={fullscreenMode ? exitFullscreen : undefined} fullscreenMode={fullscreenMode} /> : <HomeScreen onStart={handleStart} onAdminClick={showLogin} onPublicDisplayClick={showPublicDisplay} onFullscreenMode={requestFullscreen} />;
+                return activeTicket ? <TicketScreen ticket={activeTicket} onNewTicket={handleNewTicketRequest} onExit={fullscreenMode ? exitFullscreen : undefined} fullscreenMode={fullscreenMode} theme={totemTheme} /> : <HomeScreen onStart={handleStart} onAdminClick={showLogin} onPublicDisplayClick={showPublicDisplay} onFullscreenMode={requestFullscreen} theme={totemTheme} onToggleTheme={toggleTheme} />;
             case Screen.LOGIN:
                 return <LoginScreen onLoginSuccess={handleLoginSuccess} onBack={showHome} />;
             case Screen.RESTRICTED_AREA:
@@ -220,7 +232,7 @@ const AppContent: React.FC = () => {
             case Screen.PUBLIC_DISPLAY:
                 return <PublicDisplayScreen onBack={showHome} />;
             default:
-                return <HomeScreen onStart={handleStart} onAdminClick={showLogin} onPublicDisplayClick={showPublicDisplay} onFullscreenMode={requestFullscreen} />;
+                return <HomeScreen onStart={handleStart} onAdminClick={showLogin} onPublicDisplayClick={showPublicDisplay} onFullscreenMode={requestFullscreen} theme={totemTheme} onToggleTheme={toggleTheme} />;
         }
     };
 
