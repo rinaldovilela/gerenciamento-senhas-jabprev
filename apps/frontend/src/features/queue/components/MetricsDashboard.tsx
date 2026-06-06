@@ -273,11 +273,11 @@ const MetricsDashboard: React.FC = () => {
 
             // Adicionar detalhes dos últimos atendimentos (ou todos os filtrados)
             const headers = ['Senha', 'Tipo', 'Serviço', 'Operador', 'Status', 'T. Espera', 'T. Atend.', 'Data/Hora'];
-            
+
             const rows = filteredTickets.map((t) => {
                 const waitTime = t.started_at ? ((new Date(t.started_at).getTime() - new Date(t.created_at).getTime()) / 60000).toFixed(1) + ' min' : '—';
                 const serviceTime = t.started_at && t.completed_at ? ((new Date(t.completed_at).getTime() - new Date(t.started_at).getTime()) / 60000).toFixed(1) + ' min' : '—';
-                
+
                 return [
                     t.formatted_number,
                     t.user_type,
@@ -370,14 +370,17 @@ const MetricsDashboard: React.FC = () => {
     const COLORS = ['#204FA1', '#2E8B57', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#14B8A6'];
 
     return (
-        <div className="fade-in">
+        <div className="fade-in min-h-screen bg-cover bg-center bg-no-repeat relative p-6 md:p-8" style={{ backgroundImage: "url('/images/Bandeira/bandeira.jpeg')" }}>
+            {/* Overlay de cor suave para manter contraste e legibilidade */}
+            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-0"></div>
             <Toast
                 show={toast.show}
                 message={toast.message}
                 type={toast.type}
                 onClose={() => setToast((prev) => ({ ...prev, show: false }))}
             />
-            <div ref={dashboardRef} className="space-y-8">
+
+            <div ref={dashboardRef} className="space-y-8 relative z-10">
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
                     <div>
