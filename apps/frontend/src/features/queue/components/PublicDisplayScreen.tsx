@@ -3,28 +3,28 @@ import { useTodayQueue } from '@features/queue/contexts/TodayQueueContext';
 import { supabase } from '@lib/supabase/client';
 import { PANEL_CONFIG } from '@shared/constants';
 import type { Ticket, UserType } from '@shared/types';
-import { 
-  VolumeUp, 
-  Fullscreen, 
-  FullscreenExit, 
-  ArrowBack,
-  AccessTime,
-  QueuePlayNext,
-  History,
-  MeetingRoom,
-  Campaign,
-  Shield,
-  Devices,
-  Favorite
+import {
+    VolumeUp,
+    Fullscreen,
+    FullscreenExit,
+    ArrowBack,
+    AccessTime,
+    QueuePlayNext,
+    History,
+    MeetingRoom,
+    Campaign,
+    Shield,
+    Devices,
+    Favorite
 } from '@mui/icons-material';
 
 const JaboataoPrevLogo: React.FC<{ className?: string; dark?: boolean }> = ({ className, dark }) => (
     <div className={`flex items-center gap-3 ${className}`}>
         <div className={`p-2.5 rounded-xl border transition-all duration-300 ${dark ? 'bg-white/10 border-white/10' : 'bg-white/80 border-slate-200/80 shadow-sm'}`}>
-            <img 
-                src="/logo-jabprev.png" 
-                alt="JaboatãoPrev" 
-                className={`h-9 w-auto object-contain transition-all duration-300 ${dark ? 'brightness-0 invert' : ''}`} 
+            <img
+                src="/logo-jabprev.png"
+                alt="JaboatãoPrev"
+                className={`h-9 w-auto object-contain transition-all duration-300 ${dark ? 'brightness-0 invert' : ''}`}
             />
         </div>
         <div className="flex flex-col">
@@ -71,8 +71,8 @@ interface SlideItem {
 const INFO_SLIDES: SlideItem[] = [
     {
         id: 1,
-        title: "Prova de Vida Automática",
-        description: "Agora realizada de forma eletrônica cruzando dados do Governo Federal. Sem filas, sem preocupações.",
+        title: "Prova de Vida Online",
+        description: "Agora realizada de forma eletrônica cruzando dados do Governo Federal. Sem filas, sem preocupações. \n\n Acesse nosso stie e saiba mais: https://jaboataoprev.jaboatao.pe.gov.br/prova-de-vida/",
         tag: "Inovação JaboatãoPrev",
         icon: <Shield sx={{ fontSize: 40 }} className="text-amber-400" />,
         color: "from-blue-900/60 to-indigo-950/60"
@@ -80,7 +80,7 @@ const INFO_SLIDES: SlideItem[] = [
     {
         id: 2,
         title: "Portal do Segurado",
-        description: "Acesse seus contracheques, informes de rendimento e dê entrada em serviços online: jabprev.jaboatao.pe.gov.br",
+        description: "Acesse seus contracheques, informes de rendimento e dê entrada em serviços online: https://jaboataomaisfacil.jaboatao.pe.gov.br/",
         tag: "Serviço Digital",
         icon: <Devices sx={{ fontSize: 40 }} className="text-emerald-400" />,
         color: "from-teal-900/60 to-emerald-950/60"
@@ -88,7 +88,7 @@ const INFO_SLIDES: SlideItem[] = [
     {
         id: 3,
         title: "Prevenção e Qualidade de Vida",
-        description: "Mantenha hábitos saudáveis e realize exames preventivos periódicos. Cuidar de você é o nosso compromisso.",
+        description: "Mantenha hábitos saudáveis e realize exames preventivos periódicos. Cuidar de você é o nosso compromisso. ",
         tag: "Dica de Saúde",
         icon: <Favorite sx={{ fontSize: 40 }} className="text-rose-400" />,
         color: "from-rose-900/60 to-slate-950/60"
@@ -110,12 +110,12 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
     const isDark = theme === 'dark';
     const { todayTickets: tickets } = useTodayQueue();
     const [currentTime, setCurrentTime] = useState(new Date());
-    
+
     // Controle do Takeover (Senha Chamada)
     const [activeTakeoverTicket, setActiveTakeoverTicket] = useState<Ticket | null>(null);
     const [lastCalledTicketId, setLastCalledTicketId] = useState<string | null>(null);
     const [isFullscreen, setIsFullscreen] = useState(false);
-    
+
     // Controle do Carrossel de Mídia
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
@@ -398,12 +398,13 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
     }, []);
 
     return (
-        <div 
+        <div
             className={`public-display-container flex flex-col w-full h-screen overflow-hidden p-4 sm:p-5 bg-cover bg-center bg-no-repeat relative select-none ${isDark ? 'text-white' : 'text-slate-800'}`}
             style={{ backgroundImage: 'url("/images/Bandeira/bandeira.jpeg")' }}
         >
             {/* Custom stylesheet for responsive layout preservation during browser zoom */}
-            <style dangerouslySetInnerHTML={{__html: `
+            <style dangerouslySetInnerHTML={{
+                __html: `
                 /* Reduções de Layout em Telas Menores ou com Zoom Alto */
                 @media (max-height: 850px) {
                     .public-display-container {
@@ -500,14 +501,14 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
 
             {/* Main Bento Grid */}
             <main className="public-display-main flex-grow min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-5 z-10 relative mb-4">
-                
+
                 {/* COLUNA ESQUERDA (2/3): Atendimento Ativo & Slideshow */}
                 <section className="lg:col-span-2 flex flex-col gap-5 min-h-0">
-                    
+
                     {/* Slideshow Informativo JaboatãoPrev */}
                     <div className={`slideshow-container flex-grow border rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between min-h-0 backdrop-blur-md ${isDark ? 'border-white/10 bg-slate-900/40' : 'border-slate-200/60 bg-white/55 shadow-md shadow-slate-200/40'}`}>
                         <div className={`absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl pointer-events-none ${isDark ? 'bg-blue-500/5' : 'bg-blue-100/60'}`}></div>
-                        
+
                         {/* Slide Tag */}
                         <div className={`flex items-center justify-between border-b pb-3 ${isDark ? 'border-white/5' : 'border-slate-200/60'}`}>
                             <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-500">
@@ -540,9 +541,8 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
                                 <button
                                     key={slide.id}
                                     onClick={() => setCurrentSlideIndex(idx)}
-                                    className={`h-1.5 rounded-full transition-all duration-300 ${
-                                        currentSlideIndex === idx ? 'w-6 bg-amber-400' : `w-2 ${isDark ? 'bg-white/20' : 'bg-slate-300'}`
-                                    }`}
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${currentSlideIndex === idx ? 'w-6 bg-amber-400' : `w-2 ${isDark ? 'bg-white/20' : 'bg-slate-300'}`
+                                        }`}
                                 />
                             ))}
                         </div>
@@ -608,17 +608,16 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
                         <QueuePlayNext sx={{ fontSize: 16 }} className="text-amber-500" />
                         Próximas Senhas
                     </h2>
-                    
+
                     <div className="flex-grow overflow-y-auto min-h-0 space-y-2.5 pr-1 scrollbar-none">
                         {waitingTickets.length > 0 ? (
                             waitingTickets.map((ticket, idx) => (
-                                <div 
-                                    key={ticket.id} 
-                                    className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-200 ${
-                                        idx === 0 
-                                            ? 'border-amber-500/30 bg-amber-500/5 shadow-sm shadow-amber-500/5' 
-                                            : isDark ? 'border-white/5 bg-slate-900/40' : 'border-slate-200/50 bg-white/40'
-                                    }`}
+                                <div
+                                    key={ticket.id}
+                                    className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-200 ${idx === 0
+                                        ? 'border-amber-500/30 bg-amber-500/5 shadow-sm shadow-amber-500/5'
+                                        : isDark ? 'border-white/5 bg-slate-900/40' : 'border-slate-200/50 bg-white/40'
+                                        }`}
                                 >
                                     <div className="min-w-0">
                                         <span className={`font-montserrat font-black text-xl tracking-tighter ${idx === 0 ? 'text-amber-500' : isDark ? 'text-white' : 'text-slate-800'}`}>
