@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useTodayQueue } from '@features/queue/contexts/TodayQueueContext';
 import { supabase } from '@lib/supabase/client';
 import { PANEL_CONFIG } from '@shared/constants';
@@ -20,7 +20,7 @@ import {
 
 const JaboataoPrevLogo: React.FC<{ className?: string; dark?: boolean }> = ({ className, dark }) => (
     <div className={`flex items-center gap-3 ${className}`}>
-        <div className={`p-2.5 rounded-xl border transition-all duration-300 ${dark ? 'bg-white/10 border-white/10' : 'bg-slate-100 border-slate-200'}`}>
+        <div className={`p-2.5 rounded-xl border transition-all duration-300 ${dark ? 'bg-white/10 border-white/10' : 'bg-white/80 border-slate-200/80 shadow-sm'}`}>
             <img 
                 src="/logo-jabprev.png" 
                 alt="JaboatãoPrev" 
@@ -103,9 +103,11 @@ const NEWS_TICKER_TEXTS = [
 
 interface PublicDisplayScreenProps {
     onBack: () => void;
+    theme?: 'light' | 'dark';
 }
 
-const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => {
+const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme = 'dark' }) => {
+    const isDark = theme === 'dark';
     const { todayTickets: tickets } = useTodayQueue();
     const [currentTime, setCurrentTime] = useState(new Date());
     
@@ -117,121 +119,225 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
     // Controle do Carrossel de Mídia
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
 
+    const inProgressTickets = useMemo(() => {
+        return tickets
+            .filter(t => t.status === 'in_progress' && t.started_at)
+            .sort((a, b) => new Date(b.started_at!).getTime() - new Date(a.started_at!).getTime())
+            .slice(0, PANEL_CONFIG.mostrarEmAtendimento);
+    }, [tickets]);
+
+    const mainInProgressTicket = inProgressTickets[0] || null;
+    const secondaryInProgressTickets = inProgressTickets.slice(1);
+
+    const waitingTickets = useMemo(() => {
+        return tickets
+            .filter(t => t.status === 'waiting')
+            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    }, [tickets]);
+
+    const historyTickets = useMemo(() => {
+        return tickets
+            .filter(t => t.status === 'completed' && t.started_at)
+            .sort((a, b) => new Date(b.started_at!).getTime() - new Date(a.started_at!).getTime())
+            .slice(0, 5);
+    }, [tickets]);
+
+
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const previousInProgressIds = useRef<Set<string>>(new Set());
     const spokenTicketIds = useRef<Set<string>>(new Set());
 
-    // Refs de Controle Concorrente para Evitar Bugs de Modal e Sobreposição de Voz
+    // Refs de concorrência
     const activeTakeoverTicketRef = useRef<Ticket | null>(null);
-    const speechTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const safetyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+    const safetyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-    // Limpeza de timers e referências de voz no desmonte do componente
+    // Fila serial de chamadas
+    const callQueueRef = useRef<Ticket[]>([]);
+    const isProcessingQueueRef = useRef<boolean>(false);
+
+    // Limpeza no desmonte
     useEffect(() => {
         return () => {
-            if (speechTimeoutRef.current) clearTimeout(speechTimeoutRef.current);
             if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
-            if (activeUtteranceRef.current) {
-                activeUtteranceRef.current.onend = null;
-                activeUtteranceRef.current.onerror = null;
-            }
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-            }
+            if (pollingRef.current) clearInterval(pollingRef.current);
+            if ('speechSynthesis' in window) window.speechSynthesis.cancel();
         };
     }, []);
 
-    // Prefetch de vozes para navegadores modernos
+    // Prefetch de vozes
     useEffect(() => {
-        if ('speechSynthesis' in window) {
-            window.speechSynthesis.getVoices();
-            const handleVoicesChanged = () => {
-                window.speechSynthesis.getVoices();
-            };
-            window.speechSynthesis.addEventListener('voiceschanged', handleVoicesChanged);
-            return () => window.speechSynthesis.removeEventListener('voiceschanged', handleVoicesChanged);
-        }
+        if (!('speechSynthesis' in window)) return;
+        window.speechSynthesis.getVoices();
+        const h = () => window.speechSynthesis.getVoices();
+        window.speechSynthesis.addEventListener('voiceschanged', h);
+        return () => window.speechSynthesis.removeEventListener('voiceschanged', h);
     }, []);
 
-    const speakTicket = (ticket: Ticket, onComplete: () => void) => {
-        if ('speechSynthesis' in window) {
-            // Cancelar falas anteriores e forçar liberação do mecanismo em navegadores baseados no Chromium
+    // ═══════════════════════════════════════════════════════
+    // speakTicket: retorna uma Promise que resolve quando a fala termina.
+    // Simples, linear, sem race conditions.
+    // ═══════════════════════════════════════════════════════
+    const speakTicketAsync = (ticket: Ticket): Promise<void> => {
+        return new Promise<void>((resolve) => {
+            if (!('speechSynthesis' in window)) {
+                setTimeout(resolve, 5000);
+                return;
+            }
+
+            // Garantir que qualquer fala anterior foi cancelada
             window.speechSynthesis.cancel();
-            if (window.speechSynthesis.paused) {
-                window.speechSynthesis.resume();
+
+            const ticketNumber = ticket.formatted_number;
+            const formattedSpeechNumber = ticketNumber.replace('-', ' ').split('').join(' ');
+            const attendeeName = ticket.attendee_name?.trim();
+            const serviceName = ticket.service?.name || 'Atendimento Geral';
+            const operatorName = ticket.operator?.name || null;
+            const guicheText = getGuicheForTicket(ticket);
+
+            let text = `Senha, número ${formattedSpeechNumber}.`;
+            if (attendeeName) text += ` Solicitante, ${attendeeName}.`;
+            text += ` Assunto, ${serviceName}.`;
+            if (operatorName) {
+                text += ` Atendimento com ${operatorName}.`;
+            } else {
+                text += ` Dirija-se ao ${guicheText}.`;
             }
-            
-            if (speechTimeoutRef.current) {
-                clearTimeout(speechTimeoutRef.current);
-            }
-            
-            speechTimeoutRef.current = setTimeout(() => {
-                const ticketNumber = ticket.formatted_number;
-                // Espaçar letras da senha para que o sintetizador soe de forma perfeitamente soletrada
-                const formattedSpeechNumber = ticketNumber.replace('-', ' ').split('').join(' ');
-                
-                const attendeeName = ticket.attendee_name?.trim();
-                const serviceName = ticket.service?.name || 'Atendimento Geral';
-                const operatorName = ticket.operator?.name || null;
-                const guicheText = getGuicheForTicket(ticket);
 
-                let text = `Senha, número ${formattedSpeechNumber}.`;
-                if (attendeeName) {
-                    text += ` Solicitante, ${attendeeName}.`;
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'pt-BR';
+
+            const voices = window.speechSynthesis.getVoices();
+            const ptVoice =
+                voices.find(v => v.lang.startsWith('pt') &&
+                    (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural'))) ||
+                voices.find(v => v.lang.startsWith('pt'));
+            if (ptVoice) utterance.voice = ptVoice;
+
+            utterance.rate = 0.82;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+
+            let done = false;
+            const finish = () => {
+                if (done) return;
+                done = true;
+                if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+                resolve();
+            };
+
+            // onend = caminho feliz
+            utterance.onend = finish;
+            // onerror = SEMPRE resolve (nunca travar)
+            utterance.onerror = finish;
+
+            // Speak de fato
+            window.speechSynthesis.speak(utterance);
+
+            // Polling: a cada 400ms checa se a fala acabou sem onend
+            // Espera 3 ciclos (1.2s) antes de checar, para dar tempo do speak() iniciar
+            let polls = 0;
+            pollingRef.current = setInterval(() => {
+                polls++;
+                if (done) { clearInterval(pollingRef.current!); pollingRef.current = null; return; }
+                if (polls > 3 && !window.speechSynthesis.speaking && !window.speechSynthesis.pending) {
+                    console.warn('[TTS] Fala terminou sem onend — resolvendo via polling');
+                    finish();
                 }
-                text += ` Assunto, ${serviceName}.`;
-                if (operatorName) {
-                    text += ` Atendimento com ${operatorName}.`;
-                } else {
-                    text += ` Dirija-se ao ${guicheText}.`;
-                }
-
-                const utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'pt-BR';
-                
-                // Escolha da melhor voz em português (priorizando vozes femininas de alta fidelidade como Google/Microsoft)
-                const voices = window.speechSynthesis.getVoices();
-                const bestVoice = voices.find(v => v.lang.startsWith('pt') && 
-                    (v.name.includes('Google') || v.name.includes('Microsoft') || v.name.includes('Natural'))
-                ) || voices.find(v => v.lang.startsWith('pt'));
-
-                if (bestVoice) {
-                    utterance.voice = bestVoice;
-                }
-
-                utterance.rate = 0.82; // Velocidade ligeiramente pausada para clareza e acessibilidade (idosos)
-                utterance.pitch = 1.0;  // Tom de voz institucional natural
-                utterance.volume = 1.0; // Volume máximo
-                
-                let hasFinished = false;
-                const handleFinish = () => {
-                    if (!hasFinished) {
-                        hasFinished = true;
-                        activeUtteranceRef.current = null;
-                        onComplete();
-                    }
-                };
-
-                utterance.onend = handleFinish;
-                utterance.onerror = (e) => {
-                    console.error('[Speech Error]', e);
-                    handleFinish();
-                };
-
-                // Manter referência ativa para evitar que o Garbage Collector limpe o objeto no Chrome mid-speech
-                activeUtteranceRef.current = utterance;
-
-                window.speechSynthesis.speak(utterance);
-            }, 800);
-        } else {
-            // Se não houver suporte a TTS, chama o callback imediatamente com um delay padrão
-            if (speechTimeoutRef.current) {
-                clearTimeout(speechTimeoutRef.current);
-            }
-            speechTimeoutRef.current = setTimeout(onComplete, 6000);
-        }
+            }, 400);
+        });
     };
+
+    // ═══════════════════════════════════════════════════════
+    // processNextInQueue: processa um ticket por vez, em série.
+    // ═══════════════════════════════════════════════════════
+    const processNextInQueue = async () => {
+        if (isProcessingQueueRef.current) return;
+        if (callQueueRef.current.length === 0) return;
+
+        isProcessingQueueRef.current = true;
+
+        while (callQueueRef.current.length > 0) {
+            const ticket = callQueueRef.current.shift()!;
+
+            // Mostrar o modal
+            setActiveTakeoverTicket(ticket);
+            activeTakeoverTicketRef.current = ticket;
+            setLastCalledTicketId(ticket.id);
+
+            // Tocar beep
+            if (PANEL_CONFIG.mostrarSons && audioRef.current) {
+                audioRef.current.currentTime = 0;
+                try { await audioRef.current.play(); } catch (_e) { /* autoplay blocked */ }
+            }
+
+            // Esperar 600ms para o beep não atropelar a voz
+            await new Promise(r => setTimeout(r, 600));
+
+            // Falar a senha — com safety timeout de 18s
+            if (safetyTimeoutRef.current) clearTimeout(safetyTimeoutRef.current);
+
+            await Promise.race([
+                speakTicketAsync(ticket),
+                new Promise<void>(r => {
+                    safetyTimeoutRef.current = setTimeout(() => {
+                        console.warn(`[Queue] Safety timeout para ${ticket.formatted_number}`);
+                        window.speechSynthesis.cancel();
+                        r();
+                    }, 18000);
+                })
+            ]);
+
+            if (safetyTimeoutRef.current) { clearTimeout(safetyTimeoutRef.current); safetyTimeoutRef.current = null; }
+
+            // Fechar modal
+            setActiveTakeoverTicket(null);
+            activeTakeoverTicketRef.current = null;
+            setLastCalledTicketId(null);
+
+            // Pausa entre chamadas
+            await new Promise(r => setTimeout(r, 500));
+        }
+
+        isProcessingQueueRef.current = false;
+    };
+
+    const enqueueTicket = (ticket: Ticket) => {
+        if (callQueueRef.current.some(t => t.id === ticket.id)) return;
+        callQueueRef.current.push(ticket);
+        processNextInQueue();
+    };
+
+    // Canal Supabase (Recall Manual)
+    useEffect(() => {
+        const channel = supabase.channel('tickets-live-updates');
+        channel.on('broadcast', { event: 'ticket_recall' }, (payload) => {
+            const ticketId = payload.payload?.ticketId;
+            if (ticketId) {
+                const ticket = tickets.find(t => t.id === ticketId);
+                if (ticket) enqueueTicket(ticket);
+            }
+        }).subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+    }, [tickets]);
+
+    // Chamadas automáticas de novas senhas
+    useEffect(() => {
+        const currentInProgressIds = new Set(inProgressTickets.map(t => t.id));
+        const newCalls = [...currentInProgressIds].filter(id => !previousInProgressIds.current.has(id));
+
+        if (newCalls.length > 0) {
+            newCalls.forEach(id => {
+                const ticket = inProgressTickets.find(t => t.id === id);
+                if (ticket && !spokenTicketIds.current.has(id)) {
+                    spokenTicketIds.current.add(id);
+                    enqueueTicket(ticket);
+                }
+            });
+        }
+        previousInProgressIds.current = currentInProgressIds;
+    }, [inProgressTickets]);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -280,135 +386,6 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
         return () => clearInterval(slideTimer);
     }, []);
 
-    const inProgressTickets = useMemo(() => {
-        return tickets
-            .filter(t => t.status === 'in_progress' && t.started_at)
-            .sort((a, b) => new Date(b.started_at!).getTime() - new Date(a.started_at!).getTime())
-            .slice(0, PANEL_CONFIG.mostrarEmAtendimento);
-    }, [tickets]);
-
-    const mainInProgressTicket = inProgressTickets[0] || null;
-    const secondaryInProgressTickets = inProgressTickets.slice(1);
-
-    const waitingTickets = useMemo(() => {
-        return tickets
-            .filter(t => t.status === 'waiting')
-            .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-    }, [tickets]);
-
-    const historyTickets = useMemo(() => {
-        return tickets
-            .filter(t => t.status === 'completed' && t.started_at)
-            .sort((a, b) => new Date(b.started_at!).getTime() - new Date(a.started_at!).getTime())
-            .slice(0, 5);
-    }, [tickets]);
-
-    // Fila de chamadas para evitar atropelo ou cancelamento quando atendentes chamam simultaneamente
-    const callQueueRef = useRef<Ticket[]>([]);
-    const isProcessingQueueRef = useRef<boolean>(false);
-
-    const processNextInQueue = () => {
-        if (isProcessingQueueRef.current || callQueueRef.current.length === 0) {
-            return;
-        }
-
-        isProcessingQueueRef.current = true;
-        const nextTicket = callQueueRef.current.shift();
-
-        if (nextTicket) {
-            setActiveTakeoverTicket(nextTicket);
-            activeTakeoverTicketRef.current = nextTicket;
-            setLastCalledTicketId(nextTicket.id);
-
-            if (PANEL_CONFIG.mostrarSons && audioRef.current) {
-                audioRef.current.currentTime = 0;
-                audioRef.current.play().catch(e => console.error("Erro ao reproduzir áudio:", e));
-            }
-
-            if (safetyTimeoutRef.current) {
-                clearTimeout(safetyTimeoutRef.current);
-            }
-
-            // Callback para quando a fala terminar ou o tempo de segurança estourar
-            const handleSpeechEnded = () => {
-                if (safetyTimeoutRef.current) {
-                    clearTimeout(safetyTimeoutRef.current);
-                }
-
-                // Guard contra concorrência: só fecha se este callback pertence ao ticket ativo no takeover
-                if (activeTakeoverTicketRef.current?.id !== nextTicket.id) {
-                    console.log(`[Queue Control] Ignorando encerramento antigo para ticket ${nextTicket.formatted_number}`);
-                    return;
-                }
-
-                setActiveTakeoverTicket(null);
-                activeTakeoverTicketRef.current = null;
-                setLastCalledTicketId(null);
-                isProcessingQueueRef.current = false;
-
-                // Pequeno intervalo de 500ms entre as chamadas para a voz/tela respirarem
-                setTimeout(() => {
-                    processNextInQueue();
-                }, 500);
-            };
-
-            if (nextTicket.formatted_number) {
-                // Fala a senha e avança para a próxima chamada somente após a conclusão da voz
-                speakTicket(nextTicket, handleSpeechEnded);
-            } else {
-                // Se o ticket estiver incompleto, encerra após 6 segundos por segurança
-                safetyTimeoutRef.current = setTimeout(handleSpeechEnded, 6000);
-                return;
-            }
-
-            // Timeout de segurança máximo de 15 segundos para garantir que a fila nunca trave
-            // caso o navegador bloqueie a fala ou o evento onend falhe em ser disparado
-            safetyTimeoutRef.current = setTimeout(handleSpeechEnded, 15000);
-        } else {
-            isProcessingQueueRef.current = false;
-        }
-    };
-
-    const enqueueTicket = (ticket: Ticket) => {
-        if (callQueueRef.current.some(t => t.id === ticket.id)) return;
-        callQueueRef.current.push(ticket);
-        processNextInQueue();
-    };
-
-    // Canal Supabase (Recall Manual)
-    useEffect(() => {
-        const channel = supabase.channel('tickets-live-updates');
-        channel.on('broadcast', { event: 'ticket_recall' }, (payload) => {
-            const ticketId = payload.payload?.ticketId;
-            if (ticketId) {
-                const ticket = tickets.find(t => t.id === ticketId);
-                if (ticket) {
-                    enqueueTicket(ticket);
-                }
-            }
-        }).subscribe();
-
-        return () => {
-            supabase.removeChannel(channel);
-        };
-    }, [tickets]);
-
-    // Chamadas automáticas de novas senhas
-    useEffect(() => {
-        const currentInProgressIds = new Set(inProgressTickets.map(t => t.id));
-        const newCalls = [...currentInProgressIds].filter(id => !previousInProgressIds.current.has(id));
-
-        if (newCalls.length > 0) {
-            newCalls.forEach(id => {
-                const ticket = inProgressTickets.find(t => t.id === id);
-                if (ticket && !spokenTicketIds.current.has(id)) {
-                    spokenTicketIds.current.add(id);
-                    enqueueTicket(ticket);
-                }
-            });
-        }
-        previousInProgressIds.current = currentInProgressIds;
-    }, [inProgressTickets]);
 
     // Combina os textos do News Ticker em uma única string
     const fullTickerText = useMemo(() => {
@@ -417,7 +394,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
 
     return (
         <div 
-            className="public-display-container flex flex-col w-full h-screen overflow-hidden p-4 sm:p-5 bg-cover bg-center bg-no-repeat relative text-white select-none"
+            className={`public-display-container flex flex-col w-full h-screen overflow-hidden p-4 sm:p-5 bg-cover bg-center bg-no-repeat relative select-none ${isDark ? 'text-white' : 'text-slate-800'}`}
             style={{ backgroundImage: 'url("/images/Bandeira/bandeira.jpeg")' }}
         >
             {/* Custom stylesheet for responsive layout preservation during browser zoom */}
@@ -476,41 +453,41 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 }
             `}} />
 
-            {/* Backdrop Blur + Dark Gradient Overlay */}
-            <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-[8px] pointer-events-none z-0"></div>
+            {/* Backdrop Blur + Gradient Overlay */}
+            <div className={`absolute inset-0 backdrop-blur-[8px] pointer-events-none z-0 ${isDark ? 'bg-slate-950/85' : 'bg-slate-50/80'}`}></div>
 
             {/* Header */}
-            <header className="flex justify-between items-center mb-4 z-10 relative border-b border-white/10 pb-3">
+            <header className={`flex justify-between items-center mb-4 z-10 relative border-b pb-3 ${isDark ? 'border-white/10' : 'border-slate-200/60'}`}>
                 <div className="flex items-center gap-4">
                     <button
                         onClick={onBack}
-                        className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 transition-all border border-white/10 shadow-sm active:scale-95 flex items-center justify-center"
+                        className={`p-2.5 rounded-full transition-all border shadow-sm active:scale-95 flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/10' : 'bg-white/60 hover:bg-white/90 border-slate-200/80'}`}
                         aria-label="Voltar"
                     >
-                        <ArrowBack sx={{ fontSize: 20, color: 'white' }} />
+                        <ArrowBack sx={{ fontSize: 20 }} className={isDark ? 'text-white' : 'text-slate-700'} />
                     </button>
-                    <JaboataoPrevLogo dark />
+                    <JaboataoPrevLogo dark={isDark} />
                 </div>
 
                 <div className="flex items-center gap-6">
                     <div className="text-right">
-                        <p className="text-3xl sm:text-4xl font-black text-white tracking-tight flex items-center gap-2 justify-end">
+                        <p className={`text-3xl sm:text-4xl font-black tracking-tight flex items-center gap-2 justify-end ${isDark ? 'text-white' : 'text-slate-800'}`}>
                             <AccessTime sx={{ fontSize: 26 }} className="text-amber-400" />
                             {currentTime.toLocaleTimeString('pt-BR')}
                         </p>
-                        <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mt-0.5">
+                        <p className={`text-[10px] uppercase font-black tracking-widest mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                             {currentTime.toLocaleDateString('pt-BR', { weekday: 'long', month: 'long', day: 'numeric' })}
                         </p>
                     </div>
 
                     <button
                         onClick={toggleFullscreen}
-                        className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 shadow-sm flex-shrink-0 active:scale-95 flex items-center justify-center"
+                        className={`p-2.5 rounded-full border shadow-sm flex-shrink-0 active:scale-95 flex items-center justify-center ${isDark ? 'bg-white/5 hover:bg-white/10 border-white/10' : 'bg-white/60 hover:bg-white/90 border-slate-200/80'}`}
                     >
                         {isFullscreen ? (
-                            <FullscreenExit sx={{ fontSize: 22, color: 'white' }} />
+                            <FullscreenExit sx={{ fontSize: 22 }} className={isDark ? 'text-white' : 'text-slate-700'} />
                         ) : (
-                            <Fullscreen sx={{ fontSize: 22, color: 'white' }} />
+                            <Fullscreen sx={{ fontSize: 22 }} className={isDark ? 'text-white' : 'text-slate-700'} />
                         )}
                     </button>
                 </div>
@@ -523,51 +500,51 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 <section className="lg:col-span-2 flex flex-col gap-5 min-h-0">
                     
                     {/* Slideshow Informativo JaboatãoPrev */}
-                    <div className="slideshow-container flex-grow border border-white/10 bg-slate-900/40 backdrop-blur-md rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between min-h-0">
-                        <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl pointer-events-none"></div>
+                    <div className={`slideshow-container flex-grow border rounded-3xl p-6 relative overflow-hidden flex flex-col justify-between min-h-0 backdrop-blur-md ${isDark ? 'border-white/10 bg-slate-900/40' : 'border-slate-200/60 bg-white/55 shadow-md shadow-slate-200/40'}`}>
+                        <div className={`absolute top-0 right-0 w-96 h-96 rounded-full blur-3xl pointer-events-none ${isDark ? 'bg-blue-500/5' : 'bg-blue-100/60'}`}></div>
                         
                         {/* Slide Tag */}
-                        <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                            <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-400">
+                        <div className={`flex items-center justify-between border-b pb-3 ${isDark ? 'border-white/5' : 'border-slate-200/60'}`}>
+                            <span className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-500">
                                 <Campaign sx={{ fontSize: 18 }} />
                                 Informativo JaboatãoPrev
                             </span>
-                            <span className="px-2.5 py-1 rounded-full bg-white/5 border border-white/5 text-[9px] font-black uppercase tracking-wider text-slate-400">
+                            <span className={`px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider ${isDark ? 'bg-white/5 border-white/5 text-slate-400' : 'bg-slate-100/80 border-slate-200/60 text-slate-500'}`}>
                                 {INFO_SLIDES[currentSlideIndex].tag}
                             </span>
                         </div>
 
                         {/* Slide Content */}
                         <div className="slideshow-content my-auto py-4 flex flex-col sm:flex-row items-center gap-6 transition-all duration-500">
-                            <div className="p-5 bg-white/5 border border-white/10 rounded-2xl shadow-inner shrink-0">
+                            <div className={`p-5 border rounded-2xl shadow-inner shrink-0 ${isDark ? 'bg-white/5 border-white/10' : 'bg-white/70 border-slate-200/60 shadow-slate-100'}`}>
                                 {INFO_SLIDES[currentSlideIndex].icon}
                             </div>
                             <div className="space-y-2.5 text-center sm:text-left">
-                                <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight leading-tight">
+                                <h2 className={`text-2xl sm:text-3xl font-black tracking-tight leading-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
                                     {INFO_SLIDES[currentSlideIndex].title}
                                 </h2>
-                                <p className="slideshow-description text-sm sm:text-base font-semibold text-slate-300 leading-relaxed max-w-xl">
+                                <p className={`slideshow-description text-sm sm:text-base font-semibold leading-relaxed max-w-xl ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
                                     {INFO_SLIDES[currentSlideIndex].description}
                                 </p>
                             </div>
                         </div>
 
                         {/* Slide Dots */}
-                        <div className="flex justify-center gap-2 border-t border-white/5 pt-3">
+                        <div className={`flex justify-center gap-2 border-t pt-3 ${isDark ? 'border-white/5' : 'border-slate-200/60'}`}>
                             {INFO_SLIDES.map((slide, idx) => (
                                 <button
                                     key={slide.id}
                                     onClick={() => setCurrentSlideIndex(idx)}
                                     className={`h-1.5 rounded-full transition-all duration-300 ${
-                                        currentSlideIndex === idx ? 'w-6 bg-amber-400' : 'w-2 bg-white/20'
+                                        currentSlideIndex === idx ? 'w-6 bg-amber-400' : `w-2 ${isDark ? 'bg-white/20' : 'bg-slate-300'}`
                                     }`}
                                 />
                             ))}
                         </div>
                     </div>
 
-                    {/* Senha em Atendimento Ativa (Abaixo da Mídia) */}
-                    <div className="flex-shrink-0 border border-white/10 bg-slate-900/60 backdrop-blur-md rounded-3xl p-5 flex items-center justify-between gap-6 shadow-xl">
+                    {/* Senha em Atendimento Ativa */}
+                    <div className={`flex-shrink-0 border rounded-3xl p-5 flex items-center justify-between gap-6 shadow-xl backdrop-blur-md ${isDark ? 'border-white/10 bg-slate-900/60' : 'border-slate-200/60 bg-white/60 shadow-slate-200/50'}`}>
                         {mainInProgressTicket ? (
                             <>
                                 <div className="min-w-0 flex items-center gap-5">
@@ -575,9 +552,9 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                                         {mainInProgressTicket.formatted_number.charAt(0)}
                                     </div>
                                     <div className="min-w-0">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Última Senha Chamada</p>
-                                        <h3 className="font-montserrat font-black text-3xl text-white tracking-tighter mt-1">{mainInProgressTicket.formatted_number}</h3>
-                                        <p className="text-xs font-bold text-slate-300 truncate mt-0.5">{(mainInProgressTicket.attendee_name || 'Cidadão').toUpperCase()}</p>
+                                        <p className={`text-[10px] font-black uppercase tracking-widest leading-none ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Última Senha Chamada</p>
+                                        <h3 className={`font-montserrat font-black text-3xl tracking-tighter mt-1 ${isDark ? 'text-white' : 'text-slate-800'}`}>{mainInProgressTicket.formatted_number}</h3>
+                                        <p className={`text-xs font-bold truncate mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{(mainInProgressTicket.attendee_name || 'Cidadão').toUpperCase()}</p>
                                     </div>
                                 </div>
                                 <div className="text-right">
@@ -591,26 +568,26 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                                 </div>
                             </>
                         ) : (
-                            <p className="text-xs font-bold text-slate-400 text-center w-full py-4">Nenhuma senha ativa em atendimento.</p>
+                            <p className={`text-xs font-bold text-center w-full py-4 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Nenhuma senha ativa em atendimento.</p>
                         )}
                     </div>
 
                     {/* Secondary in-progress Tickets (Outros guichês) */}
                     {secondaryInProgressTickets.length > 0 && (
                         <div className="flex-shrink-0">
-                            <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-2.5">Atendimentos Simultâneos</h3>
+                            <h3 className={`text-[9px] font-black uppercase tracking-widest mb-2.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Atendimentos Simultâneos</h3>
                             <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-none">
                                 {secondaryInProgressTickets.map(ticket => (
                                     <div
                                         key={ticket.id}
-                                        className="flex-shrink-0 min-w-[220px] p-4 rounded-2xl border border-white/5 bg-slate-900/50 backdrop-blur-md flex items-center justify-between gap-4"
+                                        className={`flex-shrink-0 min-w-[220px] p-4 rounded-2xl border backdrop-blur-md flex items-center justify-between gap-4 ${isDark ? 'border-white/5 bg-slate-900/50' : 'border-slate-200/60 bg-white/55 shadow-sm'}`}
                                     >
                                         <div>
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-wider">{getAtendenteOrGuiche(ticket)}</p>
-                                            <p className="font-montserrat font-black text-xl text-white tracking-tighter mt-0.5">{ticket.formatted_number}</p>
-                                            <p className="text-[10px] font-bold text-slate-300 truncate max-w-[130px] mt-0.5">{(ticket.attendee_name || 'Cidadão').toUpperCase()}</p>
+                                            <p className={`text-[8px] font-black uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{getAtendenteOrGuiche(ticket)}</p>
+                                            <p className={`font-montserrat font-black text-xl tracking-tighter mt-0.5 ${isDark ? 'text-white' : 'text-slate-800'}`}>{ticket.formatted_number}</p>
+                                            <p className={`text-[10px] font-bold truncate max-w-[130px] mt-0.5 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{(ticket.attendee_name || 'Cidadão').toUpperCase()}</p>
                                         </div>
-                                        <span className="px-2 py-1 bg-white/5 border border-white/5 rounded-lg text-[8px] font-black uppercase text-slate-400">
+                                        <span className={`px-2 py-1 border rounded-lg text-[8px] font-black uppercase ${isDark ? 'bg-white/5 border-white/5 text-slate-400' : 'bg-slate-100/80 border-slate-200/60 text-slate-500'}`}>
                                             {ticket.user_type.replace('_', ' ')}
                                         </span>
                                     </div>
@@ -621,9 +598,9 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 </section>
 
                 {/* COLUNA DIREITA (1/3): Próximas Senhas na Fila */}
-                <aside className="lg:col-span-1 border border-white/10 bg-slate-900/60 backdrop-blur-md rounded-3xl p-5 shadow-2xl flex flex-col h-full min-h-0">
-                    <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3.5 flex items-center gap-2 border-b border-white/10 pb-2.5">
-                        <QueuePlayNext sx={{ fontSize: 16 }} className="text-amber-400" />
+                <aside className={`lg:col-span-1 border rounded-3xl p-5 shadow-2xl flex flex-col h-full min-h-0 backdrop-blur-md ${isDark ? 'border-white/10 bg-slate-900/60' : 'border-slate-200/60 bg-white/60 shadow-slate-200/50'}`}>
+                    <h2 className={`text-[10px] font-black uppercase tracking-widest mb-3.5 flex items-center gap-2 border-b pb-2.5 ${isDark ? 'text-slate-400 border-white/10' : 'text-slate-500 border-slate-200/60'}`}>
+                        <QueuePlayNext sx={{ fontSize: 16 }} className="text-amber-500" />
                         Próximas Senhas
                     </h2>
                     
@@ -635,18 +612,18 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                                     className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-200 ${
                                         idx === 0 
                                             ? 'border-amber-500/30 bg-amber-500/5 shadow-sm shadow-amber-500/5' 
-                                            : 'border-white/5 bg-slate-900/40'
+                                            : isDark ? 'border-white/5 bg-slate-900/40' : 'border-slate-200/50 bg-white/40'
                                     }`}
                                 >
                                     <div className="min-w-0">
-                                        <span className={`font-montserrat font-black text-xl tracking-tighter ${idx === 0 ? 'text-amber-400' : 'text-white'}`}>
+                                        <span className={`font-montserrat font-black text-xl tracking-tighter ${idx === 0 ? 'text-amber-500' : isDark ? 'text-white' : 'text-slate-800'}`}>
                                             {ticket.formatted_number}
                                         </span>
-                                        <span className="text-[9px] font-bold text-slate-400 block truncate uppercase mt-0.5">
+                                        <span className={`text-[9px] font-bold block truncate uppercase mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                                             {(ticket.attendee_name || 'Cidadão').toUpperCase()}
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-1 px-2.5 py-1 bg-white/5 rounded-xl border border-white/5 text-[8px] font-black uppercase text-slate-300">
+                                    <div className={`flex items-center gap-1 px-2.5 py-1 rounded-xl border text-[8px] font-black uppercase ${isDark ? 'bg-white/5 border-white/5 text-slate-300' : 'bg-slate-100/80 border-slate-200/60 text-slate-500'}`}>
                                         <UserTypeIcon userType={ticket.user_type} />
                                         {ticket.user_type.replace('servidor_ativo', 'Servidor')}
                                     </div>
@@ -654,7 +631,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                             ))
                         ) : (
                             <div className="h-full flex flex-col items-center justify-center text-center py-20">
-                                <p className="text-xs font-bold text-slate-500">Nenhuma senha aguardando.</p>
+                                <p className={`text-xs font-bold ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Nenhuma senha aguardando.</p>
                             </div>
                         )}
                     </div>
@@ -665,22 +642,22 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
             <section className="flex flex-col gap-3.5 z-10 relative flex-shrink-0">
                 {/* Últimos atendimentos */}
                 {historyTickets.length > 0 && (
-                    <div className="history-section border border-white/10 bg-slate-900/40 backdrop-blur-md rounded-3xl p-3.5">
+                    <div className={`history-section border rounded-3xl p-3.5 backdrop-blur-md ${isDark ? 'border-white/10 bg-slate-900/40' : 'border-slate-200/60 bg-white/55 shadow-sm'}`}>
                         <div className="flex items-center gap-2 mb-2">
-                            <History sx={{ fontSize: 15 }} className="text-blue-400" />
-                            <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Últimos Atendimentos</h3>
+                            <History sx={{ fontSize: 15 }} className={isDark ? 'text-blue-400' : 'text-[#204FA1]'} />
+                            <h3 className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Últimos Atendimentos</h3>
                         </div>
                         <div className="flex gap-3 overflow-x-auto pb-0.5 scrollbar-none">
                             {historyTickets.map(ticket => (
                                 <div
                                     key={ticket.id}
-                                    className="flex-shrink-0 bg-slate-950/40 border border-white/5 rounded-2xl px-4 py-2 min-w-[170px]"
+                                    className={`flex-shrink-0 border rounded-2xl px-4 py-2 min-w-[170px] ${isDark ? 'bg-slate-950/40 border-white/5' : 'bg-white/60 border-slate-200/60'}`}
                                 >
                                     <div className="flex justify-between items-center gap-2">
-                                        <span className="font-montserrat font-black text-sm text-slate-200 tracking-tight">{ticket.formatted_number}</span>
-                                        <span className="text-[7px] font-black text-emerald-400 uppercase tracking-widest">Atendido</span>
+                                        <span className={`font-montserrat font-black text-sm tracking-tight ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{ticket.formatted_number}</span>
+                                        <span className="text-[7px] font-black text-emerald-500 uppercase tracking-widest">Atendido</span>
                                     </div>
-                                    <p className="text-[9px] font-bold text-slate-400 truncate mt-1">{(ticket.attendee_name || 'Cidadão').toUpperCase()}</p>
+                                    <p className={`text-[9px] font-bold truncate mt-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{(ticket.attendee_name || 'Cidadão').toUpperCase()}</p>
                                 </div>
                             ))}
                         </div>
@@ -688,7 +665,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
                 )}
 
                 {/* News Ticker Letreiro de Notícias */}
-                <div className="ticker-container w-full bg-[#204FA1] border border-blue-700/30 rounded-2xl py-3 px-4 overflow-hidden relative flex items-center gap-4 shadow-lg">
+                <div className={`ticker-container w-full border rounded-2xl py-3 px-4 overflow-hidden relative flex items-center gap-4 shadow-lg ${isDark ? 'bg-[#204FA1] border-blue-700/30' : 'bg-[#1a3f85] border-blue-800/40'}`}>
                     <span className="bg-amber-400 text-slate-950 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg shrink-0 z-10 shadow-sm">
                         Informativo
                     </span>
@@ -704,49 +681,49 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack }) => 
             {/* FULL-SCREEN TAKEOVER OVERLAY: Ativado quando nova senha chama */}
             {/* ============================================================ */}
             {activeTakeoverTicket && (
-                <div className="fixed inset-0 bg-slate-950/95 z-[999] flex flex-col justify-between p-8 sm:p-14 animate-fade-in transition-all duration-300">
-                    {/* Glowing Accent background light */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-[#204FA1]/10 via-transparent to-transparent pointer-events-none"></div>
+                <div className={`fixed inset-0 z-[999] flex flex-col justify-between p-8 sm:p-14 animate-fade-in transition-all duration-300 ${isDark ? 'bg-slate-950/95' : 'bg-white/97'}`}>
+                    {/* Accent background light */}
+                    <div className={`absolute inset-0 bg-gradient-to-b pointer-events-none ${isDark ? 'from-[#204FA1]/10 via-transparent to-transparent' : 'from-blue-50/80 via-transparent to-transparent'}`}></div>
 
-                    {/* Logo & Clock header */}
-                    <div className="flex justify-between items-center z-10 border-b border-white/10 pb-4">
-                        <JaboataoPrevLogo dark />
+                    {/* Logo & header */}
+                    <div className={`flex justify-between items-center z-10 border-b pb-4 ${isDark ? 'border-white/10' : 'border-slate-200/60'}`}>
+                        <JaboataoPrevLogo dark={isDark} />
                         <div className="text-right">
-                            <p className="text-xs uppercase font-black tracking-widest text-amber-400">Nova Senha Chamada</p>
-                            <p className="text-sm font-bold text-slate-400 mt-0.5">Dirija-se ao atendimento</p>
+                            <p className="text-xs uppercase font-black tracking-widest text-amber-500">Nova Senha Chamada</p>
+                            <p className={`text-sm font-bold mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Dirija-se ao atendimento</p>
                         </div>
                     </div>
 
-                    {/* Giant Box display */}
+                    {/* Giant number display */}
                     <div className="my-auto flex flex-col items-center justify-center text-center z-10 space-y-4 max-h-[75vh]">
                         {/* Guichê / Atendente Badge */}
                         <div className="takeover-guiche px-6 py-2 bg-gradient-to-r from-jaboatao-blue to-[#2B6CB0] rounded-full border border-blue-400/30 text-white text-base sm:text-xl font-black uppercase tracking-widest shadow-2xl animate-bounce">
                             {getAtendenteOrGuiche(activeTakeoverTicket)}
                         </div>
 
-                        {/* Number Display */}
-                        <div className="takeover-glow bg-white/5 border border-white/10 rounded-[30px] px-8 py-4 sm:px-14 sm:py-6 max-w-3xl w-full flex items-center justify-center animate-pulse">
-                            <h1 className="font-montserrat font-black text-[12vw] md:text-[15vh] lg:text-[18vh] text-emerald-400 tracking-tighter leading-none select-none whitespace-nowrap">
+                        {/* Number */}
+                        <div className={`takeover-glow border rounded-[30px] px-8 py-4 sm:px-14 sm:py-6 max-w-3xl w-full flex items-center justify-center animate-pulse ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-50/80 border-slate-200/60 shadow-inner shadow-slate-100'}`}>
+                            <h1 className="font-montserrat font-black text-[12vw] md:text-[15vh] lg:text-[18vh] text-emerald-500 tracking-tighter leading-none select-none whitespace-nowrap">
                                 {activeTakeoverTicket.formatted_number}
                             </h1>
                         </div>
 
                         {/* Attendee Name */}
-                        <h2 className="takeover-title text-3xl sm:text-5xl md:text-6xl font-black text-white tracking-tight uppercase truncate max-w-4xl px-4 mt-2">
+                        <h2 className={`takeover-title text-3xl sm:text-5xl md:text-6xl font-black tracking-tight uppercase truncate max-w-4xl px-4 mt-2 ${isDark ? 'text-white' : 'text-slate-800'}`}>
                             {(activeTakeoverTicket.attendee_name || 'Cidadão').toUpperCase()}
                         </h2>
 
                         {/* Service Name */}
                         {activeTakeoverTicket.service?.name && (
-                            <p className="takeover-service text-lg sm:text-2xl font-bold text-slate-300 tracking-wide mt-1">
+                            <p className={`takeover-service text-lg sm:text-2xl font-bold tracking-wide mt-1 ${isDark ? 'text-slate-300' : 'text-slate-500'}`}>
                                 {activeTakeoverTicket.service.name}
                             </p>
                         )}
                     </div>
 
-                    {/* Ticker footer sound notification label */}
-                    <div className="flex justify-center items-center gap-2 z-10 text-xs font-black uppercase tracking-widest text-slate-500">
-                        <VolumeUp className="text-emerald-400 animate-ping" />
+                    {/* Footer sound label */}
+                    <div className={`flex justify-center items-center gap-2 z-10 text-xs font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                        <VolumeUp className="text-emerald-500 animate-ping" />
                         Chamada Sonora Ativa
                     </div>
                 </div>

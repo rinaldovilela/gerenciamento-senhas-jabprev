@@ -230,7 +230,7 @@ const AppContent: React.FC = () => {
             case Screen.RESTRICTED_AREA:
                 return <RestrictedArea onExit={showHome} />;
             case Screen.PUBLIC_DISPLAY:
-                return <PublicDisplayScreen onBack={showHome} />;
+                return <PublicDisplayScreen onBack={showHome} theme={totemTheme} />;
             default:
                 return <HomeScreen onStart={handleStart} onAdminClick={showLogin} onPublicDisplayClick={showPublicDisplay} onFullscreenMode={requestFullscreen} theme={totemTheme} onToggleTheme={toggleTheme} />;
         }
