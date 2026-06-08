@@ -9,6 +9,7 @@ import { createRoutes } from './routes';
 import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import { Socket } from 'socket.io';
+import { supabase } from './supabase';
 
 async function createApplication(): Promise<{ app: Express; server: http.Server }> {
   // Create Express app
@@ -53,6 +54,29 @@ async function createApplication(): Promise<{ app: Express; server: http.Server 
 async function startServer(): Promise<void> {
   try {
     const { app, server } = await createApplication();
+
+    // Ensure storage bucket for avatars exists
+    try {
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const hasAvatars = buckets?.some((b) => b.id === 'avatars');
+      if (!hasAvatars) {
+        logger.info('Creating avatars storage bucket...');
+        const { error } = await supabase.storage.createBucket('avatars', {
+          public: true,
+          allowedMimeTypes: ['image/*'],
+          fileSizeLimit: 5242880 // 5MB
+        });
+        if (error) {
+          logger.error(`Failed to create avatars bucket: ${error.message}`);
+        } else {
+          logger.info('Avatars storage bucket created successfully.');
+        }
+      } else {
+        logger.info('Avatars storage bucket already exists.');
+      }
+    } catch (e: any) {
+      logger.error(`Error listing/creating storage buckets: ${e.message || e}`);
+    }
 
     // Graceful shutdown handler
     const shutdown = async (signal: string) => {

@@ -130,4 +130,8 @@ export class ApiClient {
   static async deleteUser(id: string) {
     return this.request('DELETE', `/admin/users/${id}`);
   }
+
+  static async uploadAvatar(id: string, fileData: string, fileName: string): Promise<{ publicUrl: string }> {
+    return this.request('POST', `/admin/users/${id}/avatar`, { fileData, fileName });
+  }
 }

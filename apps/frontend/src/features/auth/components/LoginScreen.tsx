@@ -25,11 +25,21 @@ interface LoginScreenProps {
 const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
     const [error, setError] = useState('');
     const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
     const [isLoading, setIsLoading] = useState(false);
     const { login } = useAuth();
     const language: Language = 'pt'; // Simplified
+
+    // Load remembered email
+    React.useEffect(() => {
+        const remembered = localStorage.getItem('jabprev_remembered_email');
+        if (remembered) {
+            setEmail(remembered);
+            setRememberMe(true);
+        }
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -50,6 +60,11 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => 
         const result = await login(parsed.data.email, parsed.data.password);
         setIsLoading(false);
         if (result.success) {
+            if (rememberMe) {
+                localStorage.setItem('jabprev_remembered_email', parsed.data.email);
+            } else {
+                localStorage.removeItem('jabprev_remembered_email');
+            }
             onLoginSuccess();
         } else {
             setError(result.error || TRANSLATIONS.loginError[language]);
@@ -174,6 +189,20 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess, onBack }) => 
                                 placeholder="••••••••"
                             />
                             {fieldErrors.password && <p className="mt-1.5 text-xs font-semibold text-red-500">{fieldErrors.password}</p>}
+                        </div>
+
+                        <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-2.5 cursor-pointer group">
+                                <input
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="w-4 h-4 rounded border-slate-300 text-[#204FA1] focus:ring-[#204FA1]/30 cursor-pointer transition-all"
+                                />
+                                <span className="text-xs font-bold text-slate-500 group-hover:text-slate-800 transition-colors select-none">
+                                    Lembrar meu e-mail
+                                </span>
+                            </label>
                         </div>
 
                         {error && (

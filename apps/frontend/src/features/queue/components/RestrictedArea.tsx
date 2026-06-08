@@ -128,12 +128,17 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                 {/* Perfil Operador e Logout */}
                 <div className="border-t border-white/10 pt-6 mt-6">
                     <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/5 rounded-2xl mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] flex items-center justify-center font-bold text-white shadow-md">
-                            {user.email.slice(0, 2).toUpperCase()}
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] flex items-center justify-center font-bold text-white shadow-md overflow-hidden shrink-0">
+                            {user.avatarUrl ? (
+                                <img src={user.avatarUrl} alt={user.name || 'User'} className="w-full h-full object-cover" />
+                            ) : (
+                                (user.name || user.email).slice(0, 2).toUpperCase()
+                            )}
                         </div>
                         <div className="flex-grow min-w-0">
-                            <p className="text-sm font-bold text-white truncate">{user.email}</p>
-                            <span className="inline-block px-2 py-0.5 bg-jaboatao-yellow/10 border border-jaboatao-yellow/20 rounded-md text-[10px] font-bold text-jaboatao-yellow uppercase tracking-wider mt-0.5">
+                            <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
+                            {user.name && <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>}
+                            <span className="inline-block px-2 py-0.5 bg-jaboatao-yellow/10 border border-jaboatao-yellow/20 rounded-md text-[10px] font-bold text-jaboatao-yellow uppercase tracking-wider mt-1">
                                 {user.role}
                             </span>
                         </div>

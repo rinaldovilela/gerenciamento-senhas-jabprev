@@ -9,6 +9,7 @@ export interface User {
   role: 'user' | 'operator' | 'admin';
   createdAt: string;
   serviceIds?: string[];
+  avatarUrl?: string;
 }
 
 export async function registerUser(
@@ -52,6 +53,7 @@ export async function registerUser(
     name: user.name,
     role: user.role,
     createdAt: user.created_at,
+    avatarUrl: user.avatar_url,
   };
 }
 
@@ -81,6 +83,7 @@ export async function authenticateUser(
     name: user.name,
     role: user.role,
     createdAt: user.created_at,
+    avatarUrl: user.avatar_url,
     serviceIds: user.user_services?.map((us: any) => us.service_id) || [],
   };
 }
@@ -102,6 +105,7 @@ export async function getUserById(userId: string): Promise<User> {
     name: user.name,
     role: user.role,
     createdAt: user.created_at,
+    avatarUrl: user.avatar_url,
     serviceIds: user.user_services?.map((us: any) => us.service_id) || [],
   };
 }

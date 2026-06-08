@@ -14,7 +14,8 @@ import {
     ArrowBack, 
     AssignmentInd,
     Close,
-    ManageAccounts
+    ManageAccounts,
+    Person
 } from '@mui/icons-material';
 
 interface AdminUser {
@@ -24,6 +25,7 @@ interface AdminUser {
   role: 'user' | 'operator' | 'admin';
   status: 'active' | 'inactive' | 'blocked';
   serviceIds?: string[];
+  avatarUrl?: string;
 }
 
 interface UserDraft {
@@ -33,6 +35,7 @@ interface UserDraft {
   status: AdminUser['status'];
   password: string;
   serviceIds: string[];
+  avatarUrl: string;
 }
 
 const roleOptions: Array<AdminUser['role']> = ['user', 'operator', 'admin'];
@@ -134,6 +137,7 @@ const UserManagementScreen: React.FC = () => {
         status: user.status,
         password: '',
         serviceIds: user.serviceIds || [],
+        avatarUrl: user.avatarUrl || '',
       };
     });
     return nextMap;
@@ -224,6 +228,33 @@ const UserManagementScreen: React.FC = () => {
     }));
   };
 
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleAvatarUpload = async (userId: string, file: File) => {
+    setIsUploading(true);
+    try {
+      const reader = new FileReader();
+      
+      const fileBase64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = (error) => reject(error);
+        reader.readAsDataURL(file);
+      });
+
+      // Upload to backend API instead of Supabase Storage directly
+      const response = await ApiClient.uploadAvatar(userId, fileBase64, file.name);
+      
+      // Update draft state
+      updateDraft(userId, 'avatarUrl', response.publicUrl);
+      showToast('Foto de perfil carregada. Salve o usuário para persistir.', 'success');
+    } catch (error: any) {
+      console.error('Erro no upload da imagem:', error);
+      showToast('Erro ao carregar imagem: ' + (error.message || error), 'error');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleSaveUser = async (userId: string) => {
     const user = users.find(u => u.id === userId);
     const draft = draftsById[userId];
@@ -241,6 +272,7 @@ const UserManagementScreen: React.FC = () => {
     if (draft.role !== user.role) payload.role = draft.role;
     if (draft.status !== user.status) payload.status = draft.status;
     if (draft.password.trim()) payload.password = draft.password.trim();
+    if (draft.avatarUrl !== (user.avatarUrl || '')) payload.avatarUrl = draft.avatarUrl;
     if (JSON.stringify(draft.serviceIds) !== JSON.stringify(user.serviceIds || [])) {
       payload.serviceIds = draft.serviceIds;
     }
@@ -378,12 +410,16 @@ const UserManagementScreen: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black shrink-0 shadow-sm transition-colors ${
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black shrink-0 shadow-sm overflow-hidden transition-colors ${
                         isSelected 
                           ? 'bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] text-white' 
                           : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
                       }`}>
-                        {initials || 'OP'}
+                        {user.avatarUrl ? (
+                          <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                        ) : (
+                          initials || 'OP'
+                        )}
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-black text-slate-800 truncate">{user.name}</p>
@@ -435,6 +471,49 @@ const UserManagementScreen: React.FC = () => {
 
               {/* Form de Edição */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="md:col-span-2 flex items-center gap-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
+                  <div className="relative w-16 h-16 rounded-2xl bg-slate-200 flex items-center justify-center overflow-hidden border-2 border-white shadow-md shrink-0">
+                    {activeDraft.avatarUrl ? (
+                      <img src={activeDraft.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <Person className="text-slate-400" sx={{ fontSize: 32 }} />
+                    )}
+                    {isUploading && (
+                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-grow">
+                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-1.5">Foto de Perfil</label>
+                    <div className="flex items-center gap-2">
+                      <label className="cursor-pointer bg-white hover:bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-slate-700 tracking-wider shadow-sm transition-all active:scale-95 flex items-center gap-1.5">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (file) await handleAvatarUpload(activeUser.id, file);
+                          }}
+                          disabled={isUploading}
+                        />
+                        Selecionar Foto
+                      </label>
+                      {activeDraft.avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={() => updateDraft(activeUser.id, 'avatarUrl', '')}
+                          className="bg-rose-50 hover:bg-rose-100 border border-rose-200/50 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-rose-600 tracking-wider transition-all active:scale-95"
+                          disabled={isUploading}
+                        >
+                          Remover
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Nome Completo</label>
                   <input

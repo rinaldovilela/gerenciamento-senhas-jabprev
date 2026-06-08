@@ -6,6 +6,8 @@ const AUTH_TOKEN_KEY = 'jabprev_auth_token';
 
 interface AuthUser extends User {
   serviceIds?: string[];
+  name?: string;
+  avatarUrl?: string;
 }
 
 interface AuthContextType {
@@ -22,7 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<AuthUser | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    const parseJwtPayload = (token: string): { id: string; email: string; role?: UserRole; serviceIds?: string[] } | null => {
+    const parseJwtPayload = (token: string): { id: string; email: string; name?: string; role?: UserRole; serviceIds?: string[]; avatarUrl?: string } | null => {
         try {
             const payload = token.split('.')[1];
             if (!payload) return null;
@@ -54,8 +56,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         setUser({
                             id: payload.id,
                             email: payload.email,
+                            name: payload.name,
                             role,
                             serviceIds: payload.serviceIds || [],
+                            avatarUrl: payload.avatarUrl,
                         });
                     }
                 }
@@ -76,7 +80,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setIsLoading(true);
             const response = await ApiClient.login(email, password) as {
                 token: string;
-                user: { id: string; email: string; role: UserRole; serviceIds?: string[] };
+                user: { id: string; email: string; name: string; role: UserRole; serviceIds?: string[]; avatarUrl?: string };
             };
 
             if (!response?.token || !response?.user) {
@@ -89,8 +93,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser({
                 id: response.user.id,
                 email: response.user.email,
+                name: response.user.name,
                 role: response.user.role,
                 serviceIds: response.user.serviceIds || [],
+                avatarUrl: response.user.avatarUrl,
             });
 
             return { success: true };

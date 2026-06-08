@@ -11,6 +11,7 @@ const createUserSchema = Joi.object({
   role: Joi.string().valid('user', 'operator', 'admin').default('user'),
   password: Joi.string().min(8).required(),
   serviceIds: Joi.array().items(Joi.string()).optional(),
+  avatarUrl: Joi.string().allow('').optional(),
 });
 
 const updateUserSchema = Joi.object({
@@ -20,7 +21,13 @@ const updateUserSchema = Joi.object({
   status: Joi.string().valid('active', 'inactive', 'blocked'),
   password: Joi.string().min(8),
   serviceIds: Joi.array().items(Joi.string()).optional(),
+  avatarUrl: Joi.string().allow('').optional(),
 }).min(1);
+
+const uploadAvatarSchema = Joi.object({
+  fileData: Joi.string().required(),
+  fileName: Joi.string().required(),
+});
 
 router.get('/dashboard', authMiddleware, adminOnlyMiddleware, adminController.getDashboard);
 router.get('/metrics', authMiddleware, adminOnlyMiddleware, adminController.getMetrics);
@@ -28,5 +35,6 @@ router.post('/users', authMiddleware, adminOnlyMiddleware, validateRequest(creat
 router.get('/users', authMiddleware, adminOnlyMiddleware, adminController.listUsers);
 router.patch('/users/:id', authMiddleware, adminOnlyMiddleware, validateRequest(updateUserSchema), adminController.updateUser);
 router.delete('/users/:id', authMiddleware, adminOnlyMiddleware, adminController.deleteUser);
+router.post('/users/:id/avatar', authMiddleware, adminOnlyMiddleware, validateRequest(uploadAvatarSchema), adminController.uploadAvatar);
 
 export default router;

@@ -12,13 +12,13 @@ export async function register(req: Request, res: Response, next: any) {
     const user = await AuthService.registerUser(email, password, name);
     
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
+      { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl },
       config.JWT_SECRET as any,
       { expiresIn: config.JWT_EXPIRY } as any
     );
 
     res.status(201).json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, avatarUrl: user.avatarUrl },
       token,
     });
   } catch (error: any) {
@@ -33,13 +33,13 @@ export async function login(req: Request, res: Response, next: any) {
     const user = await AuthService.authenticateUser(email, password);
 
     const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role, serviceIds: user.serviceIds },
+      { id: user.id, email: user.email, name: user.name, role: user.role, serviceIds: user.serviceIds, avatarUrl: user.avatarUrl },
       config.JWT_SECRET as any,
       { expiresIn: config.JWT_EXPIRY } as any
     );
 
     res.json({
-      user: { id: user.id, email: user.email, name: user.name, role: user.role, serviceIds: user.serviceIds },
+      user: { id: user.id, email: user.email, name: user.name, role: user.role, serviceIds: user.serviceIds, avatarUrl: user.avatarUrl },
       token,
     });
   } catch (error: any) {

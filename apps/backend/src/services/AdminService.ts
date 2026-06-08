@@ -9,6 +9,7 @@ export interface User {
   role: string;
   status: string;
   serviceIds?: string[];
+  avatarUrl?: string;
 }
 
 export interface Dashboard {
@@ -47,6 +48,7 @@ export async function createUser(payload: {
   password: string;
   createdBy: string;
   serviceIds?: string[];
+  avatarUrl?: string;
 }): Promise<User> {
   const { data: existing } = await supabase
     .from('users')
@@ -69,6 +71,7 @@ export async function createUser(payload: {
         role: payload.role,
         password_hash: hashedPassword,
         status: 'active',
+        avatar_url: payload.avatarUrl,
       },
     ])
     .select()
@@ -125,10 +128,11 @@ export async function updateUser(
     status?: string;
     password?: string;
     serviceIds?: string[];
+    avatarUrl?: string;
     updatedBy: string;
   }
 ): Promise<User> {
-  const { name, email, role, status, password, serviceIds } = updates;
+  const { name, email, role, status, password, serviceIds, avatarUrl } = updates;
   const updateData: Record<string, any> = {};
 
   if (name !== undefined) updateData.name = name;
@@ -137,6 +141,9 @@ export async function updateUser(
   if (status !== undefined) updateData.status = status;
   if (password !== undefined) {
     updateData.password_hash = await bcrypt.hash(password, 10);
+  }
+  if (avatarUrl !== undefined) {
+    updateData.avatar_url = avatarUrl;
   }
 
   if (Object.keys(updateData).length > 0) {
@@ -194,5 +201,6 @@ function mapToUser(data: any): User {
     name: data.name,
     role: data.role,
     status: data.status,
+    avatarUrl: data.avatar_url,
   };
 }
