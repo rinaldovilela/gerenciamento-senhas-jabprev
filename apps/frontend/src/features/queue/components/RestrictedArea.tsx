@@ -150,9 +150,9 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto h-screen z-10 flex flex-col min-w-0">
+            <main className="flex-grow p-2 sm:p-4 md:p-6 lg:p-8 overflow-hidden h-screen z-10 flex flex-col min-w-0">
                 {/* Mobile Top Header */}
-                <div className="flex lg:hidden justify-between items-center bg-slate-950/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 mb-4 text-white">
+                <div className="flex lg:hidden justify-between items-center bg-slate-950/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 mb-4 text-white shrink-0">
                     <JaboataoPrevLogo dark />
                     <button 
                         onClick={() => setIsMobileMenuOpen(true)}
@@ -163,7 +163,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                     </button>
                 </div>
 
-                <div className="flex-grow bg-white/70 backdrop-blur-xl border border-white/30 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.15)] flex flex-col overflow-y-auto">
+                <div className="flex-grow bg-white/70 backdrop-blur-xl border border-white/30 rounded-2xl sm:rounded-3xl p-3 sm:p-6 lg:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.15)] flex flex-col overflow-y-auto">
                     {view === 'tracking' && <AttendanceTrackingScreen />}
                     {view === 'metrics' && user.role === 'admin' && <MetricsDashboard />}
                     {view === 'users' && user.role === 'admin' && <UserManagementScreen />}

@@ -354,7 +354,7 @@ const UserManagementScreen: React.FC = () => {
           </div>
 
           {/* List Deck */}
-          <div className="flex-grow overflow-y-auto max-h-[500px] space-y-2 pr-1">
+          <div className="flex-grow overflow-y-auto lg:max-h-[500px] space-y-2 pr-1">
             {isLoading ? (
               <div className="py-16 text-center">
                 <div className="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-jaboatao-blue rounded-full mb-3"></div>

@@ -259,7 +259,7 @@ const AttendanceTrackingScreen: React.FC = () => {
                         </div>
 
                         {/* Botões do Cockpit */}
-                        <div className="flex flex-wrap justify-center gap-3.5 w-full lg:w-auto">
+                        <div className="flex flex-col sm:flex-row justify-center gap-3 w-full lg:w-auto">
                             <button
                                 onClick={() => { recallTicket(myCurrentTicket.id); showToast('Chamando senha novamente!'); }}
                                 className="flex items-center justify-center gap-2 py-3.5 px-6 text-xs font-black uppercase tracking-wider text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl shadow-lg active:scale-95 transition-all duration-150 flex-1 sm:flex-none"
@@ -316,7 +316,7 @@ const AttendanceTrackingScreen: React.FC = () => {
                         </h3>
                     </div>
 
-                    <div className="flex-grow overflow-y-auto max-h-[600px] pr-2 space-y-3">
+                    <div className="flex-grow overflow-y-auto lg:max-h-[600px] pr-2 space-y-3">
                         {waitingTickets.length > 0 ? (
                             waitingTickets.map((ticket) => {
                                 const isOld = oldTicketAlerts.some(a => a.ticket.id === ticket.id);
@@ -414,7 +414,7 @@ const AttendanceTrackingScreen: React.FC = () => {
                             Histórico de Atendimentos
                         </h4>
                         
-                        <div className="flex-grow overflow-y-auto max-h-[350px] space-y-3 pr-1">
+                        <div className="flex-grow overflow-y-auto lg:max-h-[350px] space-y-3 pr-1">
                             {historyTickets.length > 0 ? (
                                 historyTickets.slice(0, 10).map(ticket => (
                                     <div key={ticket.id} className="p-3 border border-slate-100 rounded-2xl flex items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors duration-150 bg-white/50">

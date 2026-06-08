@@ -259,7 +259,7 @@ const MetricsDashboard: React.FC = () => {
             'Pensionista': '#F59E0B',
             'Servidor Ativo': '#2E8B57',
         };
-        return Array.from(distribution.entries()).map(([name, value]) => ({ name, value, fill: colorsMap[name] || '#8B5CF6' }));
+        return Array.from(distribution.entries()).map(([name, value]) => ({ name, value, fill: colorsMap[name] || '#10B981' }));
     }, [filteredTickets]);
 
     const exportPDF = useCallback(() => {
@@ -335,7 +335,7 @@ const MetricsDashboard: React.FC = () => {
         setToast({ show: true, message: 'Relatório CSV gerado com sucesso!', type: 'success' });
     }, [filteredTickets]);
 
-    const COLORS = ['#204FA1', '#2E8B57', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#14B8A6'];
+    const COLORS = ['#204FA1', '#2E8B57', '#F59E0B', '#EF4444', '#10B981', '#06B6D4', '#EC4899', '#14B8A6'];
 
     return (
         <div ref={dashboardRef} className="space-y-8 max-w-[1600px] mx-auto w-full text-slate-800">
@@ -579,11 +579,11 @@ const MetricsDashboard: React.FC = () => {
                                 <tr className="border-b border-slate-200/50 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">
                                     <th className="px-6 py-4">Senha</th>
                                     <th className="px-6 py-4">Serviço</th>
-                                    <th className="px-6 py-4">Operador</th>
-                                    <th className="px-6 py-4">Vínculo</th>
-                                    <th className="px-6 py-4">Prioridade</th>
+                                    <th className="px-6 py-4 hidden md:table-cell">Operador</th>
+                                    <th className="px-6 py-4 hidden lg:table-cell">Vínculo</th>
+                                    <th className="px-6 py-4 hidden sm:table-cell">Prioridade</th>
                                     <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4">Data/Hora Emissão</th>
+                                    <th className="px-6 py-4 hidden sm:table-cell">Data/Hora Emissão</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
@@ -591,9 +591,9 @@ const MetricsDashboard: React.FC = () => {
                                     <tr key={ticket.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                                         <td className="px-6 py-4 font-mono font-black text-[#204FA1]">{ticket.formatted_number}</td>
                                         <td className="px-6 py-4">{ticket.service?.name || '—'}</td>
-                                        <td className="px-6 py-4">{ticket.operator?.name || '—'}</td>
-                                        <td className="px-6 py-4 uppercase text-[10px] font-black">{ticket.user_type.replace('_', ' ')}</td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 hidden md:table-cell">{ticket.operator?.name || '—'}</td>
+                                        <td className="px-6 py-4 uppercase text-[10px] font-black hidden lg:table-cell">{ticket.user_type.replace('_', ' ')}</td>
+                                        <td className="px-6 py-4 hidden sm:table-cell">
                                             {ticket.is_priority ? (
                                                 <span className="px-2 py-1 bg-amber-500/10 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-wider">Sim</span>
                                             ) : (
@@ -611,7 +611,7 @@ const MetricsDashboard: React.FC = () => {
                                                 {ticket.status === 'completed' ? 'Finalizada' : ticket.status === 'waiting' ? 'Aguardando' : ticket.status === 'no_show' ? 'Ausente' : 'Cancelada'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-slate-400 font-normal">
+                                        <td className="px-6 py-4 text-slate-400 font-normal hidden sm:table-cell">
                                             {format(parseISO(ticket.created_at), 'dd/MM/yyyy HH:mm')}
                                         </td>
                                     </tr>
