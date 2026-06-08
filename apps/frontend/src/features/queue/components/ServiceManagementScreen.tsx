@@ -11,7 +11,21 @@ import {
   Delete, 
   Save, 
   Close,
-  Category
+  Category,
+  Fingerprint, 
+  PersonAdd, 
+  FamilyRestroom, 
+  ReceiptLong, 
+  Elderly, 
+  Help,
+  Description,
+  MonetizationOn,
+  Gavel,
+  LocalHospital,
+  VpnKey,
+  BarChart,
+  Home,
+  Email
 } from '@mui/icons-material';
 
 interface ServiceDraft {
@@ -20,17 +34,43 @@ interface ServiceDraft {
   icon: string;
 }
 
+const ServiceIcon: React.FC<{ iconName: string; className?: string; size?: number }> = ({ iconName, className, size = 20 }) => {
+  const sx = { fontSize: size };
+  switch (iconName) {
+    case 'fingerprint': return <Fingerprint className={className} sx={sx} />;
+    case 'person-add': return <PersonAdd className={className} sx={sx} />;
+    case 'family-restroom': return <FamilyRestroom className={className} sx={sx} />;
+    case 'receipt-long': return <ReceiptLong className={className} sx={sx} />;
+    case 'elderly': return <Elderly className={className} sx={sx} />;
+    case 'description': return <Description className={className} sx={sx} />;
+    case 'monetization-on': return <MonetizationOn className={className} sx={sx} />;
+    case 'gavel': return <Gavel className={className} sx={sx} />;
+    case 'local-hospital': return <LocalHospital className={className} sx={sx} />;
+    case 'vpn-key': return <VpnKey className={className} sx={sx} />;
+    case 'bar-chart': return <BarChart className={className} sx={sx} />;
+    case 'home': return <Home className={className} sx={sx} />;
+    case 'email': return <Email className={className} sx={sx} />;
+    default:
+      if (iconName && iconName.length <= 4) {
+        return <span className={className} style={{ fontSize: size }}>{iconName}</span>;
+      }
+      return <Help className={className} sx={sx} />;
+  }
+};
+
 const ICON_OPTIONS = [
-  { value: '📋', label: 'Geral' },
-  { value: '💰', label: 'Finanças' },
-  { value: '📄', label: 'Docs' },
-  { value: '⚖️', label: 'Jurídico' },
-  { value: '🏥', label: 'Saúde' },
-  { value: '👤', label: 'Cadastro' },
-  { value: '🔑', label: 'Acesso' },
-  { value: '📊', label: 'Análise' },
-  { value: '🏠', label: 'Imóveis' },
-  { value: '✉️', label: 'Social' },
+  { value: 'description', label: 'Geral' },
+  { value: 'monetization-on', label: 'Finanças' },
+  { value: 'receipt-long', label: 'Docs' },
+  { value: 'gavel', label: 'Jurídico' },
+  { value: 'local-hospital', label: 'Saúde' },
+  { value: 'person-add', label: 'Cadastro' },
+  { value: 'vpn-key', label: 'Acesso' },
+  { value: 'bar-chart', label: 'Análise' },
+  { value: 'home', label: 'Imóveis' },
+  { value: 'email', label: 'Social' },
+  { value: 'fingerprint', label: 'Biometria' },
+  { value: 'elderly', label: 'Idoso / Pref.' },
 ];
 
 const Toast: React.FC<{ message: string; type: 'success' | 'error'; onClose: () => void }> = ({
@@ -85,7 +125,7 @@ const ServiceManagementScreen: React.FC = () => {
   const [createForm, setCreateForm] = useState<ServiceDraft>({
     name: '',
     description: '',
-    icon: '📋',
+    icon: 'description',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -99,7 +139,7 @@ const ServiceManagementScreen: React.FC = () => {
       nextMap[service.id] = {
         name: service.name,
         description: service.description || '',
-        icon: typeof service.icon === 'string' ? service.icon : '📋',
+        icon: typeof service.icon === 'string' ? service.icon : 'description',
       };
     });
     return nextMap;
@@ -119,7 +159,7 @@ const ServiceManagementScreen: React.FC = () => {
         id: doc.id,
         name: doc.name,
         description: doc.description || '',
-        icon: doc.icon || '📋',
+        icon: doc.icon || 'description',
         created_at: doc.created_at,
         updated_at: doc.updated_at,
       }));
@@ -184,7 +224,7 @@ const ServiceManagementScreen: React.FC = () => {
       if (error) throw error;
 
       showToast('Serviço criado com sucesso.', 'success');
-      setCreateForm({ name: '', description: '', icon: '📋' });
+      setCreateForm({ name: '', description: '', icon: 'description' });
       await loadServices();
       await refreshTodayTickets();
       setSelectedServiceId(null);
@@ -222,7 +262,7 @@ const ServiceManagementScreen: React.FC = () => {
     if (draft.description.trim() !== (service.description || '')) {
       payload.description = draft.description.trim();
     }
-    if (draft.icon !== (service.icon || '📋')) payload.icon = draft.icon;
+    if (draft.icon !== (service.icon || 'description')) payload.icon = draft.icon;
 
     if (Object.keys(payload).length === 0) {
       showToast('Nenhuma alteração para salvar.', 'error');
@@ -389,7 +429,7 @@ const ServiceManagementScreen: React.FC = () => {
                           ? 'bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] text-white shadow-md' 
                           : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
                       }`}>
-                        {service.icon || '📋'}
+                        <ServiceIcon iconName={typeof service.icon === 'string' ? service.icon : 'description'} className={isSelected ? 'text-white' : 'text-slate-600'} />
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs font-black text-slate-800 truncate">{service.name}</p>
@@ -454,7 +494,7 @@ const ServiceManagementScreen: React.FC = () => {
                 {/* Seletor de Ícones */}
                 <div>
                   <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-3">Identificador Visual (Ícone/Emoji)</label>
-                  <div className="grid grid-cols-5 sm:grid-cols-10 gap-2.5">
+                  <div className="grid grid-cols-5 sm:grid-cols-6 gap-2.5">
                     {ICON_OPTIONS.map((opt) => {
                       const isSelected = activeDraft.icon === opt.value;
                       return (
@@ -462,14 +502,14 @@ const ServiceManagementScreen: React.FC = () => {
                           key={opt.value}
                           type="button"
                           onClick={() => updateDraft(activeService.id, 'icon', opt.value)}
-                          className={`w-11 h-11 text-xl flex items-center justify-center rounded-xl border-2 transition-all duration-150 active:scale-90 shadow-sm ${
+                          className={`w-11 h-11 flex items-center justify-center rounded-xl border-2 transition-all duration-150 active:scale-90 shadow-sm ${
                             isSelected 
-                              ? 'border-jaboatao-blue bg-jaboatao-blue/10 text-white scale-105 shadow-md shadow-blue-700/5' 
+                              ? 'border-jaboatao-blue bg-jaboatao-blue/10 text-jaboatao-blue scale-105 shadow-md shadow-blue-700/5' 
                               : 'border-slate-100 hover:border-slate-200 bg-white hover:-translate-y-0.5'
                           }`}
                           title={opt.label}
                         >
-                          {opt.value}
+                          <ServiceIcon iconName={opt.value} className={isSelected ? 'text-[#204FA1]' : 'text-slate-600'} />
                         </button>
                       );
                     })}
@@ -551,7 +591,7 @@ const ServiceManagementScreen: React.FC = () => {
                   {/* Seletor de Ícones */}
                   <div>
                     <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-3">Identificador Visual (Ícone/Emoji)</label>
-                    <div className="grid grid-cols-5 sm:grid-cols-10 gap-2.5">
+                    <div className="grid grid-cols-5 sm:grid-cols-6 gap-2.5">
                       {ICON_OPTIONS.map((opt) => {
                         const isSelected = createForm.icon === opt.value;
                         return (
@@ -559,14 +599,14 @@ const ServiceManagementScreen: React.FC = () => {
                             key={opt.value}
                             type="button"
                             onClick={() => setCreateForm(prev => ({ ...prev, icon: opt.value }))}
-                            className={`w-11 h-11 text-xl flex items-center justify-center rounded-xl border-2 transition-all duration-150 active:scale-90 shadow-sm ${
+                            className={`w-11 h-11 flex items-center justify-center rounded-xl border-2 transition-all duration-150 active:scale-90 shadow-sm ${
                               isSelected 
-                                ? 'border-jaboatao-blue bg-jaboatao-blue/10 text-white scale-105 shadow-md shadow-blue-700/5' 
+                                ? 'border-jaboatao-blue bg-jaboatao-blue/10 text-jaboatao-blue scale-105 shadow-md shadow-blue-700/5' 
                                 : 'border-slate-100 hover:border-slate-200 bg-white hover:-translate-y-0.5'
                             }`}
                             title={opt.label}
                           >
-                            {opt.value}
+                            <ServiceIcon iconName={opt.value} className={isSelected ? 'text-[#204FA1]' : 'text-slate-600'} />
                           </button>
                         );
                       })}

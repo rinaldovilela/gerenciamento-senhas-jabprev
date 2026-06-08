@@ -9,6 +9,14 @@ import {
     ReceiptLong, 
     Elderly, 
     Help,
+    Description,
+    MonetizationOn,
+    Gavel,
+    LocalHospital,
+    VpnKey,
+    BarChart,
+    Home,
+    Email,
     ArrowBack,
     Search
 } from '@mui/icons-material';
@@ -24,14 +32,27 @@ interface ServiceSelectionScreenProps {
 const IconRenderer: React.FC<{ iconName: string; theme: 'light' | 'dark' }> = ({ iconName, theme }) => {
     const isDark = theme === 'dark';
     const color = isDark ? '#60A5FA' : '#204FA1';
+    const sx = { fontSize: 44, color };
     
     switch (iconName) {
-        case 'fingerprint': return <Fingerprint sx={{ fontSize: 44, color }} />;
-        case 'person-add': return <PersonAdd sx={{ fontSize: 44, color }} />;
-        case 'family-restroom': return <FamilyRestroom sx={{ fontSize: 44, color }} />;
-        case 'receipt-long': return <ReceiptLong sx={{ fontSize: 44, color }} />;
-        case 'elderly': return <Elderly sx={{ fontSize: 44, color }} />;
-        default: return <Help sx={{ fontSize: 44, color }} />;
+        case 'fingerprint': return <Fingerprint sx={sx} />;
+        case 'person-add': return <PersonAdd sx={sx} />;
+        case 'family-restroom': return <FamilyRestroom sx={sx} />;
+        case 'receipt-long': return <ReceiptLong sx={sx} />;
+        case 'elderly': return <Elderly sx={sx} />;
+        case 'description': return <Description sx={sx} />;
+        case 'monetization-on': return <MonetizationOn sx={sx} />;
+        case 'gavel': return <Gavel sx={sx} />;
+        case 'local-hospital': return <LocalHospital sx={sx} />;
+        case 'vpn-key': return <VpnKey sx={sx} />;
+        case 'bar-chart': return <BarChart sx={sx} />;
+        case 'home': return <Home sx={sx} />;
+        case 'email': return <Email sx={sx} />;
+        default:
+            if (iconName && iconName.length <= 4) {
+                return <span style={{ fontSize: 40 }}>{iconName}</span>;
+            }
+            return <Help sx={sx} />;
     }
 };
 
