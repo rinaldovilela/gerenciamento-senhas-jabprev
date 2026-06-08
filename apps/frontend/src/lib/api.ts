@@ -134,4 +134,12 @@ export class ApiClient {
   static async uploadAvatar(id: string, fileData: string, fileName: string): Promise<{ publicUrl: string }> {
     return this.request('POST', `/admin/users/${id}/avatar`, { fileData, fileName });
   }
+
+  static async updateProfile(data: any): Promise<{ user: any; token: string }> {
+    return this.request('PATCH', '/auth/profile', data);
+  }
+
+  static async uploadProfileAvatar(fileData: string, fileName: string): Promise<{ publicUrl: string }> {
+    return this.request('POST', '/auth/profile/avatar', { fileData, fileName });
+  }
 }

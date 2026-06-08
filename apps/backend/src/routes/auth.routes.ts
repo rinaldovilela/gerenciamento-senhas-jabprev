@@ -16,9 +16,22 @@ const loginSchema = Joi.object({
   password: Joi.string().trim().required(),
 });
 
+const updateProfileSchema = Joi.object({
+  name: Joi.string().optional(),
+  password: Joi.string().min(8).optional(),
+  avatarUrl: Joi.string().allow('').optional(),
+}).min(1);
+
+const uploadAvatarSchema = Joi.object({
+  fileData: Joi.string().required(),
+  fileName: Joi.string().required(),
+});
+
 router.post('/register', validateRequest(registerSchema), authController.register);
 router.post('/login', validateRequest(loginSchema), authController.login);
 router.post('/logout', authMiddleware, authController.logout);
 router.post('/refresh', authController.refreshToken);
+router.patch('/profile', authMiddleware, validateRequest(updateProfileSchema), authController.updateProfile);
+router.post('/profile/avatar', authMiddleware, validateRequest(uploadAvatarSchema), authController.uploadProfileAvatar);
 
 export default router;

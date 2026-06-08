@@ -109,3 +109,36 @@ export async function getUserById(userId: string): Promise<User> {
     serviceIds: user.user_services?.map((us: any) => us.service_id) || [],
   };
 }
+
+export async function updateUserProfile(
+  userId: string,
+  updates: {
+    name?: string;
+    password?: string;
+    avatarUrl?: string;
+  }
+): Promise<User> {
+  const { name, password, avatarUrl } = updates;
+  const updateData: Record<string, any> = {};
+
+  if (name !== undefined) updateData.name = name;
+  if (password !== undefined) {
+    updateData.password_hash = await bcrypt.hash(password, 10);
+  }
+  if (avatarUrl !== undefined) {
+    updateData.avatar_url = avatarUrl;
+  }
+
+  if (Object.keys(updateData).length > 0) {
+    const { error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('id', userId);
+
+    if (error) {
+      throw new AppError(500, 'Failed to update profile');
+    }
+  }
+
+  return getUserById(userId);
+}

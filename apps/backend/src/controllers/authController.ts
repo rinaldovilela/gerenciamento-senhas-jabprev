@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config/environment';
 import { AppError } from '../middleware/errorHandler';
 import * as AuthService from '../services/AuthService';
+import { supabase } from '../supabase';
 
 export async function register(req: Request, res: Response, next: any) {
   try {
@@ -73,6 +74,85 @@ export async function refreshToken(req: Request, res: Response, next: any) {
     );
 
     res.json({ token: newToken });
+  } catch (error: any) {
+    next(error);
+  }
+}
+
+export async function updateProfile(req: AuthRequest, res: Response, next: any) {
+  try {
+    const userId = req.user!.id;
+    const { name, password, avatarUrl } = req.body;
+
+    const updatedUser = await AuthService.updateUserProfile(userId, {
+      name,
+      password,
+      avatarUrl,
+    });
+
+    // Sign a new token with updated details so the frontend session is immediately updated
+    const token = jwt.sign(
+      {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        serviceIds: updatedUser.serviceIds,
+        avatarUrl: updatedUser.avatarUrl,
+      },
+      config.JWT_SECRET as any,
+      { expiresIn: config.JWT_EXPIRY } as any
+    );
+
+    res.json({
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        role: updatedUser.role,
+        serviceIds: updatedUser.serviceIds,
+        avatarUrl: updatedUser.avatarUrl,
+      },
+      token,
+    });
+  } catch (error: any) {
+    next(error);
+  }
+}
+
+export async function uploadProfileAvatar(req: AuthRequest, res: Response, next: any) {
+  try {
+    const userId = req.user!.id;
+    const { fileData, fileName } = req.body;
+
+    // Convert Base64 back to Buffer
+    const base64Data = fileData.replace(/^data:image\/\w+;base64,/, "");
+    const buffer = Buffer.from(base64Data, 'base64');
+    
+    // Determine content type
+    const mimeMatch = fileData.match(/^data:(image\/\w+);base64,/);
+    const contentType = mimeMatch ? mimeMatch[1] : 'image/png';
+    const fileExt = contentType.split('/').pop() || 'png';
+    
+    const filePath = `user-${userId}-${Date.now()}.${fileExt}`;
+
+    // Upload directly to Supabase Storage using service_role client
+    const { error } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, buffer, {
+        contentType,
+        upsert: true
+      });
+
+    if (error) {
+      throw error;
+    }
+
+    // Get public URL
+    const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    const publicUrl = publicUrlData.publicUrl;
+
+    res.json({ publicUrl });
   } catch (error: any) {
     next(error);
   }

@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@features/auth/contexts/AuthContext';
 import { TRANSLATIONS } from '@shared/constants';
 import type { Language } from '@shared/types';
-import { Menu, Close } from '@mui/icons-material';
+import { Menu, Close, Edit, CameraAlt } from '@mui/icons-material';
+import { ApiClient } from '@lib/api';
 import MetricsDashboard from './MetricsDashboard';
 import AttendanceTrackingScreen from './AttendanceTrackingScreen';
 import UserManagementScreen from './UserManagementScreen';
@@ -47,9 +48,26 @@ const NavButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
 );
 
 const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
-    const { user, logout } = useAuth();
+    const { user, logout, updateProfile } = useAuth();
     const [view, setView] = useState<'tracking' | 'metrics' | 'users' | 'services'>('tracking');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    // Profile Settings States
+    const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+    const [profileName, setProfileName] = useState(user?.name || '');
+    const [profilePassword, setProfilePassword] = useState('');
+    const [profileAvatarUrl, setProfileAvatarUrl] = useState(user?.avatarUrl || '');
+    const [isProfileUploading, setIsProfileUploading] = useState(false);
+    const [profileError, setProfileError] = useState('');
+    const [profileSuccess, setProfileSuccess] = useState('');
+
+    // Update state if user changes
+    useEffect(() => {
+        if (user) {
+            setProfileName(user.name || '');
+            setProfileAvatarUrl(user.avatarUrl || '');
+        }
+    }, [user]);
 
     const handleLogout = () => {
         logout();
@@ -127,16 +145,27 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
 
                 {/* Perfil Operador e Logout */}
                 <div className="border-t border-white/10 pt-6 mt-6">
-                    <div className="flex items-center gap-3 p-3 bg-white/5 border border-white/5 rounded-2xl mb-4">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] flex items-center justify-center font-bold text-white shadow-md overflow-hidden shrink-0">
+                    <div 
+                        onClick={() => {
+                            setProfileError('');
+                            setProfileSuccess('');
+                            setProfilePassword('');
+                            setIsProfileModalOpen(true);
+                        }}
+                        className="flex items-center gap-3 p-3 bg-white/5 border border-white/5 hover:bg-white/10 active:scale-[0.98] transition-all rounded-2xl mb-4 cursor-pointer group"
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] flex items-center justify-center font-bold text-white shadow-md overflow-hidden shrink-0 relative">
                             {user.avatarUrl ? (
                                 <img src={user.avatarUrl} alt={user.name || 'User'} className="w-full h-full object-cover" />
                             ) : (
                                 (user.name || user.email).slice(0, 2).toUpperCase()
                             )}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
+                                <Edit sx={{ fontSize: 16 }} className="text-white" />
+                            </div>
                         </div>
                         <div className="flex-grow min-w-0">
-                            <p className="text-sm font-bold text-white truncate">{user.name || user.email}</p>
+                            <p className="text-sm font-bold text-white truncate group-hover:text-amber-400 transition-colors">{user.name || user.email}</p>
                             {user.name && <p className="text-[10px] text-slate-400 truncate mt-0.5">{user.email}</p>}
                             <span className="inline-block px-2 py-0.5 bg-jaboatao-yellow/10 border border-jaboatao-yellow/20 rounded-md text-[10px] font-bold text-jaboatao-yellow uppercase tracking-wider mt-1">
                                 {user.role}
@@ -175,6 +204,159 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                     {view === 'services' && user.role === 'admin' && <ServiceManagementScreen />}
                 </div>
             </main>
+
+            {/* Profile Edit Modal */}
+            {isProfileModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+                    <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl p-6 shadow-2xl animate-fade-in-up text-white">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-extrabold tracking-wide">Meu Perfil</h3>
+                            <button 
+                                onClick={() => {
+                                    setIsProfileModalOpen(false);
+                                    setProfileError('');
+                                    setProfileSuccess('');
+                                }}
+                                className="p-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl transition-all"
+                            >
+                                <Close sx={{ fontSize: 18 }} />
+                            </button>
+                        </div>
+
+                        <div className="flex flex-col items-center gap-3 mb-6">
+                            <div className="relative group w-24 h-24 rounded-2xl bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] flex items-center justify-center font-bold text-3xl text-white shadow-xl overflow-hidden">
+                                {profileAvatarUrl ? (
+                                    <img src={profileAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    (profileName || user.email).slice(0, 2).toUpperCase()
+                                )}
+                                
+                                <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200">
+                                    <CameraAlt className="text-white" sx={{ fontSize: 24 }} />
+                                    <span className="text-[10px] font-bold text-slate-200">Alterar</span>
+                                    <input 
+                                        type="file" 
+                                        accept="image/*" 
+                                        className="hidden" 
+                                        onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            setIsProfileUploading(true);
+                                            setProfileError('');
+                                            try {
+                                                const reader = new FileReader();
+                                                const fileBase64 = await new Promise<string>((resolve, reject) => {
+                                                    reader.onload = () => resolve(reader.result as string);
+                                                    reader.onerror = (error) => reject(error);
+                                                    reader.readAsDataURL(file);
+                                                });
+                                                
+                                                const response = await ApiClient.uploadProfileAvatar(fileBase64, file.name);
+                                                setProfileAvatarUrl(response.publicUrl);
+                                                setProfileSuccess('Foto de perfil carregada. Clique em Salvar.');
+                                            } catch (err: any) {
+                                                setProfileError(err.message || 'Erro ao fazer upload da imagem.');
+                                            } finally {
+                                                setIsProfileUploading(false);
+                                            }
+                                        }}
+                                    />
+                                </label>
+                            </div>
+                            {isProfileUploading && <span className="text-xs text-slate-400 animate-pulse">Enviando imagem...</span>}
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">E-mail</label>
+                                <input 
+                                    type="text" 
+                                    value={user.email} 
+                                    disabled 
+                                    className="w-full px-4 py-3 bg-slate-950 border border-white/5 rounded-2xl text-sm text-slate-400 cursor-not-allowed outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cargo</label>
+                                <input 
+                                    type="text" 
+                                    value={user.role.toUpperCase()} 
+                                    disabled 
+                                    className="w-full px-4 py-3 bg-slate-950 border border-white/5 rounded-2xl text-sm text-slate-400 cursor-not-allowed uppercase outline-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nome Completo</label>
+                                <input 
+                                    type="text" 
+                                    value={profileName} 
+                                    onChange={(e) => setProfileName(e.target.value)}
+                                    placeholder="Seu nome"
+                                    className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-sm focus:border-amber-500/50 outline-none transition-all"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nova Senha (deixe em branco para manter)</label>
+                                <input 
+                                    type="password" 
+                                    value={profilePassword} 
+                                    onChange={(e) => setProfilePassword(e.target.value)}
+                                    placeholder="Nova senha (min. 8 caracteres)"
+                                    className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-sm focus:border-amber-500/50 outline-none transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        {profileError && <p className="text-xs font-bold text-rose-500 mt-4 text-center">{profileError}</p>}
+                        {profileSuccess && <p className="text-xs font-bold text-emerald-500 mt-4 text-center">{profileSuccess}</p>}
+
+                        <div className="flex gap-3 mt-6">
+                            <button 
+                                onClick={() => {
+                                    setIsProfileModalOpen(false);
+                                    setProfileError('');
+                                    setProfileSuccess('');
+                                }}
+                                className="flex-1 px-4 py-3 text-sm font-bold border border-white/10 hover:bg-white/5 active:scale-[0.98] rounded-2xl transition-all"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                onClick={async () => {
+                                    if (profilePassword && profilePassword.length < 8) {
+                                        setProfileError('Nova senha deve ter no mínimo 8 caracteres.');
+                                        return;
+                                    }
+                                    setProfileError('');
+                                    setProfileSuccess('');
+                                    try {
+                                        const result = await updateProfile({
+                                            name: profileName,
+                                            password: profilePassword || undefined,
+                                            avatarUrl: profileAvatarUrl,
+                                        });
+                                        if (result.success) {
+                                            setProfileSuccess('Perfil atualizado com sucesso!');
+                                            setProfilePassword('');
+                                            setTimeout(() => setIsProfileModalOpen(false), 1500);
+                                        } else {
+                                            setProfileError(result.error || 'Erro ao atualizar.');
+                                        }
+                                    } catch (err: any) {
+                                        setProfileError(err.message || 'Erro ao atualizar.');
+                                    }
+                                }}
+                                className="flex-1 px-4 py-3 text-sm font-bold bg-gradient-to-r from-jaboatao-yellow to-amber-500 text-slate-950 hover:brightness-110 active:scale-[0.98] rounded-2xl shadow-lg shadow-amber-500/10 transition-all"
+                            >
+                                Salvar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

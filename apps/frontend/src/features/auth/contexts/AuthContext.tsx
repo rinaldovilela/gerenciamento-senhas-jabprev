@@ -16,6 +16,7 @@ interface AuthContextType {
     isLoading: boolean;
     login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
     logout: () => Promise<void>;
+    updateProfile: (data: { name?: string; password?: string; avatarUrl?: string }) => Promise<{ success: boolean; error?: string }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -123,6 +124,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const updateProfile = async (data: { name?: string; password?: string; avatarUrl?: string }) => {
+        try {
+            setIsLoading(true);
+            const response = await ApiClient.updateProfile(data);
+            
+            if (response.token) {
+                ApiClient.setToken(response.token);
+                localStorage.setItem(AUTH_TOKEN_KEY, response.token);
+            }
+            
+            if (response.user) {
+                setUser({
+                    id: response.user.id,
+                    email: response.user.email,
+                    name: response.user.name,
+                    role: response.user.role,
+                    serviceIds: response.user.serviceIds || [],
+                    avatarUrl: response.user.avatarUrl,
+                });
+            }
+            
+            return { success: true };
+        } catch (error: any) {
+            return { success: false, error: error.message || 'Erro ao atualizar perfil' };
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     return (
         <AuthContext.Provider
             value={{
@@ -131,6 +161,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isLoading,
                 login,
                 logout,
+                updateProfile,
             }}
         >
             {children}
