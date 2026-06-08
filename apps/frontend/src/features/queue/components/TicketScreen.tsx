@@ -189,18 +189,7 @@ const TicketScreen: React.FC<TicketScreenProps> = ({
                         </div>
                     </div>
 
-                    {/* QR Code and Instructions */}
-                    <div className="bg-slate-100 border border-slate-200 p-3 rounded-2xl flex items-center justify-between gap-4 mb-4 text-left">
-                        <div className="flex-1">
-                            <p className="text-[10px] font-black text-slate-800 uppercase tracking-wide">Acompanhe pelo Celular</p>
-                            <p className="text-[9px] text-slate-500 leading-tight mt-0.5">Aponte a câmera para o QR Code para acompanhar o andamento da fila pelo celular.</p>
-                        </div>
-                        <img 
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=70x70&data=${encodeURIComponent(`https://jaboataoprev.gov.br/atendimento/status?id=${ticket.id}`)}`} 
-                            alt="QR Code"
-                            className="rounded-lg w-16 h-16 border border-slate-200"
-                        />
-                    </div>
+
 
                     <div className="border-t border-slate-200 pt-3 text-[10px] text-slate-400 font-semibold tracking-wider uppercase">
                         Retire o papel da impressora
