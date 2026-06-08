@@ -104,6 +104,7 @@ const UserManagementScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null); // null means "Create Mode"
   const [isEditMode, setIsEditMode] = useState(false);
+  const [showFormOnMobile, setShowFormOnMobile] = useState(false);
 
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
@@ -326,13 +327,13 @@ const UserManagementScreen: React.FC = () => {
       <div className="flex flex-col lg:flex-row gap-6 items-stretch flex-grow min-h-[500px]">
         
         {/* COLUNA ESQUERDA: Entity Deck */}
-        <div className="w-full lg:w-96 flex flex-col gap-4 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
+        <div className={`w-full lg:w-96 flex flex-col gap-4 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.02)] ${showFormOnMobile ? 'hidden lg:flex' : 'flex'}`}>
           <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">
               Usuários cadastrados ({filteredUsers.length})
             </h2>
             <button
-              onClick={() => { setSelectedUserId(null); setIsEditMode(false); }}
+              onClick={() => { setSelectedUserId(null); setIsEditMode(false); setShowFormOnMobile(true); }}
               className="flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase text-white bg-gradient-to-r from-jaboatao-blue to-[#2B6CB0] hover:shadow-md active:scale-95 rounded-xl transition-all duration-150"
             >
               <PersonAdd sx={{ fontSize: 14 }} />
@@ -369,7 +370,7 @@ const UserManagementScreen: React.FC = () => {
                 return (
                   <button
                     key={user.id}
-                    onClick={() => { setSelectedUserId(user.id); setIsEditMode(true); }}
+                    onClick={() => { setSelectedUserId(user.id); setIsEditMode(true); setShowFormOnMobile(true); }}
                     className={`w-full text-left p-3.5 rounded-2xl border-2 flex items-center justify-between gap-4 transition-all duration-200 group active:scale-[0.97] ${
                       isSelected 
                         ? 'border-[#204FA1] bg-[#204FA1]/5 shadow-sm' 
@@ -406,7 +407,7 @@ const UserManagementScreen: React.FC = () => {
         </div>
 
         {/* COLUNA DIREITA: Control Console (Terminal de Operações) */}
-        <div className="flex-grow bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between">
+        <div className={`flex-grow bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between ${!showFormOnMobile ? 'hidden lg:flex' : 'flex'}`}>
           
           {selectedUserId && activeDraft && activeUser ? (
             /* ================= EDIT MODE ================= */
@@ -424,7 +425,7 @@ const UserManagementScreen: React.FC = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => setSelectedUserId(null)}
+                  onClick={() => { setSelectedUserId(null); setShowFormOnMobile(false); }}
                   className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-800 rounded-xl transition-all"
                   title="Fechar"
                 >
@@ -552,16 +553,26 @@ const UserManagementScreen: React.FC = () => {
             /* ================= CREATE MODE ================= */
             <form onSubmit={handleCreateUser} className="space-y-6 flex flex-col justify-between h-full">
               <div className="space-y-5">
-                <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-                  <div className="p-2.5 bg-[#2E8B57]/10 text-jaboatao-green-prev rounded-xl">
-                    <PersonAdd sx={{ fontSize: 20 }} />
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-[#2E8B57]/10 text-jaboatao-green-prev rounded-xl">
+                      <PersonAdd sx={{ fontSize: 20 }} />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
+                        Cadastrar Novo Usuário
+                      </h3>
+                      <p className="text-[10px] font-bold text-slate-400 mt-0.5">Preencha as informações básicas de acesso.</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
-                      Cadastrar Novo Usuário
-                    </h3>
-                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">Preencha as informações básicas de acesso.</p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFormOnMobile(false)}
+                    className="lg:hidden p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-800 rounded-xl transition-all"
+                    title="Voltar"
+                  >
+                    <Close sx={{ fontSize: 20 }} />
+                  </button>
                 </div>
 
                 {formError && (

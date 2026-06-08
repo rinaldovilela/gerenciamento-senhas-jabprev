@@ -38,7 +38,7 @@ const OperatorPanel: React.FC = () => {
                 {myCurrentTicket ? (
                     <div className="flex flex-col items-center">
                         <div className="text-center mb-4">
-                            <p className="text-6xl font-mono font-bold text-text-primary">{myCurrentTicket.formattedNumber}</p>
+                            <p className="text-6xl font-mono font-bold text-text-primary">{myCurrentTicket.formatted_number}</p>
                             <p className="text-lg text-text-secondary">{myCurrentTicket.service.name}</p>
                             {myCurrentTicket.attendee_name && <p className="text-md text-text-secondary mt-1 uppercase font-semibold">{myCurrentTicket.attendee_name}</p>}
                         </div>
@@ -78,7 +78,7 @@ const OperatorPanel: React.FC = () => {
                                         <ul className="flex flex-wrap gap-2">
                                             {queue.slice(0, 10).map(t => (
                                                 <li key={t.id} className="bg-jaboatao-blue/10 text-jaboatao-blue text-sm font-mono font-bold px-2 py-1 rounded">
-                                                    {t.formattedNumber}
+                                                    {t.formatted_number}
                                                 </li>
                                             ))}
                                             {queue.length > 10 && <li className="text-sm p-1">...</li>}

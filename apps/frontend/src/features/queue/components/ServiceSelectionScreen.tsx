@@ -56,7 +56,7 @@ const ServiceCard: React.FC<{
                     ? 'bg-blue-500/10 border border-blue-500/20' 
                     : 'bg-blue-50 border border-blue-100'
             }`}>
-                <IconRenderer iconName={service.icon} theme={theme} />
+                <IconRenderer iconName={typeof service.icon === 'string' ? service.icon : 'help'} theme={theme} />
             </div>
             <h3 className={`text-lg font-montserrat font-black tracking-tight leading-snug uppercase mt-2 transition-colors duration-500 ${
                 isDark ? 'text-white' : 'text-slate-800'

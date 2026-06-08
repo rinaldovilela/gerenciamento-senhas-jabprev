@@ -5,9 +5,11 @@ export interface Service {
     id: string; // Mapped from Appwrite's $id
     name: string;
     description: string;
-    icon: string; 
-    created_at: string; // Mapped from Appwrite's $createdAt
+    icon: string | React.ReactNode; 
+    created_at?: string; // Mapped from Appwrite's $createdAt
     updated_at?: string; // Mapped from Appwrite's $updatedAt
+    category?: string;
+    prefix?: string;
 }
 
 export type TicketStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';

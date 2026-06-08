@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@features/auth/contexts/AuthContext';
 import { TRANSLATIONS } from '@shared/constants';
 import type { Language } from '@shared/types';
+import { Menu, Close } from '@mui/icons-material';
 import MetricsDashboard from './MetricsDashboard';
 import AttendanceTrackingScreen from './AttendanceTrackingScreen';
 import UserManagementScreen from './UserManagementScreen';
@@ -48,10 +49,16 @@ const NavButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
 const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
     const { user, logout } = useAuth();
     const [view, setView] = useState<'tracking' | 'metrics' | 'users' | 'services'>('tracking');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const handleLogout = () => {
         logout();
         onExit();
+    };
+
+    const handleNavClick = (targetView: typeof view) => {
+        setView(targetView);
+        setIsMobileMenuOpen(false);
     };
 
     if (!user) {
@@ -61,36 +68,58 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
 
     return (
         <div 
-            className="flex min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden"
+            className="flex flex-col lg:flex-row min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden"
             style={{ backgroundImage: 'url("/images/Bandeira/bandeira.jpeg")' }}
         >
             {/* Backdrop Blur + Dark Gradient Overlay */}
             <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[6px] pointer-events-none z-0"></div>
 
-            {/* Sidebar Flutuante */}
-            <aside className="w-80 shrink-0 bg-slate-950/75 backdrop-blur-md text-white flex flex-col p-6 m-4 mr-0 rounded-3xl border border-white/10 shadow-2xl z-10">
+            {/* Mobile Backdrop Overlay */}
+            {isMobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 lg:hidden"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                ></div>
+            )}
+
+            {/* Sidebar Drawer */}
+            <aside className={`
+                fixed lg:static top-0 left-0 bottom-0 w-80 shrink-0 
+                bg-slate-950/95 lg:bg-slate-950/75 backdrop-blur-md text-white 
+                flex flex-col p-6 m-0 lg:m-4 lg:mr-0 
+                rounded-none lg:rounded-3xl border-r lg:border border-white/10 
+                shadow-2xl z-50 lg:z-10 transition-transform duration-300 ease-in-out
+                ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            `}>
                 {/* Logo e Titulo */}
-                <div className="mb-10 px-2">
+                <div className="flex items-center justify-between mb-10 px-2">
                     <JaboataoPrevLogo dark />
+                    <button 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="lg:hidden p-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl transition-all"
+                        aria-label="Fechar Menu"
+                    >
+                        <Close sx={{ fontSize: 20 }} className="text-white" />
+                    </button>
                 </div>
 
                 {/* Navegação */}
                 <nav className="flex-grow space-y-2">
-                    <NavButton label="Controle de Senhas" onClick={() => setView('tracking')} active={view === 'tracking'}>
+                    <NavButton label="Controle de Senhas" onClick={() => handleNavClick('tracking')} active={view === 'tracking'}>
                         <TrackingIcon />
                     </NavButton>
                     {user.role === 'admin' && (
-                        <NavButton label="Painel de Métricas" onClick={() => setView('metrics')} active={view === 'metrics'}>
+                        <NavButton label="Painel de Métricas" onClick={() => handleNavClick('metrics')} active={view === 'metrics'}>
                             <MetricsIcon />
                         </NavButton>
                     )}
                     {user.role === 'admin' && (
-                        <NavButton label="Gestão de Usuários" onClick={() => setView('users')} active={view === 'users'}>
+                        <NavButton label="Gestão de Usuários" onClick={() => handleNavClick('users')} active={view === 'users'}>
                             <UsersIcon />
                         </NavButton>
                     )}
                     {user.role === 'admin' && (
-                        <NavButton label="Gestão de Serviços" onClick={() => setView('services')} active={view === 'services'}>
+                        <NavButton label="Gestão de Serviços" onClick={() => handleNavClick('services')} active={view === 'services'}>
                             <ServicesIcon />
                         </NavButton>
                     )}
@@ -121,8 +150,20 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-grow p-6 md:p-8 overflow-y-auto h-screen z-10 flex flex-col min-w-0">
-                <div className="flex-grow bg-white/70 backdrop-blur-xl border border-white/30 rounded-3xl p-6 sm:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.15)] flex flex-col overflow-y-auto">
+            <main className="flex-grow p-4 md:p-6 lg:p-8 overflow-y-auto h-screen z-10 flex flex-col min-w-0">
+                {/* Mobile Top Header */}
+                <div className="flex lg:hidden justify-between items-center bg-slate-950/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 mb-4 text-white">
+                    <JaboataoPrevLogo dark />
+                    <button 
+                        onClick={() => setIsMobileMenuOpen(true)}
+                        className="p-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl active:scale-95 transition-all"
+                        aria-label="Abrir Menu"
+                    >
+                        <Menu className="text-white" />
+                    </button>
+                </div>
+
+                <div className="flex-grow bg-white/70 backdrop-blur-xl border border-white/30 rounded-3xl p-4 sm:p-6 lg:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.15)] flex flex-col overflow-y-auto">
                     {view === 'tracking' && <AttendanceTrackingScreen />}
                     {view === 'metrics' && user.role === 'admin' && <MetricsDashboard />}
                     {view === 'users' && user.role === 'admin' && <UserManagementScreen />}

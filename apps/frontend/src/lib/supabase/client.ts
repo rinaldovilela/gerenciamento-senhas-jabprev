@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import type { Database } from '../types/supabase'; // This will be generated later
 
 // IMPORTANT: Create a .env.local file in the root of your project
 // and add your Supabase URL and Anon Key there.
@@ -13,4 +12,4 @@ if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error("Supabase URL and Anon Key are required. Check your .env.local file.");
 }
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient<any>(supabaseUrl, supabaseAnonKey);
