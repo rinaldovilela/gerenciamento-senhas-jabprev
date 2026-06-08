@@ -308,19 +308,24 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
         processNextInQueue();
     };
 
+    const ticketsRef = useRef(tickets);
+    useEffect(() => {
+        ticketsRef.current = tickets;
+    }, [tickets]);
+
     // Canal Supabase (Recall Manual)
     useEffect(() => {
         const channel = supabase.channel('tickets-live-updates');
         channel.on('broadcast', { event: 'ticket_recall' }, (payload) => {
             const ticketId = payload.payload?.ticketId;
             if (ticketId) {
-                const ticket = tickets.find(t => t.id === ticketId);
+                const ticket = ticketsRef.current.find(t => t.id === ticketId);
                 if (ticket) enqueueTicket(ticket);
             }
         }).subscribe();
 
         return () => { supabase.removeChannel(channel); };
-    }, [tickets]);
+    }, []);
 
     // Chamadas automáticas de novas senhas
     useEffect(() => {
