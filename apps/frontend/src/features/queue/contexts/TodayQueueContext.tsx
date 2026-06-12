@@ -26,7 +26,7 @@ interface TodayQueueContextType {
     // Funções operacionais
     addTicket: (serviceId: string, userType: UserType, isPriority: boolean, attendeeName?: string) => Promise<Ticket | null>;
     callNextTicket: (serviceId: string) => Promise<void>;
-    updateTicketStatus: (ticketId: string, status: TicketStatus, reason?: string) => Promise<void>;
+    updateTicketStatus: (ticketId: string, status: TicketStatus, reason?: string, classification?: 'informacao' | 'reclamacao' | 'elogio') => Promise<void>;
     recallTicket: (ticketId: string) => Promise<void>;
     
     // Métodos auxiliares
@@ -71,6 +71,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     description: doc.description,
                     icon: doc.icon,
                     created_at: doc.created_at,
+                    is_ouvidoria: doc.is_ouvidoria || false,
                 })) as Service[]
             );
 
@@ -89,7 +90,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 .from('tickets')
                 .select(`
                     *,
-                    service:service_id(id, name, description, icon, created_at),
+                    service:service_id(id, name, description, icon, created_at, is_ouvidoria),
                     operator:operator_id(id, name, email)
                 `)
                 .gte('created_at', todayStartISO)
@@ -113,6 +114,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                           description: doc.service.description,
                           icon: doc.service.icon,
                           created_at: doc.service.created_at,
+                          is_ouvidoria: doc.service.is_ouvidoria || false,
                       }
                     : null,
                 user_type: doc.user_type,
@@ -130,6 +132,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 started_at: doc.started_at || null,
                 completed_at: doc.completed_at || null,
                 updated_at: doc.updated_at || null,
+                ouvidoria_classification: doc.ouvidoria_classification || null,
             }));
 
             setTodayTickets(fetchedTickets);
@@ -181,6 +184,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                                     started_at: event.data.started_at || ticket.started_at,
                                     completed_at: event.data.completed_at || ticket.completed_at,
                                     updated_at: event.data.updated_at,
+                                    ouvidoria_classification: event.data.ouvidoria_classification || null,
                                 };
                             }
                             return ticket;
@@ -293,7 +297,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
      * Atualiza status da senha
      */
     const updateTicketStatus = useCallback(
-        async (ticketId: string, status: TicketStatus, reason?: string) => {
+        async (ticketId: string, status: TicketStatus, reason?: string, classification?: 'informacao' | 'reclamacao' | 'elogio') => {
             try {
                 console.log('[TodayQueueContext] Atualizando status da senha:', ticketId, 'para', status);
                 
@@ -305,6 +309,10 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                     updatePayload.started_at = new Date().toISOString();
                 } else if (['completed', 'cancelled', 'no_show'].includes(status)) {
                     updatePayload.completed_at = new Date().toISOString();
+                }
+
+                if (status === 'completed' && classification) {
+                    updatePayload.ouvidoria_classification = classification;
                 }
 
                 // operator_id pode ter FK diferente entre ambientes legados.
@@ -349,6 +357,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                                       started_at: fallbackRow.started_at || ticket.started_at,
                                       completed_at: fallbackRow.completed_at || ticket.completed_at,
                                       updated_at: fallbackRow.updated_at || ticket.updated_at,
+                                      ouvidoria_classification: fallbackRow.ouvidoria_classification || null,
                                   }
                                 : ticket
                         )
@@ -374,6 +383,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                                   started_at: updatedRow.started_at || ticket.started_at,
                                   completed_at: updatedRow.completed_at || ticket.completed_at,
                                   updated_at: updatedRow.updated_at || ticket.updated_at,
+                                  ouvidoria_classification: updatedRow.ouvidoria_classification || null,
                               }
                             : ticket
                     )

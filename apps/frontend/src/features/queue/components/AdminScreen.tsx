@@ -1,8 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useTodayQueue } from '@features/queue/contexts/TodayQueueContext';
 import { TRANSLATIONS } from '@shared/constants';
 import type { Ticket, Language, Service } from '@shared/types';
-
+import OuvidoriaClassificationModal from './OuvidoriaClassificationModal';
 import { useAuth } from '@features/auth/contexts/AuthContext';
 
 const language: Language = 'pt'; // Simplified for this component
@@ -10,10 +10,34 @@ const language: Language = 'pt'; // Simplified for this component
 const OperatorPanel: React.FC = () => {
     const { user } = useAuth();
     const { todayTickets: tickets, callNextTicket, services, updateTicketStatus } = useTodayQueue();
+    const [classificationModalOpen, setClassificationModalOpen] = useState(false);
+    const [isFinalizing, setIsFinalizing] = useState(false);
 
     const myCurrentTicket = useMemo(() => {
         return tickets.find(t => t.status === 'in_progress' && t.operator_id === user?.id);
     }, [tickets, user]);
+
+    const handleFinalizeClick = () => {
+        if (!myCurrentTicket) return;
+        if (myCurrentTicket.service?.is_ouvidoria) {
+            setClassificationModalOpen(true);
+        } else {
+            updateTicketStatus(myCurrentTicket.id, 'completed', 'Atendimento finalizado');
+        }
+    };
+
+    const handleConfirmClassification = async (classification: 'informacao' | 'reclamacao' | 'elogio') => {
+        if (!myCurrentTicket) return;
+        setIsFinalizing(true);
+        try {
+            await updateTicketStatus(myCurrentTicket.id, 'completed', 'Atendimento finalizado com classificação', classification);
+            setClassificationModalOpen(false);
+        } catch (error) {
+            console.error('Erro ao classificar e finalizar no painel admin:', error);
+        } finally {
+            setIsFinalizing(false);
+        }
+    };
 
     const waitingByService = useMemo(() => {
         return tickets.reduce((acc, ticket) => {
@@ -33,6 +57,14 @@ const OperatorPanel: React.FC = () => {
     
     return (
         <div>
+            {myCurrentTicket && (
+                <OuvidoriaClassificationModal
+                    isOpen={classificationModalOpen}
+                    onConfirm={handleConfirmClassification}
+                    onCancel={() => setClassificationModalOpen(false)}
+                    isLoading={isFinalizing}
+                />
+            )}
             <section className="mb-8 p-6 bg-white rounded-xl shadow-lg border border-border-color">
                 <h2 className="font-montserrat text-2xl font-semibold mb-4 text-jaboatao-blue">{TRANSLATIONS.currentlyServing[language]}</h2>
                 {myCurrentTicket ? (
@@ -44,7 +76,7 @@ const OperatorPanel: React.FC = () => {
                         </div>
                         <div className="flex gap-4">
                             <button
-                                onClick={() => updateTicketStatus(myCurrentTicket.id, 'completed', 'Atendimento finalizado')}
+                                onClick={handleFinalizeClick}
                                 className="px-6 py-2 bg-jaboatao-green-prev text-white font-bold rounded shadow hover:opacity-90"
                             >
                                 Finalizar Atendimento

@@ -32,6 +32,7 @@ interface ServiceDraft {
   name: string;
   description: string;
   icon: string;
+  is_ouvidoria?: boolean;
 }
 
 const ServiceIcon: React.FC<{ iconName: string; className?: string; size?: number }> = ({ iconName, className, size = 20 }) => {
@@ -126,6 +127,7 @@ const ServiceManagementScreen: React.FC = () => {
     name: '',
     description: '',
     icon: 'description',
+    is_ouvidoria: false,
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
@@ -140,6 +142,7 @@ const ServiceManagementScreen: React.FC = () => {
         name: service.name,
         description: service.description || '',
         icon: typeof service.icon === 'string' ? service.icon : 'description',
+        is_ouvidoria: service.is_ouvidoria || false,
       };
     });
     return nextMap;
@@ -160,6 +163,7 @@ const ServiceManagementScreen: React.FC = () => {
         name: doc.name,
         description: doc.description || '',
         icon: doc.icon || 'description',
+        is_ouvidoria: doc.is_ouvidoria || false,
         created_at: doc.created_at,
         updated_at: doc.updated_at,
       }));
@@ -218,6 +222,7 @@ const ServiceManagementScreen: React.FC = () => {
           name: createForm.name.trim(),
           description: createForm.description.trim(),
           icon: createForm.icon,
+          is_ouvidoria: createForm.is_ouvidoria || false,
         },
       ]);
 
@@ -236,7 +241,7 @@ const ServiceManagementScreen: React.FC = () => {
     }
   };
 
-  const updateDraft = (id: string, key: keyof ServiceDraft, value: string) => {
+  const updateDraft = (id: string, key: keyof ServiceDraft, value: string | boolean) => {
     setDraftsById((prev) => ({
       ...prev,
       [id]: {
@@ -263,6 +268,9 @@ const ServiceManagementScreen: React.FC = () => {
       payload.description = draft.description.trim();
     }
     if (draft.icon !== (service.icon || 'description')) payload.icon = draft.icon;
+    if (draft.is_ouvidoria !== (service.is_ouvidoria || false)) {
+      payload.is_ouvidoria = draft.is_ouvidoria;
+    }
 
     if (Object.keys(payload).length === 0) {
       showToast('Nenhuma alteração para salvar.', 'error');
@@ -490,6 +498,20 @@ const ServiceManagementScreen: React.FC = () => {
                     className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 resize-none"
                   />
                 </div>
+                
+                <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+                  <input
+                    type="checkbox"
+                    id="edit-is-ouvidoria"
+                    checked={activeDraft.is_ouvidoria || false}
+                    onChange={(e) => updateDraft(activeService.id, 'is_ouvidoria', e.target.checked)}
+                    className="w-4.5 h-4.5 text-jaboatao-blue border-slate-300 rounded focus:ring-jaboatao-blue"
+                  />
+                  <div>
+                    <label htmlFor="edit-is-ouvidoria" className="block text-[10px] font-black text-slate-700 uppercase tracking-wider cursor-pointer">Serviço de Ouvidoria</label>
+                    <p className="text-[9px] font-bold text-slate-400 mt-0.5">Atendimentos deste serviço exigem classificação (Informação, Reclamação, Elogio) ao finalizar.</p>
+                  </div>
+                </div>
 
                 {/* Seletor de Ícones */}
                 <div>
@@ -586,6 +608,20 @@ const ServiceManagementScreen: React.FC = () => {
                       placeholder="Descreva brevemente o propósito deste guichê..."
                       className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 resize-none"
                     />
+                  </div>
+
+                  <div className="flex items-center gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+                    <input
+                      type="checkbox"
+                      id="create-is-ouvidoria"
+                      checked={createForm.is_ouvidoria || false}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, is_ouvidoria: e.target.checked }))}
+                      className="w-4.5 h-4.5 text-jaboatao-blue border-slate-300 rounded focus:ring-jaboatao-blue"
+                    />
+                    <div>
+                      <label htmlFor="create-is-ouvidoria" className="block text-[10px] font-black text-slate-700 uppercase tracking-wider cursor-pointer">Serviço de Ouvidoria</label>
+                      <p className="text-[9px] font-bold text-slate-400 mt-0.5">Atendimentos deste serviço exigem classificação (Informação, Reclamação, Elogio) ao finalizar.</p>
+                    </div>
                   </div>
 
                   {/* Seletor de Ícones */}

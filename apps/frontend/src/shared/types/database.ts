@@ -10,6 +10,7 @@ export interface Service {
     updated_at?: string; // Mapped from Appwrite's $updatedAt
     category?: string;
     prefix?: string;
+    is_ouvidoria?: boolean;
 }
 
 export type TicketStatus = 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
@@ -34,6 +35,7 @@ export interface Ticket {
     started_at?: string | null;
     completed_at?: string | null;
     updated_at?: string; // Mapped from Appwrite's $updatedAt
+    ouvidoria_classification?: 'informacao' | 'reclamacao' | 'elogio' | null;
 }
 
 export interface QueueState {

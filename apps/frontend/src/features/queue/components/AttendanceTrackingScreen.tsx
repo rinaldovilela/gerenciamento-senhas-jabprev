@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useTodayQueue } from '@features/queue/contexts/TodayQueueContext';
 import { oldTicketNotificationManager } from '@shared/services/OldTicketNotificationManager';
 import ConfirmationModal from './ConfirmationModal';
+import OuvidoriaClassificationModal from './OuvidoriaClassificationModal';
 import { useAuth } from '@features/auth/contexts/AuthContext';
 import type { Ticket, TicketStatus } from '@shared/types';
 import { 
@@ -52,6 +53,7 @@ const AttendanceTrackingScreen: React.FC = () => {
     const [toast, setToast] = useState({ show: false, message: '' });
     const [oldTicketAlerts, setOldTicketAlerts] = useState<ReturnType<typeof oldTicketNotificationManager.getOldTicketAlerts>>([]);
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, ticketId: '', status: null as TicketStatus | null });
+    const [classificationModal, setClassificationModal] = useState({ isOpen: false, ticketId: '' });
     const [isUpdating, setIsUpdating] = useState(false);
 
     // Get ticket for confirmation modal
@@ -78,7 +80,36 @@ const AttendanceTrackingScreen: React.FC = () => {
     };
 
     const handleUpdateStatus = (ticketId: string, status: TicketStatus) => {
-        setConfirmModal({ isOpen: true, ticketId, status });
+        const ticket = todayTickets.find(t => t.id === ticketId);
+        if (status === 'completed' && ticket?.service?.is_ouvidoria) {
+            setClassificationModal({ isOpen: true, ticketId });
+        } else {
+            setConfirmModal({ isOpen: true, ticketId, status });
+        }
+    };
+
+    const handleConfirmClassification = async (classification: 'informacao' | 'reclamacao' | 'elogio') => {
+        if (!classificationModal.ticketId) return;
+
+        setIsUpdating(true);
+        try {
+            await updateTicketStatus(
+                classificationModal.ticketId,
+                'completed',
+                'Atendimento finalizado com classificação',
+                classification
+            );
+            
+            await refreshTodayTickets();
+            showToast('Atendimento finalizado e classificado com sucesso!');
+            setLastUpdated(new Date());
+            setClassificationModal({ isOpen: false, ticketId: '' });
+        } catch (error) {
+            console.error('Erro ao finalizar e classificar ticket:', error);
+            showToast('Erro ao finalizar atendimento de Ouvidoria');
+        } finally {
+            setIsUpdating(false);
+        }
     };
 
     const handleConfirmUpdate = async () => {
@@ -169,6 +200,13 @@ const AttendanceTrackingScreen: React.FC = () => {
                     isLoading={isUpdating}
                 />
             )}
+            
+            <OuvidoriaClassificationModal
+                isOpen={classificationModal.isOpen}
+                onConfirm={handleConfirmClassification}
+                onCancel={() => setClassificationModal({ isOpen: false, ticketId: '' })}
+                isLoading={isUpdating}
+            />
             
             {/* Header com Status e Refresh */}
             <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200/50 pb-5">
