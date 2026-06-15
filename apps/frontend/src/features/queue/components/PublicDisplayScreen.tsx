@@ -373,8 +373,7 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
     useEffect(() => {
         let timerId: number;
         const updateClock = () => {
-            const jaboataoTime = new Date(new Date().toLocaleString('pt-BR', { timeZone: 'America/Recife' }));
-            setCurrentTime(jaboataoTime);
+            setCurrentTime(new Date());
             const now = Date.now();
             const delayToNextSecond = 1000 - (now % 1000);
             timerId = window.setTimeout(updateClock, delayToNextSecond);
@@ -479,10 +478,10 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
                     <div className="text-right">
                         <p className={`text-3xl sm:text-4xl font-black tracking-tight flex items-center gap-2 justify-end ${isDark ? 'text-white' : 'text-slate-800'}`}>
                             <AccessTime sx={{ fontSize: 26 }} className="text-amber-400" />
-                            {currentTime.toLocaleTimeString('pt-BR')}
+                            {currentTime.toLocaleTimeString('pt-BR', { timeZone: 'America/Recife' })}
                         </p>
                         <p className={`text-[10px] uppercase font-black tracking-widest mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                            {currentTime.toLocaleDateString('pt-BR', { weekday: 'long', month: 'long', day: 'numeric' })}
+                            {currentTime.toLocaleDateString('pt-BR', { timeZone: 'America/Recife', weekday: 'long', month: 'long', day: 'numeric' })}
                         </p>
                     </div>
 
