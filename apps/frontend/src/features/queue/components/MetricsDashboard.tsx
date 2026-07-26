@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useQueue } from '@features/queue/contexts/QueueContext';
 import type { Language, Ticket, UserType } from '@shared/types';
-import ReactECharts from 'echarts-for-react';
 import { format, subDays, startOfDay, endOfDay, parseISO, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
@@ -23,6 +22,24 @@ import {
     Hourglass
 } from 'lucide-react';
 import Toast from '@shared/components/Toast';
+
+// TREE-SHAKEN APACHE ECHARTS CORE IMPORTS (SUPER LEVE)
+import EChartsCore from 'echarts-for-react/lib/core';
+import * as echarts from 'echarts/core';
+import { LineChart, BarChart, PieChart, GaugeChart } from 'echarts/charts';
+import { TooltipComponent, GridComponent, LegendComponent } from 'echarts/components';
+import { CanvasRenderer } from 'echarts/renderers';
+
+echarts.use([
+    LineChart, 
+    BarChart, 
+    PieChart, 
+    GaugeChart, 
+    TooltipComponent, 
+    GridComponent, 
+    LegendComponent, 
+    CanvasRenderer
+]);
 
 interface FilterState {
     startDate: string;
@@ -263,15 +280,6 @@ const MetricsDashboard: React.FC = () => {
         return Array.from(distribution.entries()).map(([name, value]) => ({ name, value }));
     }, [filteredTickets]);
 
-    const userTypeDistribution = useMemo(() => {
-        const distribution = new Map<string, number>();
-        filteredTickets.forEach((t) => {
-            const typeLabel = t.user_type === 'aposentado' ? 'Aposentado' : t.user_type === 'pensionista' ? 'Pensionista' : 'Servidor Ativo';
-            distribution.set(typeLabel, (distribution.get(typeLabel) || 0) + 1);
-        });
-        return Array.from(distribution.entries()).map(([name, value]) => ({ name, value }));
-    }, [filteredTickets]);
-
     // APACHE ECHARTS OPTIONS
     const timeTrendOption = useMemo(() => ({
         backgroundColor: 'transparent',
@@ -287,7 +295,7 @@ const MetricsDashboard: React.FC = () => {
             textStyle: { color: '#94A3B8', fontWeight: 'bold' },
             top: 0,
         },
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        grid: { left: 40, right: 20, bottom: 30, top: 35 },
         xAxis: {
             type: 'category',
             boundaryGap: false,
@@ -348,7 +356,7 @@ const MetricsDashboard: React.FC = () => {
             textStyle: { color: '#94A3B8', fontWeight: 'bold' },
             top: 0,
         },
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        grid: { left: 40, right: 20, bottom: 30, top: 35 },
         xAxis: {
             type: 'category',
             data: timeSeriesData.map(d => d.date),
@@ -716,7 +724,7 @@ const MetricsDashboard: React.FC = () => {
                 <KPICard title="Cancelados / Ausentes" value={metrics.cancelled} icon={<AlertTriangle size={22} />} description={`${metrics.total > 0 ? ((metrics.cancelled / metrics.total) * 100).toFixed(1) : 0}% do total`} trend="down" accentColor="from-slate-500 to-slate-400" />
             </div>
 
-            {/* Seção Gráficos Executivos (Apache ECharts) */}
+            {/* Seção Gráficos Executivos (EChartsCore Tree-Shaken) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Gauge SLA */}
                 <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col justify-between">
@@ -725,7 +733,7 @@ const MetricsDashboard: React.FC = () => {
                         <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-lg">Meta: 15 min</span>
                     </div>
                     <div className="h-64 flex items-center justify-center">
-                        <ReactECharts option={slaGaugeOption} style={{ height: '100%', width: '100%' }} />
+                        <EChartsCore echarts={echarts} option={slaGaugeOption} style={{ height: '100%', width: '100%' }} />
                     </div>
                 </div>
 
@@ -733,7 +741,7 @@ const MetricsDashboard: React.FC = () => {
                 <div className="lg:col-span-2 bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
                     <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Fluxo & Tendência de Tempos (Espera vs Atendimento)</h2>
                     <div className="h-64">
-                        <ReactECharts option={timeTrendOption} style={{ height: '100%', width: '100%' }} />
+                        <EChartsCore echarts={echarts} option={timeTrendOption} style={{ height: '100%', width: '100%' }} />
                     </div>
                 </div>
             </div>
@@ -743,7 +751,7 @@ const MetricsDashboard: React.FC = () => {
                 <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
                     <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Volume Diário por Status</h2>
                     <div className="h-72">
-                        <ReactECharts option={volumeBarOption} style={{ height: '100%', width: '100%' }} />
+                        <EChartsCore echarts={echarts} option={volumeBarOption} style={{ height: '100%', width: '100%' }} />
                     </div>
                 </div>
 
@@ -751,7 +759,7 @@ const MetricsDashboard: React.FC = () => {
                 <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
                     <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Distribuição por Categoria de Serviço</h2>
                     <div className="h-72">
-                        <ReactECharts option={servicePieOption} style={{ height: '100%', width: '100%' }} />
+                        <EChartsCore echarts={echarts} option={servicePieOption} style={{ height: '100%', width: '100%' }} />
                     </div>
                 </div>
             </div>

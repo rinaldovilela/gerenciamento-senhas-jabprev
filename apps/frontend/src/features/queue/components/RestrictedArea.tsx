@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { useAuth } from '@features/auth/contexts/AuthContext';
 import { TRANSLATIONS } from '@shared/constants';
 import type { Language } from '@shared/types';
@@ -15,16 +15,39 @@ import {
     Camera,
     User,
     Key,
-    CheckCircle
+    CheckCircle,
+    Tv
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import MetricsDashboard from './MetricsDashboard';
-import AttendanceTrackingScreen from './AttendanceTrackingScreen';
-import UserManagementScreen from './UserManagementScreen';
-import ServiceManagementScreen from './ServiceManagementScreen';
 import { CameraAlt, Close } from '@mui/icons-material';
 
+// LAZY LOADING DOS MÓDULOS
+const MetricsDashboard = lazy(() => import('./MetricsDashboard'));
+const AttendanceTrackingScreen = lazy(() => import('./AttendanceTrackingScreen'));
+const UserManagementScreen = lazy(() => import('./UserManagementScreen'));
+const ServiceManagementScreen = lazy(() => import('./ServiceManagementScreen'));
+const TvSettingsScreen = lazy(() => import('./TvSettingsScreen'));
+
+// PRELOAD EM SEGUNDO PLANO
+import('./MetricsDashboard');
+import('./AttendanceTrackingScreen');
+import('./UserManagementScreen');
+import('./ServiceManagementScreen');
+import('./TvSettingsScreen');
+
 const language: Language = 'pt';
+
+const ScreenSkeleton: React.FC = () => (
+    <div className="space-y-6 animate-pulse p-4">
+        <div className="h-10 bg-white/5 rounded-2xl w-1/3"></div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="h-32 bg-white/5 rounded-3xl"></div>
+            <div className="h-32 bg-white/5 rounded-3xl"></div>
+            <div className="h-32 bg-white/5 rounded-3xl"></div>
+        </div>
+        <div className="h-64 bg-white/5 rounded-3xl"></div>
+    </div>
+);
 
 const JaboataoPrevLogo: React.FC<{ className?: string; dark?: boolean }> = ({ className, dark }) => (
     <div className={`flex items-center gap-3 ${className}`}>
@@ -57,7 +80,7 @@ const NavButton: React.FC<{ active: boolean; onClick: () => void; icon: React.Re
 
 const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
     const { user, logout, updateProfile } = useAuth();
-    const [view, setView] = useState<'tracking' | 'metrics' | 'users' | 'services'>('tracking');
+    const [view, setView] = useState<'tracking' | 'metrics' | 'users' | 'services' | 'tv-settings'>('tracking');
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // Profile Settings States
@@ -69,7 +92,6 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
     const [profileError, setProfileError] = useState('');
     const [profileSuccess, setProfileSuccess] = useState('');
 
-    // Update state if user changes
     useEffect(() => {
         if (user) {
             setProfileName(user.name || '');
@@ -97,7 +119,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
             className="flex flex-col lg:flex-row min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden"
             style={{ backgroundImage: 'url("/images/Bandeira/bandeira.jpeg")' }}
         >
-            {/* Backdrop Blur + Dark Gradient Overlay */}
+            {/* Backdrop Blur Original + Dark Gradient Overlay */}
             <div className="absolute inset-0 bg-slate-950/45 backdrop-blur-[6px] pointer-events-none z-0"></div>
 
             {/* Mobile Backdrop Overlay */}
@@ -108,7 +130,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                 ></div>
             )}
 
-            {/* Sidebar Drawer */}
+            {/* Sidebar Drawer Original (com w-80, rounded-3xl e margens originais) */}
             <aside className={`
                 fixed lg:static top-0 left-0 bottom-0 w-80 shrink-0 
                 bg-slate-950/95 lg:bg-slate-950/75 backdrop-blur-md text-white 
@@ -131,19 +153,14 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
 
                 {/* Navegação */}
                 <nav className="flex-grow space-y-2">
-                    <NavButton label="Controle de Senhas" onClick={() => handleNavClick('tracking')} active={view === 'tracking'} icon={<ClipboardList size={20} />}>
-                    </NavButton>
+                    <NavButton label="Controle de Senhas" onClick={() => handleNavClick('tracking')} active={view === 'tracking'} icon={<ClipboardList size={20} />} />
                     {user.role === 'admin' && (
-                        <NavButton label="Painel de Métricas" onClick={() => handleNavClick('metrics')} active={view === 'metrics'} icon={<BarChart3 size={20} />}>
-                        </NavButton>
-                    )}
-                    {user.role === 'admin' && (
-                        <NavButton label="Gestão de Usuários" onClick={() => handleNavClick('users')} active={view === 'users'} icon={<Users size={20} />}>
-                        </NavButton>
-                    )}
-                    {user.role === 'admin' && (
-                        <NavButton label="Gestão de Serviços" onClick={() => handleNavClick('services')} active={view === 'services'} icon={<Briefcase size={20} />}>
-                        </NavButton>
+                        <>
+                            <NavButton label="Painel de Métricas" onClick={() => handleNavClick('metrics')} active={view === 'metrics'} icon={<BarChart3 size={20} />} />
+                            <NavButton label="Painel TV & Anúncios" onClick={() => handleNavClick('tv-settings')} active={view === 'tv-settings'} icon={<Tv size={20} />} />
+                            <NavButton label="Gestão de Usuários" onClick={() => handleNavClick('users')} active={view === 'users'} icon={<Users size={20} />} />
+                            <NavButton label="Gestão de Serviços" onClick={() => handleNavClick('services')} active={view === 'services'} icon={<Briefcase size={20} />} />
+                        </>
                     )}
                 </nav>
 
@@ -187,7 +204,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                 </div>
             </aside>
 
-            {/* Main Content Area */}
+            {/* Main Content Area Container Original */}
             <main className="flex-grow p-2 sm:p-4 md:p-6 lg:p-8 overflow-hidden h-screen z-10 flex flex-col min-w-0">
                 {/* Mobile Top Header */}
                 <div className="flex lg:hidden justify-between items-center bg-slate-950/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 mb-4 text-white shrink-0">
@@ -202,21 +219,24 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                 </div>
 
                 <div className="flex-grow bg-slate-950/80 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-3xl p-3 sm:p-6 lg:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.35)] flex flex-col overflow-y-auto text-slate-100">
-                    <AnimatePresence mode="wait">
-                        <motion.div
-                            key={view}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            transition={{ duration: 0.2 }}
-                            className="flex-grow flex flex-col min-h-0"
-                        >
-                            {view === 'tracking' && <AttendanceTrackingScreen />}
-                            {view === 'metrics' && user.role === 'admin' && <MetricsDashboard />}
-                            {view === 'users' && user.role === 'admin' && <UserManagementScreen />}
-                            {view === 'services' && user.role === 'admin' && <ServiceManagementScreen />}
-                        </motion.div>
-                    </AnimatePresence>
+                    <Suspense fallback={<ScreenSkeleton />}>
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={view}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                                className="flex-grow flex flex-col min-h-0 transform-gpu"
+                            >
+                                {view === 'tracking' && <AttendanceTrackingScreen />}
+                                {view === 'metrics' && user.role === 'admin' && <MetricsDashboard />}
+                                {view === 'tv-settings' && user.role === 'admin' && <TvSettingsScreen />}
+                                {view === 'users' && user.role === 'admin' && <UserManagementScreen />}
+                                {view === 'services' && user.role === 'admin' && <ServiceManagementScreen />}
+                            </motion.div>
+                        </AnimatePresence>
+                    </Suspense>
                 </div>
             </main>
 

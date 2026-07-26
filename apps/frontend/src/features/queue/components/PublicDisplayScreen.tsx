@@ -101,6 +101,8 @@ const NEWS_TICKER_TEXTS = [
     "JaboatãoPrev — Compromisso com o Futuro e Acessibilidade do Servidor."
 ];
 
+import { getStoredTvConfig, DEFAULT_TV_CONFIG, type TvConfig } from '../utils/tvConfigHelper';
+
 interface PublicDisplayScreenProps {
     onBack: () => void;
     theme?: 'light' | 'dark';
@@ -111,6 +113,39 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
     const { todayTickets: tickets } = useTodayQueue();
     const [currentTime, setCurrentTime] = useState(new Date());
 
+    // Configuração Dinâmica da TV & Letreiro
+    const [tvConfig, setTvConfig] = useState<TvConfig>(getStoredTvConfig);
+
+    useEffect(() => {
+        const handleStorageChange = () => setTvConfig(getStoredTvConfig());
+        window.addEventListener('storage', handleStorageChange);
+
+        let channel: BroadcastChannel | null = null;
+        if ('BroadcastChannel' in window) {
+            channel = new BroadcastChannel('jabprev_tv_channel');
+            channel.onmessage = (event) => {
+                if (event.data?.type === 'TV_CONFIG_UPDATED' && event.data?.config) {
+                    setTvConfig(event.data.config);
+                }
+            };
+        }
+
+        return () => {
+            window.removeEventListener('storage', handleStorageChange);
+            if (channel) channel.close();
+        };
+    }, []);
+
+    const activeSlides = useMemo(() => {
+        const list = (tvConfig.slides || []).filter(s => s.active);
+        return list.length > 0 ? list : DEFAULT_TV_CONFIG.slides;
+    }, [tvConfig.slides]);
+
+    const fullTickerText = useMemo(() => {
+        const list = (tvConfig.tickers || []).filter(t => t.active).map(t => t.text);
+        return list.length > 0 ? list.join('   •   ') : DEFAULT_TV_CONFIG.tickers.map(t => t.text).join('   •   ');
+    }, [tvConfig.tickers]);
+
     // Controle do Takeover (Senha Chamada)
     const [activeTakeoverTicket, setActiveTakeoverTicket] = useState<Ticket | null>(null);
     const [lastCalledTicketId, setLastCalledTicketId] = useState<string | null>(null);
@@ -118,6 +153,14 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
 
     // Controle do Carrossel de Mídia
     const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+    useEffect(() => {
+        if (activeSlides.length <= 1) return;
+        const interval = setInterval(() => {
+            setCurrentSlideIndex((prev) => (prev + 1) % activeSlides.length);
+        }, (tvConfig.slideDurationSeconds || 12) * 1000);
+        return () => clearInterval(interval);
+    }, [activeSlides, tvConfig.slideDurationSeconds]);
 
     const inProgressTickets = useMemo(() => {
         return tickets
@@ -379,21 +422,6 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
             timerId = window.setTimeout(updateClock, delayToNextSecond);
         };
         updateClock();
-        return () => window.clearTimeout(timerId);
-    }, []);
-
-    // Timer do Carrossel de Mídia (8 segundos por slide)
-    useEffect(() => {
-        const slideTimer = setInterval(() => {
-            setCurrentSlideIndex(prev => (prev + 1) % INFO_SLIDES.length);
-        }, 8000);
-        return () => clearInterval(slideTimer);
-    }, []);
-
-
-    // Combina os textos do News Ticker em uma única string
-    const fullTickerText = useMemo(() => {
-        return NEWS_TICKER_TEXTS.join("  •  ");
     }, []);
 
     return (
@@ -515,32 +543,32 @@ const PublicDisplayScreen: React.FC<PublicDisplayScreenProps> = ({ onBack, theme
                                 Informativo JaboatãoPrev
                             </span>
                             <span className={`px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider ${isDark ? 'bg-white/5 border-white/5 text-slate-400' : 'bg-slate-100/80 border-slate-200/60 text-slate-500'}`}>
-                                {INFO_SLIDES[currentSlideIndex].tag}
+                                {activeSlides[currentSlideIndex % activeSlides.length]?.tag || 'Aviso'}
                             </span>
                         </div>
 
                         {/* Slide Content */}
                         <div className="slideshow-content my-auto py-4 flex flex-col sm:flex-row items-center gap-6 transition-all duration-500">
                             <div className={`p-5 border rounded-2xl shadow-inner shrink-0 ${isDark ? 'bg-white/5 border-white/10' : 'bg-white/70 border-slate-200/60 shadow-slate-100'}`}>
-                                {INFO_SLIDES[currentSlideIndex].icon}
+                                <Shield sx={{ fontSize: 40 }} className="text-amber-400" />
                             </div>
                             <div className="space-y-2.5 text-center sm:text-left">
                                 <h2 className={`text-2xl sm:text-3xl font-black tracking-tight leading-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                                    {INFO_SLIDES[currentSlideIndex].title}
+                                    {activeSlides[currentSlideIndex % activeSlides.length]?.title || 'JaboatãoPrev'}
                                 </h2>
                                 <p className={`slideshow-description text-sm sm:text-base font-semibold leading-relaxed max-w-xl ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                                    {INFO_SLIDES[currentSlideIndex].description}
+                                    {activeSlides[currentSlideIndex % activeSlides.length]?.description || ''}
                                 </p>
                             </div>
                         </div>
 
                         {/* Slide Dots */}
                         <div className={`flex justify-center gap-2 border-t pt-3 ${isDark ? 'border-white/5' : 'border-slate-200/60'}`}>
-                            {INFO_SLIDES.map((slide, idx) => (
+                            {activeSlides.map((slide, idx) => (
                                 <button
                                     key={slide.id}
                                     onClick={() => setCurrentSlideIndex(idx)}
-                                    className={`h-1.5 rounded-full transition-all duration-300 ${currentSlideIndex === idx ? 'w-6 bg-amber-400' : `w-2 ${isDark ? 'bg-white/20' : 'bg-slate-300'}`
+                                    className={`h-1.5 rounded-full transition-all duration-300 ${currentSlideIndex % activeSlides.length === idx ? 'w-6 bg-amber-400' : `w-2 ${isDark ? 'bg-white/20' : 'bg-slate-300'}`
                                         }`}
                                 />
                             ))}

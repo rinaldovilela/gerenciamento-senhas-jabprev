@@ -22,6 +22,31 @@ export default defineConfig(({ mode }) => {
           '@lib': path.resolve(__dirname, './src/lib'),
           '@config': path.resolve(__dirname, './src/config'),
         }
+      },
+      build: {
+        chunkSizeWarningLimit: 1000,
+        rollupOptions: {
+          output: {
+            manualChunks(id) {
+              const normalizedId = id.replace(/\\/g, '/');
+              if (normalizedId.includes('node_modules/echarts')) {
+                return 'vendor-echarts';
+              }
+              if (normalizedId.includes('node_modules/lucide-react')) {
+                return 'vendor-lucide';
+              }
+              if (normalizedId.includes('node_modules/jspdf') || normalizedId.includes('node_modules/html2canvas') || normalizedId.includes('node_modules/jspdf-autotable')) {
+                return 'vendor-pdf';
+              }
+              if (normalizedId.includes('node_modules/react') || normalizedId.includes('node_modules/react-dom') || normalizedId.includes('node_modules/framer-motion')) {
+                return 'vendor-react';
+              }
+              if (normalizedId.includes('node_modules/@supabase')) {
+                return 'vendor-supabase';
+              }
+            }
+          }
+        }
       }
     };
 });
