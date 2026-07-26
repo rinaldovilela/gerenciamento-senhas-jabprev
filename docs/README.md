@@ -19,8 +19,9 @@ Este indice organiza os documentos por ordem de uso e governanca.
 ## 2. Visao e Arquitetura
 
 1. [OVERVIEW.md](OVERVIEW.md)
-2. [architecture/MIGRACAO_APPWRITE_SUPABASE.md](architecture/MIGRACAO_APPWRITE_SUPABASE.md)
-3. [architecture/ANALISE_COMPLETA_GAPS.md](architecture/ANALISE_COMPLETA_GAPS.md)
+2. [GUIA_GRAPHIFY.md](GUIA_GRAPHIFY.md)
+3. [architecture/MIGRACAO_APPWRITE_SUPABASE.md](architecture/MIGRACAO_APPWRITE_SUPABASE.md)
+4. [architecture/ANALISE_COMPLETA_GAPS.md](architecture/ANALISE_COMPLETA_GAPS.md)
 
 ## 3. Implementacao e Evolucao
 

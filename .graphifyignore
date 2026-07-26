@@ -1,0 +1,30 @@
+# .graphifyignore - Restringir análise do Graphify para a pasta apps/ (Corpus de Código)
+
+# Pastas fora do escopo de código da aplicação
+docs/
+scripts/
+supabase/
+roku/
+.agents/
+.config/
+.github/
+
+# Dependências e artefatos de build
+node_modules/
+dist/
+build/
+*.log
+
+# Mídias, imagens e documentos para garantir um corpus 100% de código (AST offline)
+*.png
+*.jpg
+*.jpeg
+*.svg
+*.ico
+*.webp
+*.gif
+*.pdf
+*.md
+*.doc
+*.docx
+*.html
