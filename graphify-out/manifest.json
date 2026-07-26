@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/MetricsDashboard.tsx": {
-    "mtime": 1785028233.389488,
-    "ast_hash": "a9a6cfaaea2cfec0d05c1bab742cd6b5",
+    "mtime": 1785038873.9279802,
+    "ast_hash": "b5af3fb518d2c42ddb3debd7d4bfd0c8",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/NameInputScreen.tsx": {
@@ -305,13 +305,13 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx": {
-    "mtime": 1781519497.4485407,
-    "ast_hash": "312e12712b649eb107e2f1cabb9efcb4",
+    "mtime": 1785038344.9546452,
+    "ast_hash": "80266962b61efafa57a092b3374125cd",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/RestrictedArea.tsx": {
-    "mtime": 1785028860.0106134,
-    "ast_hash": "c2a60274a88e44e5aaf6581754712e4f",
+    "mtime": 1785039786.639063,
+    "ast_hash": "55aa76d5ee53cc9393355c6694897d3f",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/ServiceManagementScreen.tsx": {
@@ -330,8 +330,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/UserManagementScreen.tsx": {
-    "mtime": 1785028275.724032,
-    "ast_hash": "653f81cec2b2bdaf6b495280065b2863",
+    "mtime": 1785038859.8171654,
+    "ast_hash": "955e7f953dbad6c461cdcea82e7146fd",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/UserTypeSelectionScreen.tsx": {
@@ -435,8 +435,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/shared/constants.tsx": {
-    "mtime": 1780752964.8329773,
-    "ast_hash": "55aa42d94d91dbae0acf88ec54dde381",
+    "mtime": 1785038676.1144073,
+    "ast_hash": "3d9777d602575c0780ddc60347c359e7",
     "semantic_hash": ""
   },
   "apps/frontend/src/shared/hooks/index.ts": {
@@ -525,8 +525,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/vite.config.ts": {
-    "mtime": 1780752964.855504,
-    "ast_hash": "407443344e0bb12ef608fe889f695654",
+    "mtime": 1785038104.560186,
+    "ast_hash": "fca13e653b0c580e549c88561d6781d5",
     "semantic_hash": ""
   },
   "package.json": {
@@ -537,6 +537,16 @@
   "apps/frontend/public/sounds/campainha_geren_senhas_jabprev.mp3": {
     "mtime": 1780752964.7658427,
     "ast_hash": "36aa9b78b425171fee4f6d933e71b3c8",
+    "semantic_hash": ""
+  },
+  "apps/frontend/src/features/queue/components/TvSettingsScreen.tsx": {
+    "mtime": 1785038340.6625457,
+    "ast_hash": "9c032028e155aa340a59f62dbaae33f9",
+    "semantic_hash": ""
+  },
+  "apps/frontend/src/features/queue/utils/tvConfigHelper.ts": {
+    "mtime": 1785038335.1409745,
+    "ast_hash": "eb5a46254e0bf53d1dec3494db535b1f",
     "semantic_hash": ""
   }
 }

@@ -1,16 +1,16 @@
 # Graph Report - gerenciamento-senhas-jabprev  (2026-07-26)
 
 ## Corpus Check
-- 107 files · ~35,055 words
+- 109 files · ~37,165 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 554 nodes · 901 edges · 36 communities (29 shown, 7 thin omitted)
+- 570 nodes · 925 edges · 34 communities (27 shown, 7 thin omitted)
 - Extraction: 100% EXTRACTED · 0% INFERRED · 0% AMBIGUOUS
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `84573a9b`
+- Built from commit: `0e4d1e42`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -41,7 +41,6 @@
 - [[_COMMUNITY_Community 23|Community 23]]
 - [[_COMMUNITY_Community 24|Community 24]]
 - [[_COMMUNITY_Community 25|Community 25]]
-- [[_COMMUNITY_Community 26|Community 26]]
 - [[_COMMUNITY_Community 27|Community 27]]
 - [[_COMMUNITY_Community 28|Community 28]]
 - [[_COMMUNITY_Community 29|Community 29]]
@@ -49,7 +48,6 @@
 - [[_COMMUNITY_Community 31|Community 31]]
 - [[_COMMUNITY_Community 32|Community 32]]
 - [[_COMMUNITY_Community 33|Community 33]]
-- [[_COMMUNITY_Community 35|Community 35]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `ApiClient` - 25 edges
@@ -64,29 +62,29 @@
 10. `Ticket` - 10 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `FilterState` --references--> `UserType`  [EXTRACTED]
-  apps/frontend/src/features/queue/components/MetricsDashboard.tsx → apps/frontend/src/shared/types/database.ts
 - `RestrictedArea()` --calls--> `useAuth()`  [EXTRACTED]
   apps/frontend/src/features/queue/components/RestrictedArea.tsx → apps/frontend/src/features/auth/contexts/AuthContext.tsx
-- `LoginScreen()` --calls--> `useAuth()`  [EXTRACTED]
-  apps/frontend/src/features/auth/components/LoginScreen.tsx → apps/frontend/src/features/auth/contexts/AuthContext.tsx
-- `NameInputScreenProps` --references--> `Service`  [EXTRACTED]
-  apps/frontend/src/features/queue/components/NameInputScreen.tsx → apps/frontend/src/shared/types/database.ts
-- `ServiceSelectionScreenProps` --references--> `Service`  [EXTRACTED]
-  apps/frontend/src/features/queue/components/ServiceSelectionScreen.tsx → apps/frontend/src/shared/types/database.ts
+- `FilterState` --references--> `UserType`  [EXTRACTED]
+  apps/frontend/src/features/queue/components/MetricsDashboard.tsx → apps/frontend/src/shared/types/database.ts
+- `PublicDisplayScreen()` --calls--> `useTodayQueue()`  [EXTRACTED]
+  apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx → apps/frontend/src/features/queue/contexts/TodayQueueContext.tsx
+- `AttendanceTrackingScreen()` --calls--> `useAuth()`  [EXTRACTED]
+  apps/frontend/src/features/queue/components/AttendanceTrackingScreen.tsx → apps/frontend/src/features/auth/contexts/AuthContext.tsx
+- `ServiceManagementScreen()` --calls--> `useTodayQueue()`  [EXTRACTED]
+  apps/frontend/src/features/queue/components/ServiceManagementScreen.tsx → apps/frontend/src/features/queue/contexts/TodayQueueContext.tsx
 
 ## Import Cycles
 - 2-file cycle: `apps/backend/src/db/index.ts -> apps/backend/src/db/queries.ts -> apps/backend/src/db/index.ts`
 
-## Communities (36 total, 7 thin omitted)
+## Communities (34 total, 7 thin omitted)
 
 ### Community 0 - "Community 0"
-Cohesion: 0.06
+Cohesion: 0.07
 Nodes (37): createUser(), deleteUser(), getDashboard(), getMetrics(), listUsers(), updateUser(), login(), logout() (+29 more)
 
 ### Community 1 - "Community 1"
-Cohesion: 0.14
-Nodes (21): AppError, createUser(), Dashboard, deleteUser(), getDashboard(), getMetrics(), listUsers(), mapToUser() (+13 more)
+Cohesion: 0.08
+Nodes (36): supabase, config, missing, requiredEnvVars, AppError, errorHandler(), createUser(), Dashboard (+28 more)
 
 ### Community 2 - "Community 2"
 Cohesion: 0.09
@@ -97,8 +95,8 @@ Cohesion: 0.06
 Nodes (33): dependencies, appwrite, date-fns, echarts, echarts-for-react, @emotion/react, @emotion/styled, framer-motion (+25 more)
 
 ### Community 4 - "Community 4"
-Cohesion: 0.08
-Nodes (29): supabase, config, missing, requiredEnvVars, createServer(), setupQueueHandlers(), errorHandler(), createRoutes() (+21 more)
+Cohesion: 0.16
+Nodes (14): createServer(), setupQueueHandlers(), createRoutes(), createApplication(), startServer(), LOG_LEVELS, Logger, SOCKET_EVENTS (+6 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.07
@@ -113,12 +111,12 @@ Cohesion: 0.08
 Nodes (23): compilerOptions, allowImportingTsExtensions, allowJs, experimentalDecorators, isolatedModules, jsx, lib, module (+15 more)
 
 ### Community 8 - "Community 8"
-Cohesion: 0.18
-Nodes (7): JaboataoPrevLogo(), LogoProps, NameInputScreenProps, PrioritySelectionScreen(), PrioritySelectionScreenProps, ServiceSelectionScreen(), ServiceSelectionScreenProps
+Cohesion: 0.21
+Nodes (7): JaboataoPrevLogo(), LogoProps, NameInputScreenProps, PrioritySelectionScreen(), PrioritySelectionScreenProps, ServiceSelectionScreenProps, Service
 
 ### Community 9 - "Community 9"
-Cohesion: 0.21
-Nodes (9): OperatorPanel(), AttendanceTrackingScreen(), Classification, OuvidoriaClassificationModalProps, ServiceManagementScreen(), TicketScreen(), useAuth(), useTodayQueue() (+1 more)
+Cohesion: 0.12
+Nodes (13): AttendanceTrackingScreen(), STATUS_CONFIG, ConfirmationModal(), ConfirmationModalProps, Classification, OuvidoriaClassificationModalProps, ICON_OPTIONS, ServiceDraft (+5 more)
 
 ### Community 10 - "Community 10"
 Cohesion: 0.11
@@ -129,28 +127,28 @@ Cohesion: 0.12
 Nodes (5): ErrorBoundary, ErrorBoundaryProps, ErrorBoundaryState, LoadingProps, ModalProps
 
 ### Community 12 - "Community 12"
-Cohesion: 0.16
-Nodes (11): AuthContext, AuthContextType, AuthProvider(), AuthUser, AuditLogEntry, CallHistoryEntry, QueueState, Screen (+3 more)
+Cohesion: 0.09
+Nodes (15): AuthContext, AuthContextType, AuthProvider(), AuthUser, root, rootElement, root, rootElement (+7 more)
 
 ### Community 13 - "Community 13"
-Cohesion: 0.15
-Nodes (7): UserTypeSelectionScreen(), UserTypeSelectionScreenProps, root, rootElement, root, rootElement, UserType
+Cohesion: 0.21
+Nodes (8): FilterState, UserTypeSelectionScreen(), UserTypeSelectionScreenProps, TodayQueueContext, TodayQueueContextType, initializeSocket(), TicketStatus, UserType
 
 ### Community 14 - "Community 14"
-Cohesion: 0.13
-Nodes (16): STATUS_CONFIG, TicketScreenProps, QueueContext, QueueContextType, QueueProvider(), TodayQueueContext, TodayQueueContextType, TodayQueueProvider() (+8 more)
+Cohesion: 0.11
+Nodes (18): MetricsDashboard(), TicketScreenProps, Toast(), ToastProps, toneByType, QueueContext, QueueContextType, QueueProvider() (+10 more)
 
 ### Community 15 - "Community 15"
-Cohesion: 0.27
-Nodes (6): FilterState, MetricsDashboard(), Toast(), ToastProps, toneByType, useQueue()
+Cohesion: 0.22
+Nodes (4): Service, supabase, supabaseAnon, Ticket
 
 ### Community 17 - "Community 17"
 Cohesion: 0.35
 Nodes (7): formatDate(), formatDateTime(), formatTime(), calculatePercentage(), formatCurrency(), classNames(), cn()
 
 ### Community 18 - "Community 18"
-Cohesion: 0.22
-Nodes (8): getAtendenteOrGuiche(), getGuicheForTicket(), INFO_SLIDES, NEWS_TICKER_TEXTS, PublicDisplayScreen(), PublicDisplayScreenProps, SlideItem, PANEL_CONFIG
+Cohesion: 0.15
+Nodes (14): getAtendenteOrGuiche(), getGuicheForTicket(), INFO_SLIDES, NEWS_TICKER_TEXTS, PublicDisplayScreen(), PublicDisplayScreenProps, SlideItem, PANEL_CONFIG (+6 more)
 
 ### Community 19 - "Community 19"
 Cohesion: 0.18
@@ -161,12 +159,12 @@ Cohesion: 0.22
 Nodes (9): AuthResponse, CreateTicketRequest, CreateUserRequest, DashboardResponse, ErrorResponse, LoginRequest, RegisterRequest, UpdateTicketRequest (+1 more)
 
 ### Community 21 - "Community 21"
-Cohesion: 0.10
-Nodes (8): HomeScreenProps, loginSchema, LoginScreen(), LoginScreenProps, RestrictedArea(), SERVICES, TRANSLATIONS, Language
+Cohesion: 0.11
+Nodes (10): OperatorPanel(), HomeScreenProps, loginSchema, LoginScreen(), LoginScreenProps, useAuth(), TodayQueueProvider(), SERVICES (+2 more)
 
 ### Community 22 - "Community 22"
-Cohesion: 0.29
-Nodes (4): ConfirmationModal(), ConfirmationModalProps, ICON_OPTIONS, ServiceDraft
+Cohesion: 0.20
+Nodes (6): AttendanceTrackingScreen, MetricsDashboard, RestrictedArea(), ServiceManagementScreen, TvSettingsScreen, UserManagementScreen
 
 ### Community 24 - "Community 24"
 Cohesion: 0.43
@@ -176,10 +174,6 @@ Nodes (3): useAsync(), useLocalStorage(), useWebSocket()
 Cohesion: 0.29
 Nodes (6): ClientConfig, Screen, Service, Ticket, User, UserType
 
-### Community 26 - "Community 26"
-Cohesion: 0.40
-Nodes (4): ApiResponse, AttendanceRecord, Notification, User
-
 ### Community 28 - "Community 28"
 Cohesion: 0.50
 Nodes (3): ClientConfig, Ticket, User
@@ -188,29 +182,25 @@ Nodes (3): ClientConfig, Ticket, User
 Cohesion: 0.50
 Nodes (3): QueueRoom, SocketEvents, SocketUser
 
-### Community 35 - "Community 35"
-Cohesion: 0.52
-Nodes (4): supabase, attendanceQueries, ticketQueries, userQueries
-
 ## Knowledge Gaps
-- **191 isolated node(s):** `name`, `private`, `version`, `type`, `dev` (+186 more)
+- **196 isolated node(s):** `SlideItem`, `INFO_SLIDES`, `NEWS_TICKER_TEXTS`, `PublicDisplayScreenProps`, `MetricsDashboard` (+191 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `ApiClient` connect `Community 2` to `Community 12`, `Community 21`?**
-  _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **Why does `Logger` connect `Community 4` to `Community 0`?**
+- **Why does `ApiClient` connect `Community 2` to `Community 12`, `Community 22`?**
+  _High betweenness centrality (0.024) - this node is a cross-community bridge._
+- **Why does `Ticket` connect `Community 14` to `Community 9`, `Community 12`, `Community 13`, `Community 18`, `Community 21`?**
+  _High betweenness centrality (0.009) - this node is a cross-community bridge._
+- **Why does `Logger` connect `Community 4` to `Community 0`, `Community 1`?**
   _High betweenness centrality (0.008) - this node is a cross-community bridge._
-- **Why does `Ticket` connect `Community 14` to `Community 9`, `Community 13`, `Community 15`, `Community 18`, `Community 26`?**
-  _High betweenness centrality (0.008) - this node is a cross-community bridge._
-- **What connects `name`, `private`, `version` to the rest of the system?**
-  _191 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `SlideItem`, `INFO_SLIDES`, `NEWS_TICKER_TEXTS` to the rest of the system?**
+  _196 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
-  _Cohesion score 0.062146892655367235 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.06948051948051948 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
-  _Cohesion score 0.14153846153846153 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.07764705882352942 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
   _Cohesion score 0.08534850640113797 - nodes in this community are weakly interconnected._
