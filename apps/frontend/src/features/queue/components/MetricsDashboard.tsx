@@ -1,30 +1,28 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useQueue } from '@features/queue/contexts/QueueContext';
-import { TRANSLATIONS } from '@shared/constants';
 import type { Language, Ticket, UserType } from '@shared/types';
-import {
-    LineChart,
-    Line,
-    BarChart as RechartsBarChart,
-    Bar,
-    PieChart,
-    Pie,
-    Cell,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-} from 'recharts';
-import { format, subDays, startOfDay, endOfDay, parseISO } from 'date-fns';
+import ReactECharts from 'echarts-for-react';
+import { format, subDays, startOfDay, endOfDay, parseISO, startOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { FileDownload, TrendingUp, Schedule, PersonSearch, SignalCellularAlt } from '@mui/icons-material';
+import { 
+    TrendingUp, 
+    Clock, 
+    Users, 
+    CheckCircle2, 
+    AlertTriangle, 
+    Download, 
+    Calendar, 
+    Filter, 
+    FileText, 
+    PieChart as PieChartIcon, 
+    Activity,
+    ChevronDown,
+    Award,
+    Hourglass
+} from 'lucide-react';
 import Toast from '@shared/components/Toast';
-
-const language: Language = 'pt';
 
 interface FilterState {
     startDate: string;
@@ -41,42 +39,43 @@ const KPICard: React.FC<{
     description?: string; 
     icon?: React.ReactNode; 
     trend?: 'up' | 'down' | 'neutral'; 
-    trenValue?: string 
+    trendValue?: string;
+    accentColor?: string;
 }> = ({
     title,
     value,
     description,
     icon,
     trend,
-    trenValue,
+    trendValue,
+    accentColor = 'from-amber-500 to-yellow-400'
 }) => (
-    <div className="bg-white/90 backdrop-blur-md p-6 rounded-3xl border border-slate-200/60 shadow-[0_8px_30px_rgba(0,0,0,0.02)] hover:shadow-xl hover:scale-[1.01] transition-all duration-300 flex flex-col justify-between h-full group relative overflow-hidden">
-        {/* Subtle accent border */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-jaboatao-blue to-[#407BDE] opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+    <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-xl hover:shadow-amber-500/5 hover:border-white/20 hover:scale-[1.01] transition-all duration-300 flex flex-col justify-between h-full group relative overflow-hidden">
+        <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${accentColor} opacity-70 group-hover:opacity-100 transition-opacity duration-300`}></div>
         <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{title}</p>
-                <h3 className="text-3xl font-black text-slate-800 tracking-tight group-hover:text-jaboatao-blue transition-colors duration-200">{value}</h3>
-                {description && <p className="text-xs font-semibold text-slate-500 mt-1.5">{description}</p>}
+                <h3 className="text-3xl font-black text-white tracking-tight group-hover:text-amber-400 transition-colors duration-200">{value}</h3>
+                {description && <p className="text-xs font-medium text-slate-400 mt-1.5">{description}</p>}
             </div>
             {icon && (
-                <div className="p-3 bg-blue-500/10 border border-blue-100/30 text-jaboatao-blue rounded-2xl shadow-sm transition-transform duration-300 group-hover:scale-110">
+                <div className="p-3 bg-white/5 border border-white/10 text-amber-400 rounded-2xl shadow-inner transition-transform duration-300 group-hover:scale-110">
                     {icon}
                 </div>
             )}
         </div>
-        {trenValue && (
+        {trendValue && (
             <div className={`flex items-center gap-1.5 mt-4 text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg border w-fit ${
                 trend === 'up' 
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' 
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
                     : trend === 'down' 
-                        ? 'bg-rose-500/10 border-rose-500/20 text-rose-600' 
-                        : 'bg-slate-500/10 border-slate-500/20 text-slate-500'
+                        ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
+                        : 'bg-slate-500/10 border-slate-500/30 text-slate-400'
             }`}>
                 {trend === 'up' && <span>↑</span>}
                 {trend === 'down' && <span>↓</span>}
                 {trend === 'neutral' && <span>→</span>}
-                <span>{trenValue}</span>
+                <span>{trendValue}</span>
             </div>
         )}
     </div>
@@ -87,6 +86,7 @@ const MetricsDashboard: React.FC = () => {
     const dashboardRef = useRef<HTMLDivElement>(null);
     const [lastUpdated, setLastUpdated] = useState(new Date());
     const [exportDropdownOpen, setExportDropdownOpen] = useState(false);
+    const [quickRange, setQuickRange] = useState<'today' | '7days' | '30days' | 'month'>('30days');
     const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
         show: false,
         message: '',
@@ -106,6 +106,22 @@ const MetricsDashboard: React.FC = () => {
         userType: 'all',
         priorityType: 'all',
     });
+
+    const handleQuickRange = (range: 'today' | '7days' | '30days' | 'month') => {
+        setQuickRange(range);
+        const now = new Date();
+        let start = now;
+        if (range === 'today') start = now;
+        else if (range === '7days') start = subDays(now, 7);
+        else if (range === '30days') start = subDays(now, 30);
+        else if (range === 'month') start = startOfMonth(now);
+
+        setFilters((prev) => ({
+            ...prev,
+            startDate: format(start, 'yyyy-MM-dd'),
+            endDate: format(now, 'yyyy-MM-dd'),
+        }));
+    };
 
     useEffect(() => {
         const interval = setInterval(() => setLastUpdated(new Date()), 30000);
@@ -133,8 +149,7 @@ const MetricsDashboard: React.FC = () => {
         };
 
         fetchDashboardData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filters.startDate, filters.endDate]);
+    }, [filters.startDate, filters.endDate, fetchTicketsByDateRange]);
 
     const operators = useMemo(() => {
         const opsMap = new Map<string, { id: string; name: string }>();
@@ -230,8 +245,8 @@ const MetricsDashboard: React.FC = () => {
             const avgService = g.atendimentos.length > 0 ? g.atendimentos.reduce((a, b) => a + b, 0) / g.atendimentos.length : 0;
             return {
                 date: g.date,
-                'Tempo Espera': parseFloat(avgWait.toFixed(1)),
-                'Tempo Atendimento': parseFloat(avgService.toFixed(1)),
+                tempoEspera: parseFloat(avgWait.toFixed(1)),
+                tempoAtendimento: parseFloat(avgService.toFixed(1)),
                 completados: g.completados,
                 esperando: g.esperando,
                 cancelados: g.cancelados,
@@ -254,13 +269,207 @@ const MetricsDashboard: React.FC = () => {
             const typeLabel = t.user_type === 'aposentado' ? 'Aposentado' : t.user_type === 'pensionista' ? 'Pensionista' : 'Servidor Ativo';
             distribution.set(typeLabel, (distribution.get(typeLabel) || 0) + 1);
         });
-        const colorsMap: Record<string, string> = {
-            'Aposentado': '#204FA1',
-            'Pensionista': '#F59E0B',
-            'Servidor Ativo': '#2E8B57',
-        };
-        return Array.from(distribution.entries()).map(([name, value]) => ({ name, value, fill: colorsMap[name] || '#10B981' }));
+        return Array.from(distribution.entries()).map(([name, value]) => ({ name, value }));
     }, [filteredTickets]);
+
+    // APACHE ECHARTS OPTIONS
+    const timeTrendOption = useMemo(() => ({
+        backgroundColor: 'transparent',
+        tooltip: {
+            trigger: 'axis',
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            textStyle: { color: '#F8FAFC', fontSize: 12 },
+            borderRadius: 12,
+        },
+        legend: {
+            data: ['Tempo Espera (min)', 'Tempo Atendimento (min)'],
+            textStyle: { color: '#94A3B8', fontWeight: 'bold' },
+            top: 0,
+        },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: {
+            type: 'category',
+            boundaryGap: false,
+            data: timeSeriesData.map(d => d.date),
+            axisLine: { lineStyle: { color: '#334155' } },
+            axisLabel: { color: '#94A3B8', fontWeight: 600 },
+        },
+        yAxis: {
+            type: 'value',
+            axisLine: { show: false },
+            splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
+            axisLabel: { color: '#94A3B8', fontWeight: 600 },
+        },
+        series: [
+            {
+                name: 'Tempo Espera (min)',
+                type: 'line',
+                smooth: true,
+                symbolSize: 8,
+                itemStyle: { color: '#F59E0B' },
+                areaStyle: {
+                    color: {
+                        type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                        colorStops: [{ offset: 0, color: 'rgba(245, 158, 11, 0.4)' }, { offset: 1, color: 'rgba(245, 158, 11, 0)' }]
+                    }
+                },
+                data: timeSeriesData.map(d => d.tempoEspera)
+            },
+            {
+                name: 'Tempo Atendimento (min)',
+                type: 'line',
+                smooth: true,
+                symbolSize: 8,
+                itemStyle: { color: '#3B82F6' },
+                areaStyle: {
+                    color: {
+                        type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+                        colorStops: [{ offset: 0, color: 'rgba(59, 130, 246, 0.4)' }, { offset: 1, color: 'rgba(59, 130, 246, 0)' }]
+                    }
+                },
+                data: timeSeriesData.map(d => d.tempoAtendimento)
+            }
+        ]
+    }), [timeSeriesData]);
+
+    const volumeBarOption = useMemo(() => ({
+        backgroundColor: 'transparent',
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            textStyle: { color: '#F8FAFC', fontSize: 12 },
+            borderRadius: 12,
+        },
+        legend: {
+            data: ['Completados', 'Aguardando', 'Cancelados'],
+            textStyle: { color: '#94A3B8', fontWeight: 'bold' },
+            top: 0,
+        },
+        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+        xAxis: {
+            type: 'category',
+            data: timeSeriesData.map(d => d.date),
+            axisLine: { lineStyle: { color: '#334155' } },
+            axisLabel: { color: '#94A3B8', fontWeight: 600 },
+        },
+        yAxis: {
+            type: 'value',
+            splitLine: { lineStyle: { color: 'rgba(255, 255, 255, 0.05)' } },
+            axisLabel: { color: '#94A3B8', fontWeight: 600 },
+        },
+        series: [
+            {
+                name: 'Completados',
+                type: 'bar',
+                stack: 'total',
+                itemStyle: { color: '#10B981', borderRadius: [0, 0, 4, 4] },
+                data: timeSeriesData.map(d => d.completados)
+            },
+            {
+                name: 'Aguardando',
+                type: 'bar',
+                stack: 'total',
+                itemStyle: { color: '#F59E0B' },
+                data: timeSeriesData.map(d => d.esperando)
+            },
+            {
+                name: 'Cancelados',
+                type: 'bar',
+                stack: 'total',
+                itemStyle: { color: '#EF4444', borderRadius: [4, 4, 0, 0] },
+                data: timeSeriesData.map(d => d.cancelados)
+            }
+        ]
+    }), [timeSeriesData]);
+
+    const servicePieOption = useMemo(() => ({
+        backgroundColor: 'transparent',
+        tooltip: {
+            trigger: 'item',
+            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+            borderColor: 'rgba(255, 255, 255, 0.1)',
+            textStyle: { color: '#F8FAFC', fontSize: 12 },
+            borderRadius: 12,
+        },
+        legend: {
+            orient: 'vertical',
+            right: 10,
+            top: 'center',
+            textStyle: { color: '#94A3B8', fontSize: 11, fontWeight: 600 },
+        },
+        series: [
+            {
+                name: 'Serviços',
+                type: 'pie',
+                radius: ['45%', '75%'],
+                center: ['40%', '50%'],
+                avoidLabelOverlap: false,
+                itemStyle: {
+                    borderRadius: 8,
+                    borderColor: '#0F172A',
+                    borderWidth: 3
+                },
+                label: { show: false },
+                emphasis: {
+                    label: { show: true, fontSize: 14, fontWeight: 'bold', color: '#F8FAFC' }
+                },
+                data: serviceDistribution.map((s, idx) => {
+                    const palette = ['#F59E0B', '#3B82F6', '#10B981', '#EC4899', '#8B5CF6', '#06B6D4'];
+                    return { name: s.name, value: s.value, itemStyle: { color: palette[idx % palette.length] } };
+                })
+            }
+        ]
+    }), [serviceDistribution]);
+
+    const slaGaugeOption = useMemo(() => {
+        const avgWait = Number(metrics.avgWaitTime);
+        return {
+            backgroundColor: 'transparent',
+            series: [
+                {
+                    type: 'gauge',
+                    startAngle: 180,
+                    endAngle: 0,
+                    min: 0,
+                    max: 45,
+                    splitNumber: 3,
+                    axisLine: {
+                        lineStyle: {
+                            width: 16,
+                            color: [
+                                [0.33, '#10B981'], // Excelente (<=15m)
+                                [0.66, '#F59E0B'], // Atenção (15-30m)
+                                [1, '#EF4444']    // Crítico (>30m)
+                            ]
+                        }
+                    },
+                    pointer: {
+                        icon: 'path://M12.8,0.7l12,40.1H0.7L12.8,0.7z',
+                        length: '60%',
+                        width: 8,
+                        offsetCenter: [0, '-40%'],
+                        itemStyle: { color: '#F8FAFC' }
+                    },
+                    axisTick: { length: 8, lineStyle: { color: 'auto', width: 2 } },
+                    splitLine: { length: 12, lineStyle: { color: 'auto', width: 3 } },
+                    axisLabel: { color: '#94A3B8', fontSize: 10, distance: -40 },
+                    title: { offsetCenter: [0, '20%'], fontSize: 12, color: '#94A3B8', fontWeight: 600 },
+                    detail: {
+                        valueAnimation: true,
+                        offsetCenter: [0, '-10%'],
+                        fontSize: 24,
+                        fontWeight: 'bolder',
+                        formatter: '{value} min',
+                        color: '#F8FAFC'
+                    },
+                    data: [{ value: avgWait, name: 'SLA Espera Médio' }]
+                }
+            ]
+        };
+    }, [metrics.avgWaitTime]);
 
     const exportPDF = useCallback(() => {
         try {
@@ -335,111 +544,144 @@ const MetricsDashboard: React.FC = () => {
         setToast({ show: true, message: 'Relatório CSV gerado com sucesso!', type: 'success' });
     }, [filteredTickets]);
 
-    const COLORS = ['#204FA1', '#2E8B57', '#F59E0B', '#EF4444', '#10B981', '#06B6D4', '#EC4899', '#14B8A6'];
-
     return (
-        <div ref={dashboardRef} className="space-y-8 max-w-[1600px] mx-auto w-full text-slate-800">
+        <div ref={dashboardRef} className="space-y-8 max-w-[1600px] mx-auto w-full text-slate-100 pb-10">
             <Toast
                 show={toast.show}
                 message={toast.message}
                 type={toast.type}
                 onClose={() => setToast((prev) => ({ ...prev, show: false }))}
             />
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-2 border-b border-slate-200/50">
+
+            {/* Top Bar Header */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pb-4 border-b border-white/10">
                 <div>
-                    <h1 className="font-montserrat text-3xl font-black text-slate-900 tracking-tight">
-                        Painel de Métricas
-                    </h1>
-                    <p className="text-slate-500 text-sm font-semibold mt-1">Análise inteligente de performance, tempo de fila e atendimentos.</p>
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-2xl">
+                            <Activity size={24} />
+                        </div>
+                        <div>
+                            <h1 className="font-montserrat text-2xl sm:text-3xl font-black text-white tracking-tight">
+                                Painel de Métricas & Inteligência
+                            </h1>
+                            <p className="text-slate-400 text-xs sm:text-sm font-medium mt-0.5">Análise executiva de performance, tempos de fila e distribuição de atendimento.</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div className="relative self-stretch sm:self-auto" ref={exportRef}>
-                    <button
-                        onClick={() => setExportDropdownOpen((prev) => !prev)}
-                        disabled={filteredTickets.length === 0}
-                        className="flex items-center justify-center gap-2 py-3.5 px-6 text-xs font-black uppercase tracking-wider text-white bg-[#2E8B57] hover:bg-[#20623A] rounded-xl shadow-lg shadow-emerald-700/10 hover:shadow-xl active:scale-95 transition-all duration-200 w-full sm:w-auto disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed"
-                    >
-                        <FileDownload sx={{ fontSize: 20 }} />
-                        Exportar Relatório
-                    </button>
-                    {exportDropdownOpen && (
-                        <div className="absolute right-0 mt-3 w-56 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl z-20 border border-slate-200/80 p-2 animate-fade-in-up">
-                            <button onClick={exportPDF} className="flex items-center gap-3 w-full text-left px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 rounded-xl transition-all duration-150">
-                                <span className="text-lg">📄</span> PDF
-                            </button>
-                            <button onClick={exportJSON} className="flex items-center gap-3 w-full text-left px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 rounded-xl transition-all duration-150">
-                                <span className="text-lg">📋</span> JSON
-                            </button>
-                            <button onClick={exportCSV} className="flex items-center gap-3 w-full text-left px-4 py-3 text-xs font-black uppercase tracking-wider text-slate-700 hover:bg-slate-50 rounded-xl transition-all duration-150">
-                                <span className="text-lg">📊</span> CSV
-                            </button>
-                        </div>
-                    )}
+                {/* Quick Date Range Pills + Export */}
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    <div className="flex bg-slate-900/80 p-1 border border-white/10 rounded-2xl">
+                        <button
+                            onClick={() => handleQuickRange('today')}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${quickRange === 'today' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            Hoje
+                        </button>
+                        <button
+                            onClick={() => handleQuickRange('7days')}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${quickRange === '7days' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            7 Dias
+                        </button>
+                        <button
+                            onClick={() => handleQuickRange('30days')}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${quickRange === '30days' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            30 Dias
+                        </button>
+                        <button
+                            onClick={() => handleQuickRange('month')}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all ${quickRange === 'month' ? 'bg-amber-500 text-slate-950 shadow-md' : 'text-slate-400 hover:text-white'}`}
+                        >
+                            Este Mês
+                        </button>
+                    </div>
+
+                    <div className="relative" ref={exportRef}>
+                        <button
+                            onClick={() => setExportDropdownOpen((prev) => !prev)}
+                            disabled={filteredTickets.length === 0}
+                            className="flex items-center justify-center gap-2 py-2.5 px-5 text-xs font-bold text-slate-950 bg-gradient-to-r from-jaboatao-yellow to-amber-500 hover:brightness-110 rounded-2xl shadow-lg shadow-amber-500/10 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Download size={16} />
+                            <span>Exportar</span>
+                            <ChevronDown size={14} />
+                        </button>
+                        {exportDropdownOpen && (
+                            <div className="absolute right-0 mt-2 w-48 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-30 p-2 text-xs font-bold">
+                                <button onClick={exportPDF} className="flex items-center gap-2.5 w-full text-left px-3 py-2.5 text-slate-200 hover:bg-white/5 rounded-xl transition-all">
+                                    <FileText size={16} className="text-red-400" /> Exportar PDF
+                                </button>
+                                <button onClick={exportJSON} className="flex items-center gap-2.5 w-full text-left px-3 py-2.5 text-slate-200 hover:bg-white/5 rounded-xl transition-all">
+                                    <FileText size={16} className="text-blue-400" /> Exportar JSON
+                                </button>
+                                <button onClick={exportCSV} className="flex items-center gap-2.5 w-full text-left px-3 py-2.5 text-slate-200 hover:bg-white/5 rounded-xl transition-all">
+                                    <FileText size={16} className="text-emerald-400" /> Exportar CSV
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            {/* Filtros */}
-            <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
-                <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6 flex items-center gap-2">
-                    <PersonSearch sx={{ fontSize: 22 }} className="text-jaboatao-blue" />
-                    Filtros da Fila
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5">
+            {/* Painel de Filtros */}
+            <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
+                <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+                    <Filter size={16} className="text-amber-400" />
+                    <span>Filtros Avançados</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                     <div>
-                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Data Inicial</label>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Data Inicial</label>
                         <input
                             type="date"
                             value={filters.startDate}
                             onChange={(e) => setFilters((f) => ({ ...f, startDate: e.target.value }))}
-                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+                            className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all"
                         />
                     </div>
                     <div>
-                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Data Final</label>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Data Final</label>
                         <input
                             type="date"
                             value={filters.endDate}
                             onChange={(e) => setFilters((f) => ({ ...f, endDate: e.target.value }))}
-                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
+                            className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all"
                         />
                     </div>
                     <div>
-                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Serviço</label>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Serviço</label>
                         <select
                             value={filters.serviceId}
                             onChange={(e) => setFilters((f) => ({ ...f, serviceId: e.target.value }))}
-                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                            className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all cursor-pointer"
                         >
                             <option value="all">Todos os Serviços</option>
                             {services.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                    {s.name}
-                                </option>
+                                <option key={s.id} value={s.id}>{s.name}</option>
                             ))}
                         </select>
                     </div>
                     <div>
-                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Operador</label>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Operador</label>
                         <select
                             value={filters.operatorId}
                             onChange={(e) => setFilters((f) => ({ ...f, operatorId: e.target.value }))}
-                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                            className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all cursor-pointer"
                         >
                             <option value="all">Todos os Operadores</option>
                             {operators.map((op) => (
-                                <option key={op.id} value={op.id}>
-                                    {op.name}
-                                </option>
+                                <option key={op.id} value={op.id}>{op.name}</option>
                             ))}
                         </select>
                     </div>
                     <div>
-                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Vínculo</label>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Vínculo</label>
                         <select
                             value={filters.userType}
                             onChange={(e) => setFilters((f) => ({ ...f, userType: e.target.value as any }))}
-                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                            className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all cursor-pointer"
                         >
                             <option value="all">Todos os Vínculos</option>
                             <option value="aposentado">Aposentado</option>
@@ -448,11 +690,11 @@ const MetricsDashboard: React.FC = () => {
                         </select>
                     </div>
                     <div>
-                        <label className="text-[10px] font-black text-slate-700 uppercase tracking-wider block mb-2">Fila</label>
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Fila</label>
                         <select
                             value={filters.priorityType}
                             onChange={(e) => setFilters((f) => ({ ...f, priorityType: e.target.value as any }))}
-                            className="w-full px-4 py-2.5 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                            className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all cursor-pointer"
                         >
                             <option value="all">Fila Geral</option>
                             <option value="normal">Normal</option>
@@ -464,154 +706,104 @@ const MetricsDashboard: React.FC = () => {
 
             {/* KPIs principais */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <KPICard title="Total de Atendimentos" value={metrics.total} icon={<TrendingUp />} description="No período filtrado" />
-                <KPICard title="Tempo Médio Espera" value={`${metrics.avgWaitTime} min`} icon={<Schedule />} description="Média até ser chamado" trend="up" trenValue={`${metrics.medianWaitTime} min (mediana)`} />
-                <KPICard title="Tempo Médio Atendimento" value={`${metrics.avgServiceTime} min`} description="Tempo em guichê" trend="neutral" />
-                <KPICard title="Taxa Finalização" value={`${metrics.attendanceRate}%`} description={`${metrics.completed} de ${metrics.total} atendimentos`} trend={Number(metrics.attendanceRate) > 80 ? 'up' : 'down'} />
-                <KPICard title="Máximo Tempo Espera" value={`${metrics.maxWaitTime} min`} description="Maior fila registrada" />
-                <KPICard title="Atendimentos Prioritários" value={metrics.priorityCount} description="Prioridade garantida" />
-                <KPICard title="Aguardando" value={metrics.waiting} description="Senhas ativas na fila" />
-                <KPICard title="Cancelados/Não Compareceram" value={metrics.cancelled} description={`${metrics.total > 0 ? ((metrics.cancelled / metrics.total) * 100).toFixed(1) : 0}% do total`} trend="down" />
+                <KPICard title="Total de Atendimentos" value={metrics.total} icon={<TrendingUp size={22} />} description="Senhas no período" accentColor="from-blue-500 to-indigo-500" />
+                <KPICard title="Tempo Médio Espera" value={`${metrics.avgWaitTime} min`} icon={<Clock size={22} />} description="Tempo até ser chamado" trend="up" trendValue={`${metrics.medianWaitTime}m (mediana)`} accentColor="from-amber-500 to-yellow-400" />
+                <KPICard title="Tempo Médio Atendimento" value={`${metrics.avgServiceTime} min`} icon={<Hourglass size={22} />} description="Duração em guichê" trend="neutral" accentColor="from-emerald-500 to-teal-400" />
+                <KPICard title="Taxa de Finalização" value={`${metrics.attendanceRate}%`} icon={<CheckCircle2 size={22} />} description={`${metrics.completed} de ${metrics.total} senhas`} trend={Number(metrics.attendanceRate) > 80 ? 'up' : 'down'} accentColor="from-teal-400 to-emerald-500" />
+                <KPICard title="Maior Espera Registrada" value={`${metrics.maxWaitTime} min`} icon={<AlertTriangle size={22} />} description="Pico máximo da fila" accentColor="from-rose-500 to-red-400" />
+                <KPICard title="Senhas Prioritárias" value={metrics.priorityCount} icon={<Award size={22} />} description="Atendimento preferencial" accentColor="from-purple-500 to-indigo-400" />
+                <KPICard title="Aguardando na Fila" value={metrics.waiting} icon={<Users size={22} />} description="Senhas ativas no momento" accentColor="from-cyan-500 to-blue-400" />
+                <KPICard title="Cancelados / Ausentes" value={metrics.cancelled} icon={<AlertTriangle size={22} />} description={`${metrics.total > 0 ? ((metrics.cancelled / metrics.total) * 100).toFixed(1) : 0}% do total`} trend="down" accentColor="from-slate-500 to-slate-400" />
             </div>
 
-            {/* Gráficos Modernos */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {timeSeriesData.length > 0 && (
-                    <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
-                        <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6">Tendência de Tempos (Espera vs Atendimento)</h2>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={timeSeriesData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                                <XAxis dataKey="date" stroke="#94A3B8" fontSize={11} fontWeight={700} tickLine={false} />
-                                <YAxis stroke="#94A3B8" fontSize={11} fontWeight={700} tickLine={false} axisLine={false} />
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.98)', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', fontFamily: 'Inter, sans-serif' }} />
-                                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
-                                <Line type="monotone" dataKey="Tempo Espera" stroke="#204FA1" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6 }} />
-                                <Line type="monotone" dataKey="Tempo Atendimento" stroke="#2E8B57" strokeWidth={3} dot={{ r: 4, strokeWidth: 2, fill: '#fff' }} activeDot={{ r: 6 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
+            {/* Seção Gráficos Executivos (Apache ECharts) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Gauge SLA */}
+                <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                        <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">SLA & Desempenho Fila</h2>
+                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-lg">Meta: 15 min</span>
                     </div>
-                )}
+                    <div className="h-64 flex items-center justify-center">
+                        <ReactECharts option={slaGaugeOption} style={{ height: '100%', width: '100%' }} />
+                    </div>
+                </div>
 
-                {timeSeriesData.length > 0 && (
-                    <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
-                        <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6">Volume de Atendimentos por Dia</h2>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <RechartsBarChart data={timeSeriesData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
-                                <XAxis dataKey="date" stroke="#94A3B8" fontSize={11} fontWeight={700} tickLine={false} />
-                                <YAxis stroke="#94A3B8" fontSize={11} fontWeight={700} tickLine={false} axisLine={false} />
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.98)', borderRadius: '16px', border: '1px solid #E2E8F0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)', fontFamily: 'Inter, sans-serif' }} />
-                                <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '12px', fontWeight: 'bold' }} />
-                                <Bar dataKey="completados" name="Completados" stackId="a" fill="#2E8B57" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="esperando" name="Aguardando" stackId="a" fill="#F59E0B" radius={[4, 4, 0, 0]} />
-                                <Bar dataKey="cancelados" name="Cancelados" stackId="a" fill="#EF4444" radius={[4, 4, 0, 0]} />
-                            </RechartsBarChart>
-                        </ResponsiveContainer>
+                {/* ECharts Tendência de Tempos (Área Fluida) */}
+                <div className="lg:col-span-2 bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Fluxo & Tendência de Tempos (Espera vs Atendimento)</h2>
+                    <div className="h-64">
+                        <ReactECharts option={timeTrendOption} style={{ height: '100%', width: '100%' }} />
                     </div>
-                )}
-
-                {serviceDistribution.length > 0 && (
-                    <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
-                        <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6">Distribuição por Serviço</h2>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={serviceDistribution}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                                    outerRadius={80}
-                                    innerRadius={45}
-                                    paddingAngle={3}
-                                    dataKey="value"
-                                >
-                                    {serviceDistribution.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.98)', borderRadius: '16px', border: '1px solid #E2E8F0' }} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                )}
-
-                {userTypeDistribution.length > 0 && (
-                    <div className="bg-white/90 backdrop-blur-md p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
-                        <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-6">Distribuição por Tipo de Usuário</h2>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={userTypeDistribution}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                                    outerRadius={80}
-                                    innerRadius={45}
-                                    paddingAngle={3}
-                                    dataKey="value"
-                                >
-                                    {userTypeDistribution.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                                    ))}
-                                </Pie>
-                                <Tooltip contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.98)', borderRadius: '16px', border: '1px solid #E2E8F0' }} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    </div>
-                )}
+                </div>
             </div>
 
-            {/* Tabela de últimos atendimentos */}
-            <div className="bg-white/90 backdrop-blur-md rounded-3xl border border-slate-200/80 shadow-[0_8px_30px_rgba(0,0,0,0.02)] overflow-hidden">
-                <div className="p-6 sm:p-8 border-b border-slate-200/50">
-                    <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                        <SignalCellularAlt sx={{ fontSize: 20 }} className="text-jaboatao-blue" />
-                        Histórico Geral de Senhas
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Volume por Dia */}
+                <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Volume Diário por Status</h2>
+                    <div className="h-72">
+                        <ReactECharts option={volumeBarOption} style={{ height: '100%', width: '100%' }} />
+                    </div>
+                </div>
+
+                {/* Donut de Serviços */}
+                <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Distribuição por Categoria de Serviço</h2>
+                    <div className="h-72">
+                        <ReactECharts option={servicePieOption} style={{ height: '100%', width: '100%' }} />
+                    </div>
+                </div>
+            </div>
+
+            {/* Tabela de Histórico Recente */}
+            <div className="bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+                <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <FileText size={16} className="text-amber-400" />
+                        Histórico Filtrado de Atendimentos ({filteredTickets.length})
                     </h2>
                 </div>
                 <div className="overflow-x-auto">
                     {filteredTickets.length > 0 ? (
-                        <table className="w-full border-collapse text-left text-xs sm:text-sm">
+                        <table className="w-full border-collapse text-left text-xs">
                             <thead>
-                                <tr className="border-b border-slate-200/50 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50">
+                                <tr className="border-b border-white/10 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-950/40">
                                     <th className="px-6 py-4">Senha</th>
                                     <th className="px-6 py-4">Serviço</th>
                                     <th className="px-6 py-4 hidden md:table-cell">Operador</th>
                                     <th className="px-6 py-4 hidden lg:table-cell">Vínculo</th>
                                     <th className="px-6 py-4 hidden sm:table-cell">Prioridade</th>
                                     <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4 hidden sm:table-cell">Data/Hora Emissão</th>
+                                    <th className="px-6 py-4 hidden sm:table-cell">Emissão</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 font-semibold text-slate-700">
-                                {filteredTickets.map((ticket) => (
-                                    <tr key={ticket.id} className="hover:bg-slate-50/50 transition-colors duration-150">
-                                        <td className="px-6 py-4 font-mono font-black text-[#204FA1]">{ticket.formatted_number}</td>
+                            <tbody className="divide-y divide-white/5 font-medium text-slate-200">
+                                {filteredTickets.slice(0, 15).map((ticket) => (
+                                    <tr key={ticket.id} className="hover:bg-white/5 transition-colors">
+                                        <td className="px-6 py-4 font-mono font-bold text-amber-400">{ticket.formatted_number}</td>
                                         <td className="px-6 py-4">{ticket.service?.name || '—'}</td>
-                                        <td className="px-6 py-4 hidden md:table-cell">{ticket.operator?.name || '—'}</td>
-                                        <td className="px-6 py-4 uppercase text-[10px] font-black hidden lg:table-cell">{ticket.user_type.replace('_', ' ')}</td>
+                                        <td className="px-6 py-4 hidden md:table-cell text-slate-400">{ticket.operator?.name || '—'}</td>
+                                        <td className="px-6 py-4 uppercase text-[10px] font-bold text-slate-400 hidden lg:table-cell">{ticket.user_type.replace('_', ' ')}</td>
                                         <td className="px-6 py-4 hidden sm:table-cell">
                                             {ticket.is_priority ? (
-                                                <span className="px-2 py-1 bg-amber-500/10 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-wider">Sim</span>
+                                                <span className="px-2 py-0.5 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-md text-[9px] font-bold uppercase tracking-wider">Preferencial</span>
                                             ) : (
-                                                <span className="px-2 py-1 bg-slate-100 text-slate-400 rounded-lg text-[9px] font-black uppercase tracking-wider">Não</span>
+                                                <span className="px-2 py-0.5 bg-slate-800 text-slate-400 rounded-md text-[9px] font-bold uppercase tracking-wider">Normal</span>
                                             )}
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider border ${
+                                            <span className={`inline-flex px-2.5 py-1 rounded-lg text-[9px] font-bold uppercase tracking-wider border ${
                                                 ticket.status === 'completed'
-                                                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600'
+                                                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
                                                     : ticket.status === 'waiting'
-                                                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-500'
-                                                        : 'bg-rose-500/10 border-rose-500/20 text-rose-600'
+                                                        ? 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+                                                        : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
                                             }`}>
                                                 {ticket.status === 'completed' ? 'Finalizada' : ticket.status === 'waiting' ? 'Aguardando' : ticket.status === 'no_show' ? 'Ausente' : 'Cancelada'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 text-slate-400 font-normal hidden sm:table-cell">
+                                        <td className="px-6 py-4 text-slate-400 font-mono text-[11px] hidden sm:table-cell">
                                             {format(parseISO(ticket.created_at), 'dd/MM/yyyy HH:mm')}
                                         </td>
                                     </tr>
@@ -619,15 +811,14 @@ const MetricsDashboard: React.FC = () => {
                             </tbody>
                         </table>
                     ) : (
-                        <p className="text-center text-slate-400 py-20 font-bold text-sm">Nenhum atendimento finalizado para os filtros selecionados.</p>
+                        <p className="text-center text-slate-400 py-16 font-bold text-xs">Nenhum atendimento finalizado para os filtros selecionados.</p>
                     )}
                 </div>
             </div>
 
             {/* Footer */}
-            <footer className="text-center text-[10px] font-black uppercase tracking-widest text-slate-400 pt-6 border-t border-slate-200/50">
-                <p>Última atualização automática: {format(lastUpdated, 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}</p>
-                <p className="mt-1 text-slate-300">Período de Dados: {format(parseISO(filters.startDate), 'dd/MM/yyyy', { locale: ptBR })} a {format(parseISO(filters.endDate), 'dd/MM/yyyy', { locale: ptBR })}</p>
+            <footer className="text-center text-[10px] font-bold uppercase tracking-widest text-slate-400 pt-4 border-t border-white/10">
+                <p>Sincronização em Tempo Real | Última atualização: {format(lastUpdated, 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}</p>
             </footer>
         </div>
     );

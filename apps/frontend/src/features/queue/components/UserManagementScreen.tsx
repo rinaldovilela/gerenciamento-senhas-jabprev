@@ -3,20 +3,27 @@ import { z } from 'zod';
 import { ApiClient, ApiError } from '@lib/api';
 import { supabase } from '@lib/supabase/client';
 import { 
-    PersonAdd, 
+    UserPlus, 
     Search, 
-    Refresh, 
+    RefreshCw, 
     Shield, 
-    CheckCircle, 
-    Block, 
-    Delete, 
+    CheckCircle2, 
+    UserX, 
+    Trash2, 
     Save, 
-    ArrowBack, 
-    AssignmentInd,
-    Close,
-    ManageAccounts,
-    Person
-} from '@mui/icons-material';
+    ArrowLeft, 
+    UserCheck, 
+    X, 
+    User, 
+    Lock, 
+    Key, 
+    Filter,
+    Sparkles,
+    Briefcase,
+    Mail,
+    Camera
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface AdminUser {
   id: string;
@@ -48,9 +55,9 @@ const ROLE_LABELS: Record<AdminUser['role'], string> = {
 };
 
 const STATUS_CONFIG: Record<AdminUser['status'], { label: string; badge: string }> = {
-  active: { label: 'Ativo', badge: 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-600' },
-  inactive: { label: 'Inativo', badge: 'bg-slate-500/10 border border-slate-500/30 text-slate-500' },
-  blocked: { label: 'Bloqueado', badge: 'bg-rose-500/10 border border-rose-500/30 text-rose-600 font-bold animate-pulse' },
+  active: { label: 'Ativo', badge: 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 font-bold' },
+  inactive: { label: 'Inativo', badge: 'bg-slate-500/10 border border-slate-500/30 text-slate-400' },
+  blocked: { label: 'Bloqueado', badge: 'bg-rose-500/10 border border-rose-500/30 text-rose-400 font-bold animate-pulse' },
 };
 
 const createUserSchema = z.object({
@@ -80,13 +87,13 @@ const Toast: React.FC<{ message: string; type: 'success' | 'error'; onClose: () 
 
   return (
     <div
-      className={`fixed bottom-6 right-6 rounded-2xl px-6 py-3.5 text-sm font-semibold text-white shadow-2xl z-50 animate-fade-in-up flex items-center gap-2.5 ${
-        type === 'success' ? 'bg-[#1E7342] border border-emerald-600/30' : 'bg-red-600 border border-red-500/30'
+      className={`fixed bottom-6 right-6 rounded-2xl px-6 py-3.5 text-xs font-bold text-white shadow-2xl z-50 animate-fade-in-up flex items-center gap-3 backdrop-blur-md ${
+        type === 'success' ? 'bg-emerald-950/90 border border-emerald-500/30 text-emerald-300' : 'bg-rose-950/90 border border-rose-500/30 text-rose-300'
       }`}
     >
       <span>{message}</span>
-      <button onClick={onClose} className="p-0.5 hover:bg-white/10 rounded">
-        <Close sx={{ fontSize: 16 }} />
+      <button onClick={onClose} className="p-1 hover:bg-white/10 rounded-lg">
+        <X size={14} />
       </button>
     </div>
   );
@@ -105,9 +112,9 @@ const UserManagementScreen: React.FC = () => {
   
   // HUD UI State
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null); // null means "Create Mode"
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [showFormOnMobile, setShowFormOnMobile] = useState(false);
+  const [roleFilter, setRoleFilter] = useState<'all' | AdminUser['role']>('all');
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
@@ -163,7 +170,7 @@ const UserManagementScreen: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [buildDraftMap, showToast]);
+  }, [buildDraftMap]);
 
   useEffect(() => {
     loadData();
@@ -174,13 +181,12 @@ const UserManagementScreen: React.FC = () => {
     const query = searchQuery.trim().toLowerCase();
     return users
       .filter((user) => {
-        return (
-          user.name.toLowerCase().includes(query) ||
-          user.email.toLowerCase().includes(query)
-        );
+        const matchesQuery = user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query);
+        const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+        return matchesQuery && matchesRole;
       })
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
-  }, [users, searchQuery]);
+  }, [users, searchQuery, roleFilter]);
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,7 +211,7 @@ const UserManagementScreen: React.FC = () => {
       setCreateForm({ name: '', email: '', role: 'operator', password: '', serviceIds: [] });
       showToast('Usuário criado com sucesso.', 'success');
       await loadData();
-      setSelectedUserId(null); // Keep in create mode or select new
+      setSelectedUserId(null);
     } catch (error) {
       if (error instanceof ApiError && error.details?.length) {
         setFormError(error.details.join(' | '));
@@ -228,25 +234,19 @@ const UserManagementScreen: React.FC = () => {
     }));
   };
 
-  const [isUploading, setIsUploading] = useState(false);
-
   const handleAvatarUpload = async (userId: string, file: File) => {
     setIsUploading(true);
     try {
       const reader = new FileReader();
-      
       const fileBase64 = await new Promise<string>((resolve, reject) => {
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = (error) => reject(error);
         reader.readAsDataURL(file);
       });
 
-      // Upload to backend API instead of Supabase Storage directly
       const response = await ApiClient.uploadAvatar(userId, fileBase64, file.name);
-      
-      // Update draft state
       updateDraft(userId, 'avatarUrl', response.publicUrl);
-      showToast('Foto de perfil carregada. Salve o usuário para persistir.', 'success');
+      showToast('Foto de perfil salva. Clique em "Salvar" para aplicar.', 'success');
     } catch (error: any) {
       console.error('Erro no upload da imagem:', error);
       showToast('Erro ao carregar imagem: ' + (error.message || error), 'error');
@@ -298,36 +298,25 @@ const UserManagementScreen: React.FC = () => {
 
   const handleDeleteUser = async (userId: string) => {
     const user = users.find(u => u.id === userId);
-    if (!user) return;
+    if (!user || !window.confirm(`Tem certeza que deseja excluir o usuário ${user.name}?`)) return;
 
-    const confirmed = window.confirm(`Deseja realmente excluir o usuário ${user.email}?`);
-    if (!confirmed) return;
-
-    setIsSavingId(userId);
     try {
       await ApiClient.deleteUser(userId);
       showToast('Usuário excluído com sucesso.', 'success');
-      setSelectedUserId(null);
+      if (selectedUserId === userId) setSelectedUserId(null);
       await loadData();
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Erro ao excluir usuário.';
       showToast(message, 'error');
-    } finally {
-      setIsSavingId(null);
     }
   };
 
-  const activeUser = useMemo(() => {
+  const selectedUser = useMemo(() => {
     return users.find(u => u.id === selectedUserId) || null;
   }, [users, selectedUserId]);
 
-  const activeDraft = useMemo(() => {
-    if (!selectedUserId) return null;
-    return draftsById[selectedUserId] || null;
-  }, [draftsById, selectedUserId]);
-
   return (
-    <div className="flex flex-col h-full gap-6 w-full text-slate-800">
+    <div className="space-y-6 max-w-[1600px] mx-auto w-full text-slate-100 pb-8">
       {toast.show && (
         <Toast
           message={toast.message}
@@ -336,439 +325,395 @@ const UserManagementScreen: React.FC = () => {
         />
       )}
 
-      {/* Header */}
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200/50 pb-5">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-white/10">
         <div>
-          <h1 className="font-montserrat text-3xl font-black text-slate-900 tracking-tight">
-            Gestão de Credenciais
+          <h1 className="font-montserrat text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
+            <Users size={28} className="text-amber-400" />
+            Gestão de Usuários & Operadores
           </h1>
-          <p className="text-sm text-slate-500 mt-1 font-semibold">
-            Cadastre novos operadores, configure níveis de acesso e vincule guichês.
+          <p className="text-xs sm:text-sm text-slate-400 font-medium mt-1">
+            Gerencie credenciais, permissões de guichês e perfis da equipe de atendimento.
           </p>
         </div>
-        <button
-          onClick={loadData}
-          className="flex items-center gap-2 py-2.5 px-5 text-sm font-bold text-slate-700 bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:bg-slate-50 active:scale-95 transition-all duration-200 self-stretch sm:self-auto justify-center"
-        >
-          <Refresh sx={{ fontSize: 18 }} />
-          Atualizar Fila
-        </button>
-      </header>
 
-      {/* Cockpit Asimétrico (Master-Detail Layout) */}
-      <div className="flex flex-col lg:flex-row gap-6 items-stretch flex-grow min-h-[500px]">
+        <div className="flex items-center gap-3 self-stretch sm:self-auto">
+          <button
+            onClick={() => loadData()}
+            className="p-2.5 bg-white/5 border border-white/10 hover:bg-white/10 rounded-2xl transition-all text-slate-300"
+            title="Atualizar Lista"
+          >
+            <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={() => setSelectedUserId(null)}
+            className="flex items-center gap-2 py-2.5 px-5 bg-gradient-to-r from-jaboatao-yellow to-amber-500 text-slate-950 font-black text-xs rounded-2xl shadow-lg shadow-amber-500/10 hover:brightness-110 active:scale-95 transition-all"
+          >
+            <UserPlus size={16} />
+            <span>Novo Usuário</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Grid Principal: Lista + Formulário de Edição/Criação */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* COLUNA ESQUERDA: Entity Deck */}
-        <div className={`w-full lg:w-96 flex flex-col gap-4 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.02)] ${showFormOnMobile ? 'hidden lg:flex' : 'flex'}`}>
-          <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
-            <h2 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-              Usuários cadastrados ({filteredUsers.length})
-            </h2>
-            <button
-              onClick={() => { setSelectedUserId(null); setIsEditMode(false); setShowFormOnMobile(true); }}
-              className="flex items-center justify-center gap-1.5 px-3 py-2 text-[10px] font-black uppercase text-white bg-gradient-to-r from-jaboatao-blue to-[#2B6CB0] hover:shadow-md active:scale-95 rounded-xl transition-all duration-150"
-            >
-              <PersonAdd sx={{ fontSize: 14 }} />
-              Novo
-            </button>
+        {/* Painel Esquerdo: Lista de Usuários (7 cols) */}
+        <div className="lg:col-span-7 bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white/10 p-6 shadow-2xl flex flex-col">
+          
+          {/* Barra de Pesquisa e Filtros Por Pílulas */}
+          <div className="space-y-4 mb-6">
+            <div className="relative">
+              <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Pesquisar por nome ou e-mail..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 bg-slate-950/80 border border-white/10 rounded-2xl text-xs text-white placeholder-slate-500 focus:border-amber-500/50 outline-none transition-all"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              <button
+                onClick={() => setRoleFilter('all')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${roleFilter === 'all' ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-white/5 border border-white/5 text-slate-400 hover:text-white'}`}
+              >
+                Todos ({users.length})
+              </button>
+              <button
+                onClick={() => setRoleFilter('admin')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${roleFilter === 'admin' ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-white/5 border border-white/5 text-slate-400 hover:text-white'}`}
+              >
+                Admins ({users.filter(u => u.role === 'admin').length})
+              </button>
+              <button
+                onClick={() => setRoleFilter('operator')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${roleFilter === 'operator' ? 'bg-amber-500 text-slate-950 shadow-md' : 'bg-white/5 border border-white/5 text-slate-400 hover:text-white'}`}
+              >
+                Operadores ({users.filter(u => u.role === 'operator').length})
+              </button>
+            </div>
           </div>
 
-          {/* Search bar */}
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" sx={{ fontSize: 18 }} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por nome ou e-mail..."
-              className="w-full pl-10 pr-4 py-3 bg-slate-50/50 border border-slate-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/5 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
-            />
-          </div>
-
-          {/* List Deck */}
-          <div className="flex-grow overflow-y-auto lg:max-h-[500px] space-y-2 pr-1">
+          {/* Cards de Usuários */}
+          <div className="space-y-3 overflow-y-auto max-h-[600px] pr-1">
             {isLoading ? (
-              <div className="py-16 text-center">
-                <div className="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-jaboatao-blue rounded-full mb-3"></div>
-                <p className="text-xs font-bold text-slate-400">Carregando credenciais...</p>
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map(n => (
+                  <div key={n} className="h-20 bg-white/5 rounded-2xl animate-pulse" />
+                ))}
               </div>
-            ) : filteredUsers.length === 0 ? (
-              <p className="text-center text-slate-400 py-16 text-xs font-bold">Nenhum operador encontrado.</p>
-            ) : (
-              filteredUsers.map((user) => {
-                const isSelected = selectedUserId === user.id;
-                const initials = user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
-                
+            ) : filteredUsers.length > 0 ? (
+              filteredUsers.map((userItem) => {
+                const isSelected = selectedUserId === userItem.id;
+                const draft = draftsById[userItem.id] || userItem;
+                const statusInfo = STATUS_CONFIG[draft.status] || STATUS_CONFIG.active;
+
                 return (
-                  <button
-                    key={user.id}
-                    onClick={() => { setSelectedUserId(user.id); setIsEditMode(true); setShowFormOnMobile(true); }}
-                    className={`w-full text-left p-3.5 rounded-2xl border-2 flex items-center justify-between gap-4 transition-all duration-200 group active:scale-[0.97] ${
-                      isSelected 
-                        ? 'border-[#204FA1] bg-[#204FA1]/5 shadow-sm' 
-                        : 'border-slate-100/80 bg-white hover:border-slate-300'
+                  <div
+                    key={userItem.id}
+                    onClick={() => setSelectedUserId(userItem.id)}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-4 ${
+                      isSelected
+                        ? 'bg-slate-950 border-amber-500/50 shadow-lg shadow-amber-500/5'
+                        : 'bg-slate-950/40 border-white/5 hover:border-white/15 hover:bg-slate-950/60'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-black shrink-0 shadow-sm overflow-hidden transition-colors ${
-                        isSelected 
-                          ? 'bg-gradient-to-tr from-jaboatao-blue to-[#407BDE] text-white' 
-                          : 'bg-slate-100 text-slate-600 group-hover:bg-slate-200'
-                      }`}>
-                        {user.avatarUrl ? (
-                          <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500/20 to-yellow-500/10 border border-amber-500/30 flex items-center justify-center font-bold text-amber-400 shadow-inner shrink-0 overflow-hidden">
+                        {draft.avatarUrl ? (
+                          <img src={draft.avatarUrl} alt={userItem.name} className="w-full h-full object-cover" />
                         ) : (
-                          initials || 'OP'
+                          userItem.name.slice(0, 2).toUpperCase()
                         )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-slate-800 truncate">{user.name}</p>
-                        <p className="text-[10px] font-bold text-slate-400 truncate mt-0.5">{user.email}</p>
+                        <h4 className="text-sm font-bold text-white truncate flex items-center gap-2">
+                          {userItem.name}
+                          {userItem.role === 'admin' && <Shield size={14} className="text-amber-400 shrink-0" />}
+                        </h4>
+                        <p className="text-xs text-slate-400 truncate">{userItem.email}</p>
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-wider border ${STATUS_CONFIG[user.status].badge}`}>
-                        {STATUS_CONFIG[user.status].label}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`px-2.5 py-1 rounded-lg text-[10px] uppercase font-bold border ${statusInfo.badge}`}>
+                        {statusInfo.label}
                       </span>
-                      <span className="text-[9px] font-black text-slate-400 group-hover:text-slate-800 transition-colors">
-                        {ROLE_LABELS[user.role]}
-                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteUser(userItem.id);
+                        }}
+                        className="p-2 text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all"
+                        title="Excluir Usuário"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                  </button>
+                  </div>
                 );
               })
+            ) : (
+              <div className="text-center py-16 text-slate-500 text-xs font-bold">
+                Nenhum usuário encontrado para a busca.
+              </div>
             )}
           </div>
         </div>
 
-        {/* COLUNA DIREITA: Control Console (Terminal de Operações) */}
-        <div className={`flex-grow bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col justify-between ${!showFormOnMobile ? 'hidden lg:flex' : 'flex'}`}>
-          
-          {selectedUserId && activeDraft && activeUser ? (
-            /* ================= EDIT MODE ================= */
+        {/* Painel Direito: Formulário de Criação / Edição (5 cols) */}
+        <div className="lg:col-span-5 bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white/10 p-6 shadow-2xl flex flex-col">
+          {selectedUserId && selectedUser ? (
+            /* MODO EDIÇÃO */
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex justify-between items-center pb-4 border-b border-white/10">
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-[#204FA1]/10 text-[#204FA1] rounded-xl">
-                    <Shield sx={{ fontSize: 20 }} />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
-                      Painel de Controle do Usuário
-                    </h3>
-                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">{activeUser.email}</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => { setSelectedUserId(null); setShowFormOnMobile(false); }}
-                  className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-800 rounded-xl transition-all"
-                  title="Fechar"
-                >
-                  <Close sx={{ fontSize: 20 }} />
-                </button>
-              </div>
-
-              {/* Form de Edição */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div className="md:col-span-2 flex items-center gap-4 bg-slate-50/50 p-4 rounded-2xl border border-slate-100">
-                  <div className="relative w-16 h-16 rounded-2xl bg-slate-200 flex items-center justify-center overflow-hidden border-2 border-white shadow-md shrink-0">
-                    {activeDraft.avatarUrl ? (
-                      <img src={activeDraft.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-bold overflow-hidden">
+                    {draftsById[selectedUser.id]?.avatarUrl ? (
+                      <img src={draftsById[selectedUser.id].avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                     ) : (
-                      <Person className="text-slate-400" sx={{ fontSize: 32 }} />
-                    )}
-                    {isUploading && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                      </div>
+                      selectedUser.name.slice(0, 2).toUpperCase()
                     )}
                   </div>
-                  <div className="flex-grow">
-                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-1.5">Foto de Perfil</label>
-                    <div className="flex items-center gap-2">
-                      <label className="cursor-pointer bg-white hover:bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-slate-700 tracking-wider shadow-sm transition-all active:scale-95 flex items-center gap-1.5">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (file) await handleAvatarUpload(activeUser.id, file);
-                          }}
-                          disabled={isUploading}
-                        />
-                        Selecionar Foto
-                      </label>
-                      {activeDraft.avatarUrl && (
-                        <button
-                          type="button"
-                          onClick={() => updateDraft(activeUser.id, 'avatarUrl', '')}
-                          className="bg-rose-50 hover:bg-rose-100 border border-rose-200/50 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase text-rose-600 tracking-wider transition-all active:scale-95"
-                          disabled={isUploading}
-                        >
-                          Remover
-                        </button>
-                      )}
-                    </div>
+                  <div>
+                    <h3 className="text-base font-extrabold text-white">Editar Usuário</h3>
+                    <p className="text-xs text-slate-400">{selectedUser.email}</p>
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Nome Completo</label>
-                  <input
-                    value={activeDraft.name}
-                    onChange={(e) => updateDraft(activeUser.id, 'name', e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">E-mail Corporativo</label>
-                  <input
-                    value={activeDraft.email}
-                    onChange={(e) => updateDraft(activeUser.id, 'email', e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Perfil de Acesso</label>
-                  <select
-                    value={activeDraft.role}
-                    onChange={(e) => updateDraft(activeUser.id, 'role', e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
-                  >
-                    {roleOptions.map((role) => (
-                      <option key={role} value={role}>
-                        {ROLE_LABELS[role]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Status da Conta</label>
-                  <select
-                    value={activeDraft.status}
-                    onChange={(e) => updateDraft(activeUser.id, 'status', e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
-                  >
-                    {statusOptions.map((status) => (
-                      <option key={status} value={status}>
-                        {STATUS_CONFIG[status].label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Nova Senha (Reset)</label>
-                  <input
-                    type="password"
-                    value={activeDraft.password}
-                    onChange={(e) => updateDraft(activeUser.id, 'password', e.target.value)}
-                    placeholder="Deixe em branco para manter a senha atual"
-                    className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs transition-all duration-200"
-                  />
-                </div>
+                <button
+                  onClick={() => setSelectedUserId(null)}
+                  className="px-3 py-1.5 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl text-xs text-slate-300 font-bold"
+                >
+                  Novo
+                </button>
               </div>
 
-              {/* Serviços Vinculados (apenas se for operador) */}
-              {activeDraft.role === 'operator' && (
-                <div className="border-t border-slate-100 pt-5 mt-4">
-                  <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-3">
-                    Vincular Serviços a este Operador
+              {/* Upload de Avatar */}
+              <div>
+                <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Foto de Perfil</label>
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 hover:bg-white/10 rounded-2xl text-xs text-slate-200 font-bold cursor-pointer transition-all">
+                    <Camera size={16} className="text-amber-400" />
+                    <span>{isUploading ? 'Enviando...' : 'Carregar Imagem'}</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleAvatarUpload(selectedUser.id, file);
+                      }}
+                    />
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                    {services.map(s => {
-                      const isLinked = activeDraft.serviceIds.includes(s.id);
-                      return (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => {
-                            const currentList = [...activeDraft.serviceIds];
-                            if (isLinked) {
-                              updateDraft(activeUser.id, 'serviceIds', currentList.filter(id => id !== s.id));
-                            } else {
-                              updateDraft(activeUser.id, 'serviceIds', [...currentList, s.id]);
-                            }
-                          }}
-                          className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-left text-xs font-bold transition-all duration-150 active:scale-95 ${
-                            isLinked 
-                              ? 'border-jaboatao-blue bg-jaboatao-blue/5 text-[#204FA1]' 
-                              : 'border-slate-100 hover:border-slate-200 bg-white text-slate-600'
-                          }`}
-                        >
-                          <span className={`w-4 h-4 rounded-md flex items-center justify-center border text-[9px] ${isLinked ? 'bg-jaboatao-blue border-jaboatao-blue text-white' : 'border-slate-300 bg-white'}`}>
-                            {isLinked ? '✓' : ''}
-                          </span>
-                          <span className="truncate">{s.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
                 </div>
-              )}
-
-              {/* Botões de Ação */}
-              <div className="flex items-center justify-between border-t border-slate-100 pt-5 mt-6">
-                <button
-                  onClick={() => handleDeleteUser(activeUser.id)}
-                  disabled={isSavingId !== null}
-                  className="flex items-center gap-2 py-3 px-5 text-xs font-black uppercase tracking-wider text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl active:scale-95 transition-all duration-150 disabled:opacity-50"
-                >
-                  <Delete sx={{ fontSize: 18 }} />
-                  Excluir Operador
-                </button>
-                <button
-                  onClick={() => handleSaveUser(activeUser.id)}
-                  disabled={isSavingId !== null}
-                  className="flex items-center gap-2 py-3 px-6 text-xs font-black uppercase tracking-wider text-white bg-[#2E8B57] hover:bg-[#20623A] rounded-xl shadow-lg shadow-emerald-700/10 active:scale-95 transition-all duration-150 disabled:opacity-50"
-                >
-                  <Save sx={{ fontSize: 18 }} />
-                  {isSavingId === activeUser.id ? 'Salvando...' : 'Salvar Alterações'}
-                </button>
               </div>
-            </div>
-          ) : (
-            /* ================= CREATE MODE ================= */
-            <form onSubmit={handleCreateUser} className="space-y-6 flex flex-col justify-between h-full">
-              <div className="space-y-5">
-                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-[#2E8B57]/10 text-jaboatao-green-prev rounded-xl">
-                      <PersonAdd sx={{ fontSize: 20 }} />
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">
-                        Cadastrar Novo Usuário
-                      </h3>
-                      <p className="text-[10px] font-bold text-slate-400 mt-0.5">Preencha as informações básicas de acesso.</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowFormOnMobile(false)}
-                    className="lg:hidden p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-800 rounded-xl transition-all"
-                    title="Voltar"
-                  >
-                    <Close sx={{ fontSize: 20 }} />
-                  </button>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Nome Completo</label>
+                  <input
+                    type="text"
+                    value={draftsById[selectedUser.id]?.name || ''}
+                    onChange={(e) => updateDraft(selectedUser.id, 'name', e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all"
+                  />
                 </div>
 
-                {formError && (
-                  <div className="p-4 rounded-xl bg-rose-50 border-2 border-rose-100 text-xs font-bold text-rose-600">
-                    ⚠️ {formError}
-                  </div>
-                )}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">E-mail</label>
+                  <input
+                    type="email"
+                    value={draftsById[selectedUser.id]?.email || ''}
+                    onChange={(e) => updateDraft(selectedUser.id, 'email', e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all"
+                  />
+                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Nome Completo</label>
-                    <input
-                      type="text"
-                      required
-                      value={createForm.name}
-                      onChange={(e) => setCreateForm(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Ex: João da Silva"
-                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
-                    />
-                    {fieldErrors.name && <p className="mt-1 text-[10px] font-bold text-rose-500">{fieldErrors.name}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">E-mail Corporativo</label>
-                    <input
-                      type="email"
-                      required
-                      value={createForm.email}
-                      onChange={(e) => setCreateForm(prev => ({ ...prev, email: e.target.value }))}
-                      placeholder="nome@jaboataoprev.pe.gov.br"
-                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200"
-                    />
-                    {fieldErrors.email && <p className="mt-1 text-[10px] font-bold text-rose-500">{fieldErrors.email}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Perfil de Acesso</label>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Perfil de Acesso</label>
                     <select
-                      value={createForm.role}
-                      onChange={(e) => setCreateForm(prev => ({ ...prev, role: e.target.value as any }))}
-                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs font-bold transition-all duration-200 cursor-pointer"
+                      value={draftsById[selectedUser.id]?.role || 'operator'}
+                      onChange={(e) => updateDraft(selectedUser.id, 'role', e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none cursor-pointer"
                     >
-                      {roleOptions.map((role) => (
-                        <option key={role} value={role}>
-                          {ROLE_LABELS[role]}
-                        </option>
-                      ))}
+                      <option value="operator">Operador</option>
+                      <option value="admin">Administrador</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-2">Senha Provisória</label>
-                    <input
-                      type="password"
-                      required
-                      value={createForm.password}
-                      onChange={(e) => setCreateForm(prev => ({ ...prev, password: e.target.value }))}
-                      placeholder="Mínimo 8 caracteres"
-                      className="w-full px-4 py-3 bg-slate-50/50 border border-slate-200/80 rounded-xl focus:outline-none focus:ring-4 focus:ring-jaboatao-blue/10 focus:border-jaboatao-blue focus:bg-white text-xs transition-all duration-200"
-                    />
-                    {fieldErrors.password && <p className="mt-1 text-[10px] font-bold text-rose-500">{fieldErrors.password}</p>}
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Status</label>
+                    <select
+                      value={draftsById[selectedUser.id]?.status || 'active'}
+                      onChange={(e) => updateDraft(selectedUser.id, 'status', e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none cursor-pointer"
+                    >
+                      <option value="active">Ativo</option>
+                      <option value="inactive">Inativo</option>
+                      <option value="blocked">Bloqueado</option>
+                    </select>
                   </div>
                 </div>
 
-                {/* Serviços Vinculados (apenas se for operador) */}
-                {createForm.role === 'operator' && (
-                  <div className="border-t border-slate-100 pt-5 mt-4">
-                    <label className="block text-[10px] font-black text-slate-700 uppercase tracking-wider mb-3">
-                      Vincular Serviços Iniciais
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                      {services.map(s => {
-                        const isLinked = createForm.serviceIds.includes(s.id);
-                        return (
-                          <button
-                            key={s.id}
-                            type="button"
-                            onClick={() => {
-                              const currentList = [...createForm.serviceIds];
-                              if (isLinked) {
-                                setCreateForm(prev => ({ ...prev, serviceIds: currentList.filter(id => id !== s.id) }));
-                              } else {
-                                setCreateForm(prev => ({ ...prev, serviceIds: [...currentList, s.id] }));
-                              }
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Nova Senha (opcional)</label>
+                  <input
+                    type="password"
+                    placeholder="Deixe em branco para manter a atual"
+                    value={draftsById[selectedUser.id]?.password || ''}
+                    onChange={(e) => updateDraft(selectedUser.id, 'password', e.target.value)}
+                    className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all"
+                  />
+                </div>
+
+                {/* Vínculo de Serviços */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Serviços Permitidos</label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto p-3 bg-slate-950 border border-white/5 rounded-2xl">
+                    {services.map(s => {
+                      const currentIds = draftsById[selectedUser.id]?.serviceIds || [];
+                      const isChecked = currentIds.includes(s.id);
+
+                      return (
+                        <label key={s.id} className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const nextIds = e.target.checked
+                                ? [...currentIds, s.id]
+                                : currentIds.filter(id => id !== s.id);
+                              updateDraft(selectedUser.id, 'serviceIds', nextIds);
                             }}
-                            className={`flex items-center gap-2.5 p-3 rounded-xl border-2 text-left text-xs font-bold transition-all duration-150 active:scale-95 ${
-                              isLinked 
-                                ? 'border-jaboatao-blue bg-jaboatao-blue/5 text-[#204FA1]' 
-                                : 'border-slate-100 hover:border-slate-200 bg-white text-slate-600'
-                            }`}
-                          >
-                            <span className={`w-4 h-4 rounded-md flex items-center justify-center border text-[9px] ${isLinked ? 'bg-jaboatao-blue border-jaboatao-blue text-white' : 'border-slate-300 bg-white'}`}>
-                              {isLinked ? '✓' : ''}
-                            </span>
-                            <span className="truncate">{s.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                            className="rounded accent-amber-500"
+                          />
+                          <span>{s.name}</span>
+                        </label>
+                      );
+                    })}
                   </div>
-                )}
+                </div>
               </div>
 
-              {/* Botão de Envio */}
-              <div className="border-t border-slate-100 pt-5 flex justify-end">
-                <button
-                  type="submit"
-                  disabled={isCreating}
-                  className="flex items-center gap-2 py-3.5 px-8 text-xs font-black uppercase tracking-wider text-white bg-[#204FA1] hover:bg-[#1C4690] rounded-xl shadow-lg shadow-blue-700/10 active:scale-95 transition-all duration-150 disabled:opacity-50"
-                >
-                  <Save sx={{ fontSize: 18 }} />
-                  {isCreating ? 'Cadastrando...' : 'Cadastrar Credencial'}
-                </button>
+              <button
+                onClick={() => handleSaveUser(selectedUser.id)}
+                disabled={isSavingId === selectedUser.id}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-jaboatao-yellow to-amber-500 text-slate-950 font-black text-xs rounded-2xl shadow-lg shadow-amber-500/10 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+              >
+                <Save size={16} />
+                <span>{isSavingId === selectedUser.id ? 'Salvando...' : 'Salvar Alterações'}</span>
+              </button>
+            </div>
+          ) : (
+            /* MODO CRIAÇÃO */
+            <form onSubmit={handleCreateUser} className="space-y-6">
+              <div className="pb-4 border-b border-white/10">
+                <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                  <UserPlus size={18} className="text-amber-400" />
+                  Cadastrar Novo Usuário
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Preencha as informações para liberar o acesso ao sistema.</p>
               </div>
+
+              {formError && (
+                <div className="p-3 bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs rounded-xl font-bold">
+                  {formError}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Nome Completo *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: Maria Silva"
+                    value={createForm.name}
+                    onChange={(e) => setCreateForm(f => ({ ...f, name: e.target.value }))}
+                    className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all"
+                  />
+                  {fieldErrors.name && <p className="text-[10px] font-bold text-rose-400 mt-1">{fieldErrors.name}</p>}
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">E-mail de Acesso *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="operador@jaboatão.pe.gov.br"
+                    value={createForm.email}
+                    onChange={(e) => setCreateForm(f => ({ ...f, email: e.target.value }))}
+                    className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all"
+                  />
+                  {fieldErrors.email && <p className="text-[10px] font-bold text-rose-400 mt-1">{fieldErrors.email}</p>}
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Perfil *</label>
+                    <select
+                      value={createForm.role}
+                      onChange={(e) => setCreateForm(f => ({ ...f, role: e.target.value as any }))}
+                      className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none cursor-pointer"
+                    >
+                      <option value="operator">Operador</option>
+                      <option value="admin">Administrador</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5">Senha Inicial *</label>
+                    <input
+                      type="password"
+                      required
+                      placeholder="Mín. 8 caracteres"
+                      value={createForm.password}
+                      onChange={(e) => setCreateForm(f => ({ ...f, password: e.target.value }))}
+                      className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-xs text-white focus:border-amber-500/50 outline-none transition-all"
+                    />
+                    {fieldErrors.password && <p className="text-[10px] font-bold text-rose-400 mt-1">{fieldErrors.password}</p>}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Serviços Permitidos</label>
+                  <div className="space-y-2 max-h-36 overflow-y-auto p-3 bg-slate-950 border border-white/5 rounded-2xl">
+                    {services.map(s => {
+                      const isChecked = createForm.serviceIds.includes(s.id);
+                      return (
+                        <label key={s.id} className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const nextIds = e.target.checked
+                                ? [...createForm.serviceIds, s.id]
+                                : createForm.serviceIds.filter(id => id !== s.id);
+                              setCreateForm(f => ({ ...f, serviceIds: nextIds }));
+                            }}
+                            className="rounded accent-amber-500"
+                          />
+                          <span>{s.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isCreating}
+                className="w-full flex items-center justify-center gap-2 py-3.5 bg-gradient-to-r from-jaboatao-yellow to-amber-500 text-slate-950 font-black text-xs rounded-2xl shadow-lg shadow-amber-500/10 hover:brightness-110 active:scale-95 transition-all disabled:opacity-50"
+              >
+                <UserPlus size={16} />
+                <span>{isCreating ? 'Criando Usuário...' : 'Criar Usuário'}</span>
+              </button>
             </form>
           )}
-
         </div>
 
       </div>

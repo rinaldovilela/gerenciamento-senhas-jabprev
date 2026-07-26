@@ -2,47 +2,55 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@features/auth/contexts/AuthContext';
 import { TRANSLATIONS } from '@shared/constants';
 import type { Language } from '@shared/types';
-import { Menu, Close, Edit, CameraAlt } from '@mui/icons-material';
 import { ApiClient } from '@lib/api';
+import {
+    ClipboardList,
+    BarChart3,
+    Users,
+    Briefcase,
+    LogOut,
+    Menu,
+    X,
+    Edit,
+    Camera,
+    User,
+    Key,
+    CheckCircle
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import MetricsDashboard from './MetricsDashboard';
 import AttendanceTrackingScreen from './AttendanceTrackingScreen';
 import UserManagementScreen from './UserManagementScreen';
 import ServiceManagementScreen from './ServiceManagementScreen';
+import { CameraAlt, Close } from '@mui/icons-material';
 
 const language: Language = 'pt';
 
 const JaboataoPrevLogo: React.FC<{ className?: string; dark?: boolean }> = ({ className, dark }) => (
     <div className={`flex items-center gap-3 ${className}`}>
-        <div className={`p-2.5 rounded-xl border transition-all duration-300 ${dark ? 'bg-white/10 border-white/10' : 'bg-slate-100 border-slate-200'}`}>
-            <img 
-                src="/logo-jabprev.png" 
-                alt="JaboatãoPrev" 
-                className={`h-7 w-auto object-contain transition-all duration-300 ${dark ? 'brightness-0 invert' : ''}`} 
+        <div className={`p-2.5 rounded-xl border transition-all duration-300 ${dark ? 'bg-white/10 border-white/10 shadow-inner' : 'bg-slate-100 border-slate-200'}`}>
+            <img
+                src="/logo-jabprev.png"
+                alt="JaboatãoPrev"
+                className={`h-7 w-auto object-contain transition-all duration-300 ${dark ? 'brightness-0 invert' : ''}`}
             />
         </div>
         <div className="flex flex-col">
             <span className={`font-montserrat font-extrabold text-sm tracking-wider leading-none ${dark ? 'text-white' : 'text-[#204FA1]'}`}>JABOATÃO</span>
-            <span className={`font-poppins font-bold text-[10px] tracking-widest leading-none mt-1 ${dark ? 'text-amber-400' : 'text-slate-505'}`}>PREV</span>
+            <span className={`font-poppins font-bold text-[10px] tracking-widest leading-none mt-1 ${dark ? 'text-amber-400' : 'text-slate-500'}`}>PREV</span>
         </div>
     </div>
 );
 
-const MetricsIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8a2.3 2.3 0 0 0-3.4 0l-4.6 4.6a2.3 2.3 0 0 0 0 3.4l2.6 2.6a2.3 2.3 0 0 0 3.4 0l4.6-4.6a2.3 2.3 0 0 0 0-3.4Z"/></svg>;
-const TrackingIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>;
-const UsersIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>;
-const ServicesIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>;
-const LogoutIcon: React.FC = () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>;
-
-const NavButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode; label: string; }> = ({ active, onClick, children, label }) => (
+const NavButton: React.FC<{ active: boolean; onClick: () => void; icon: React.ReactNode; label: string; }> = ({ active, onClick, icon, label }) => (
     <button
         onClick={onClick}
-        className={`flex items-center w-full px-4 py-3.5 text-sm font-bold rounded-2xl transition-all duration-200 group active:scale-[0.98] ${
-        active 
-            ? 'bg-gradient-to-r from-jaboatao-yellow to-amber-500 text-slate-950 shadow-lg shadow-amber-500/15' 
+        className={`flex items-center w-full px-4 py-3.5 text-sm font-bold rounded-2xl transition-all duration-200 group active:scale-[0.98] ${active
+            ? 'bg-gradient-to-r from-jaboatao-yellow to-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
             : 'text-slate-400 hover:bg-white/5 hover:text-white'
-        }`}
+            }`}
     >
-        <span className={`mr-3 transition-transform duration-200 group-hover:scale-110 ${active ? 'text-slate-950' : 'text-slate-400 group-hover:text-white'}`}>{children}</span>
+        <span className={`mr-3 transition-transform duration-200 group-hover:scale-110 ${active ? 'text-slate-950' : 'text-slate-400 group-hover:text-white'}`}>{icon}</span>
         <span>{label}</span>
     </button>
 );
@@ -85,7 +93,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
     }
 
     return (
-        <div 
+        <div
             className="flex flex-col lg:flex-row min-h-screen bg-cover bg-center bg-no-repeat relative overflow-hidden"
             style={{ backgroundImage: 'url("/images/Bandeira/bandeira.jpeg")' }}
         >
@@ -94,7 +102,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
 
             {/* Mobile Backdrop Overlay */}
             {isMobileMenuOpen && (
-                <div 
+                <div
                     className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-40 lg:hidden"
                     onClick={() => setIsMobileMenuOpen(false)}
                 ></div>
@@ -112,7 +120,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                 {/* Logo e Titulo */}
                 <div className="flex items-center justify-between mb-10 px-2">
                     <JaboataoPrevLogo dark />
-                    <button 
+                    <button
                         onClick={() => setIsMobileMenuOpen(false)}
                         className="lg:hidden p-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl transition-all"
                         aria-label="Fechar Menu"
@@ -123,29 +131,25 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
 
                 {/* Navegação */}
                 <nav className="flex-grow space-y-2">
-                    <NavButton label="Controle de Senhas" onClick={() => handleNavClick('tracking')} active={view === 'tracking'}>
-                        <TrackingIcon />
+                    <NavButton label="Controle de Senhas" onClick={() => handleNavClick('tracking')} active={view === 'tracking'} icon={<ClipboardList size={20} />}>
                     </NavButton>
                     {user.role === 'admin' && (
-                        <NavButton label="Painel de Métricas" onClick={() => handleNavClick('metrics')} active={view === 'metrics'}>
-                            <MetricsIcon />
+                        <NavButton label="Painel de Métricas" onClick={() => handleNavClick('metrics')} active={view === 'metrics'} icon={<BarChart3 size={20} />}>
                         </NavButton>
                     )}
                     {user.role === 'admin' && (
-                        <NavButton label="Gestão de Usuários" onClick={() => handleNavClick('users')} active={view === 'users'}>
-                            <UsersIcon />
+                        <NavButton label="Gestão de Usuários" onClick={() => handleNavClick('users')} active={view === 'users'} icon={<Users size={20} />}>
                         </NavButton>
                     )}
                     {user.role === 'admin' && (
-                        <NavButton label="Gestão de Serviços" onClick={() => handleNavClick('services')} active={view === 'services'}>
-                            <ServicesIcon />
+                        <NavButton label="Gestão de Serviços" onClick={() => handleNavClick('services')} active={view === 'services'} icon={<Briefcase size={20} />}>
                         </NavButton>
                     )}
                 </nav>
 
                 {/* Perfil Operador e Logout */}
                 <div className="border-t border-white/10 pt-6 mt-6">
-                    <div 
+                    <div
                         onClick={() => {
                             setProfileError('');
                             setProfileSuccess('');
@@ -161,7 +165,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                                 (user.name || user.email).slice(0, 2).toUpperCase()
                             )}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity duration-200">
-                                <Edit sx={{ fontSize: 16 }} className="text-white" />
+                                <Edit size={16} className="text-white" />
                             </div>
                         </div>
                         <div className="flex-grow min-w-0">
@@ -172,12 +176,12 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                             </span>
                         </div>
                     </div>
-                    
-                    <button 
-                        onClick={handleLogout} 
+
+                    <button
+                        onClick={handleLogout}
                         className="flex items-center justify-center w-full px-4 py-3 text-sm font-bold rounded-2xl text-red-400 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 hover:border-red-500/20 active:scale-[0.98] transition-all duration-200"
                     >
-                        <span className="mr-3"><LogoutIcon /></span>
+                        <span className="mr-3"><LogOut size={18} /></span>
                         {TRANSLATIONS.logout[language]}
                     </button>
                 </div>
@@ -188,20 +192,31 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                 {/* Mobile Top Header */}
                 <div className="flex lg:hidden justify-between items-center bg-slate-950/60 backdrop-blur-md border border-white/10 rounded-2xl p-4 mb-4 text-white shrink-0">
                     <JaboataoPrevLogo dark />
-                    <button 
+                    <button
                         onClick={() => setIsMobileMenuOpen(true)}
                         className="p-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-xl active:scale-95 transition-all"
                         aria-label="Abrir Menu"
                     >
-                        <Menu className="text-white" />
+                        <Menu size={20} className="text-white" />
                     </button>
                 </div>
 
-                <div className="flex-grow bg-white/70 backdrop-blur-xl border border-white/30 rounded-2xl sm:rounded-3xl p-3 sm:p-6 lg:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.15)] flex flex-col overflow-y-auto">
-                    {view === 'tracking' && <AttendanceTrackingScreen />}
-                    {view === 'metrics' && user.role === 'admin' && <MetricsDashboard />}
-                    {view === 'users' && user.role === 'admin' && <UserManagementScreen />}
-                    {view === 'services' && user.role === 'admin' && <ServiceManagementScreen />}
+                <div className="flex-grow bg-slate-950/80 backdrop-blur-xl border border-white/10 rounded-2xl sm:rounded-3xl p-3 sm:p-6 lg:p-8 shadow-[0_12px_40px_rgba(0,0,0,0.35)] flex flex-col overflow-y-auto text-slate-100">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={view}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className="flex-grow flex flex-col min-h-0"
+                        >
+                            {view === 'tracking' && <AttendanceTrackingScreen />}
+                            {view === 'metrics' && user.role === 'admin' && <MetricsDashboard />}
+                            {view === 'users' && user.role === 'admin' && <UserManagementScreen />}
+                            {view === 'services' && user.role === 'admin' && <ServiceManagementScreen />}
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
             </main>
 
@@ -211,7 +226,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                     <div className="w-full max-w-md bg-slate-900 border border-white/10 rounded-3xl p-6 shadow-2xl animate-fade-in-up text-white">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-extrabold tracking-wide">Meu Perfil</h3>
-                            <button 
+                            <button
                                 onClick={() => {
                                     setIsProfileModalOpen(false);
                                     setProfileError('');
@@ -230,14 +245,14 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                                 ) : (
                                     (profileName || user.email).slice(0, 2).toUpperCase()
                                 )}
-                                
+
                                 <label className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 cursor-pointer transition-all duration-200">
                                     <CameraAlt className="text-white" sx={{ fontSize: 24 }} />
                                     <span className="text-[10px] font-bold text-slate-200">Alterar</span>
-                                    <input 
-                                        type="file" 
-                                        accept="image/*" 
-                                        className="hidden" 
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
                                         onChange={async (e) => {
                                             const file = e.target.files?.[0];
                                             if (!file) return;
@@ -250,7 +265,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                                                     reader.onerror = (error) => reject(error);
                                                     reader.readAsDataURL(file);
                                                 });
-                                                
+
                                                 const response = await ApiClient.uploadProfileAvatar(fileBase64, file.name);
                                                 setProfileAvatarUrl(response.publicUrl);
                                                 setProfileSuccess('Foto de perfil carregada. Clique em Salvar.');
@@ -269,29 +284,29 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                         <div className="space-y-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">E-mail</label>
-                                <input 
-                                    type="text" 
-                                    value={user.email} 
-                                    disabled 
+                                <input
+                                    type="text"
+                                    value={user.email}
+                                    disabled
                                     className="w-full px-4 py-3 bg-slate-950 border border-white/5 rounded-2xl text-sm text-slate-400 cursor-not-allowed outline-none"
                                 />
                             </div>
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Cargo</label>
-                                <input 
-                                    type="text" 
-                                    value={user.role.toUpperCase()} 
-                                    disabled 
+                                <input
+                                    type="text"
+                                    value={user.role.toUpperCase()}
+                                    disabled
                                     className="w-full px-4 py-3 bg-slate-950 border border-white/5 rounded-2xl text-sm text-slate-400 cursor-not-allowed uppercase outline-none"
                                 />
                             </div>
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nome Completo</label>
-                                <input 
-                                    type="text" 
-                                    value={profileName} 
+                                <input
+                                    type="text"
+                                    value={profileName}
                                     onChange={(e) => setProfileName(e.target.value)}
                                     placeholder="Seu nome"
                                     className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-sm focus:border-amber-500/50 outline-none transition-all"
@@ -300,9 +315,9 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
 
                             <div>
                                 <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Nova Senha (deixe em branco para manter)</label>
-                                <input 
-                                    type="password" 
-                                    value={profilePassword} 
+                                <input
+                                    type="password"
+                                    value={profilePassword}
                                     onChange={(e) => setProfilePassword(e.target.value)}
                                     placeholder="Nova senha (min. 8 caracteres)"
                                     className="w-full px-4 py-3 bg-slate-950 border border-white/10 rounded-2xl text-sm focus:border-amber-500/50 outline-none transition-all"
@@ -314,7 +329,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                         {profileSuccess && <p className="text-xs font-bold text-emerald-500 mt-4 text-center">{profileSuccess}</p>}
 
                         <div className="flex gap-3 mt-6">
-                            <button 
+                            <button
                                 onClick={() => {
                                     setIsProfileModalOpen(false);
                                     setProfileError('');
@@ -324,7 +339,7 @@ const RestrictedArea: React.FC<{ onExit: () => void }> = ({ onExit }) => {
                             >
                                 Cancelar
                             </button>
-                            <button 
+                            <button
                                 onClick={async () => {
                                     if (profilePassword && profilePassword.length < 8) {
                                         setProfileError('Nova senha deve ter no mínimo 8 caracteres.');

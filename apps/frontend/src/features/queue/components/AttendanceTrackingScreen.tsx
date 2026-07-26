@@ -6,19 +6,23 @@ import OuvidoriaClassificationModal from './OuvidoriaClassificationModal';
 import { useAuth } from '@features/auth/contexts/AuthContext';
 import type { Ticket, TicketStatus } from '@shared/types';
 import { 
-    PlayArrow, 
-    VolumeUp, 
-    CheckCircle, 
-    Cancel, 
-    HourglassEmpty, 
-    Refresh, 
-    AccessTime, 
-    Person, 
-    Assignment,
+    Play, 
+    Volume2, 
+    CheckCircle2, 
+    XCircle, 
+    UserX, 
+    Clock, 
+    User, 
+    RefreshCw, 
+    AlertTriangle, 
+    Search, 
+    Sparkles, 
+    Shield, 
+    History,
     ChevronRight,
-    Warning,
-    History
-} from '@mui/icons-material';
+    Award
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const STATUS_CONFIG: Record<TicketStatus, { label: string; badgeClass: string; icon: string }> = {
     waiting: { label: 'Aguardando', badgeClass: 'bg-blue-500/10 border border-blue-500/30 text-blue-400', icon: '⏳' },
@@ -39,7 +43,7 @@ const Toast: React.FC<{ message: string; show: boolean; onClose: () => void }> =
     if (!show) return null;
 
     return (
-        <div className="fixed bottom-6 right-6 bg-slate-950/95 backdrop-blur-md text-white py-3.5 px-6 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-3.5 z-[100] animate-fade-in-up text-sm font-semibold">
+        <div className="fixed bottom-6 right-6 bg-slate-900/95 backdrop-blur-md text-white py-3.5 px-6 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-3.5 z-[100] animate-fade-in-up text-sm font-semibold">
             <span className="p-1 bg-emerald-500/20 text-emerald-400 rounded-lg">✓</span>
             <span>{message}</span>
         </div>
@@ -184,7 +188,7 @@ const AttendanceTrackingScreen: React.FC = () => {
     }, [visibleTickets]);
 
     return (
-        <div className="flex flex-col h-full gap-6 w-full text-slate-800">
+        <div className="flex flex-col h-full gap-6 w-full text-slate-100 pb-8">
             <Toast message={toast.message} show={toast.show} onClose={() => setToast({ ...toast, show: false })} />
             
             {selectedTicket && confirmModal.status && (
@@ -209,25 +213,25 @@ const AttendanceTrackingScreen: React.FC = () => {
             />
             
             {/* Header com Status e Refresh */}
-            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200/50 pb-5">
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/10 pb-5">
                 <div>
-                    <h1 className="font-montserrat text-3xl font-black text-slate-900 tracking-tight">
+                    <h1 className="font-montserrat text-2xl sm:text-3xl font-black text-white tracking-tight">
                         Cockpit de Atendimento
                     </h1>
-                    <p className="text-sm text-slate-500 mt-1 font-semibold">
+                    <p className="text-sm text-slate-400 mt-1 font-medium">
                         Controle e gestão da fila de guichês em tempo real.
                     </p>
                 </div>
                 <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-start">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#204FA1]/10 border border-[#204FA1]/25 rounded-2xl text-xs font-extrabold text-[#204FA1]">
-                        <span className="w-2 h-2 rounded-full bg-jaboatao-green-prev animate-ping"></span>
+                    <span className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-xs font-bold text-emerald-400">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
                         Fila Live
                     </span>
                     <button 
                         onClick={handleManualRefresh} 
-                        className="flex items-center gap-2 py-2 px-5 text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-sm hover:shadow-md active:scale-95 transition-all duration-200"
+                        className="flex items-center gap-2 py-2 px-4 text-xs font-bold text-slate-200 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl active:scale-95 transition-all duration-200"
                     >
-                        <Refresh sx={{ fontSize: 18 }} />
+                        <RefreshCw size={14} />
                         Sincronizar
                     </button>
                 </div>
@@ -238,26 +242,23 @@ const AttendanceTrackingScreen: React.FC = () => {
                 <div className="space-y-3">
                     {oldTicketAlerts.map(alert => {
                         const isCritical = alert.level === 'critical';
-                        const isDanger = alert.level === 'danger';
                         const alertStyles = isCritical 
-                            ? 'border-red-300 bg-red-500/10 text-red-800 shadow-red-100/50' 
-                            : isDanger 
-                            ? 'border-orange-300 bg-orange-500/10 text-orange-800 shadow-orange-100/50' 
-                            : 'border-amber-300 bg-amber-500/10 text-amber-800 shadow-amber-100/50';
+                            ? 'border-rose-500/40 bg-rose-500/10 text-rose-200 shadow-rose-950/20' 
+                            : 'border-amber-500/40 bg-amber-500/10 text-amber-200 shadow-amber-950/20';
                         
                         return (
                             <div
                                 key={alert.ticket.id}
-                                className={`p-4 rounded-2xl border-2 ${alertStyles} text-sm font-bold flex items-center justify-between shadow-sm animate-pulse`}
+                                className={`p-4 rounded-2xl border ${alertStyles} text-xs font-bold flex items-center justify-between shadow-lg animate-pulse`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <Warning sx={{ fontSize: 20 }} className={isCritical ? 'text-red-600' : 'text-amber-600'} />
+                                    <AlertTriangle size={18} className={isCritical ? 'text-rose-400' : 'text-amber-400'} />
                                     <span>
-                                        Tempo Limite Excedido: Senha <span className="font-mono bg-white/80 px-2 py-0.5 rounded-lg border border-black/10 mx-1 font-black text-slate-900">{alert.ticket.formatted_number}</span> 
-                                        está aguardando há <span className="underline decoration-2">{alert.waitingMinutes} minutos</span> no serviço {alert.ticket.service?.name}.
+                                        Tempo Limite Excedido: Senha <span className="font-mono bg-white/10 px-2 py-0.5 rounded border border-white/20 font-black text-amber-300">{alert.ticket.formatted_number}</span> 
+                                        está aguardando há <span className="underline">{alert.waitingMinutes} minutos</span> no serviço {alert.ticket.service?.name}.
                                     </span>
                                 </div>
-                                <span className="text-[10px] uppercase tracking-widest px-3 py-1 bg-black/5 rounded-lg font-black shrink-0">
+                                <span className="text-[10px] uppercase tracking-widest px-2.5 py-1 bg-black/20 rounded-lg font-bold shrink-0 text-amber-400 border border-amber-400/20">
                                     Atenção Prioritária
                                 </span>
                             </div>
@@ -267,29 +268,32 @@ const AttendanceTrackingScreen: React.FC = () => {
             )}
 
             {/* ZONA 1: Terminal Ativo (HUD de Atendimento do Operador) */}
-            <section className="relative overflow-hidden rounded-3xl border border-white/40 bg-gradient-to-br from-[#204FA1] via-[#1A428A] to-[#123066] text-white shadow-2xl p-6 sm:p-8">
-                {/* Visual Glass Accent */}
-                <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
+            <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-slate-900/90 text-white shadow-2xl p-6 sm:p-8">
+                {/* Visual Accent Glow */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
                 {myCurrentTicket ? (
                     <div className="flex flex-col lg:flex-row items-center justify-between gap-8 relative z-10">
                         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
-                            <div className="p-5 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white shadow-xl shadow-slate-900/10">
-                                <Person sx={{ fontSize: 48 }} />
+                            <div className="p-5 bg-gradient-to-tr from-amber-500/20 to-yellow-500/10 border border-amber-500/30 rounded-2xl text-amber-400 shadow-xl">
+                                <User size={42} />
                             </div>
                             <div className="space-y-2">
-                                <span className="inline-flex items-center px-3.5 py-1 rounded-full text-[10px] font-black tracking-widest uppercase bg-[#FFC000] text-slate-950 animate-pulse shadow-md">
-                                    ⚡ Em Atendimento no Seu Terminal
+                                <span className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-[10px] font-black tracking-widest uppercase bg-amber-400 text-slate-950 shadow-md">
+                                    <Sparkles size={12} />
+                                    Em Atendimento no Seu Terminal
                                 </span>
-                                <h2 className="text-6xl font-black font-mono tracking-tight text-white drop-shadow-md">
+                                <h2 className="text-5xl sm:text-6xl font-black font-mono tracking-tight text-white drop-shadow-md">
                                     {myCurrentTicket.formatted_number}
                                 </h2>
-                                <p className="text-base font-bold text-white/90 flex items-center gap-1.5 justify-center sm:justify-start">
-                                    <Assignment sx={{ fontSize: 18 }} className="text-white/60" />
-                                    {myCurrentTicket.service?.name}
+                                <p className="text-sm font-bold text-slate-300 flex items-center gap-2 justify-center sm:justify-start">
+                                    <span>{myCurrentTicket.service?.name}</span>
+                                    {myCurrentTicket.is_priority && (
+                                        <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded text-[10px] uppercase font-bold">Preferencial</span>
+                                    )}
                                 </p>
                                 {myCurrentTicket.attendee_name && (
-                                    <p className="text-xs font-black text-slate-950 bg-white/90 px-3 py-1.5 rounded-xl uppercase w-fit mx-auto sm:mx-0 shadow-sm">
+                                    <p className="text-xs font-bold text-slate-200 bg-white/5 border border-white/10 px-3 py-1.5 rounded-xl uppercase w-fit mx-auto sm:mx-0">
                                         Beneficiário: {myCurrentTicket.attendee_name}
                                     </p>
                                 )}
@@ -299,196 +303,200 @@ const AttendanceTrackingScreen: React.FC = () => {
                         {/* Botões do Cockpit */}
                         <div className="flex flex-col sm:flex-row justify-center gap-3 w-full lg:w-auto">
                             <button
-                                onClick={() => { recallTicket(myCurrentTicket.id); showToast('Chamando senha novamente!'); }}
-                                className="flex items-center justify-center gap-2 py-3.5 px-6 text-xs font-black uppercase tracking-wider text-white bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl shadow-lg active:scale-95 transition-all duration-150 flex-1 sm:flex-none"
+                                onClick={() => recallTicket(myCurrentTicket.id)}
+                                className="flex items-center justify-center gap-2 px-6 py-4 bg-white/10 hover:bg-white/15 border border-white/20 rounded-2xl text-white font-bold text-sm transition-all active:scale-95 shadow-lg"
                             >
-                                <VolumeUp sx={{ fontSize: 18 }} />
-                                Re-chamar
+                                <Volume2 size={18} className="text-amber-400" />
+                                <span>Rechamar</span>
                             </button>
                             <button
                                 onClick={() => handleUpdateStatus(myCurrentTicket.id, 'completed')}
-                                className="flex items-center justify-center gap-2 py-3.5 px-6 text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-jaboatao-green-prev to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl shadow-lg shadow-emerald-950/20 active:scale-95 transition-all duration-150 flex-1 sm:flex-none"
+                                className="flex items-center justify-center gap-2 px-6 py-4 bg-emerald-500 hover:bg-emerald-600 rounded-2xl text-slate-950 font-black text-sm transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
                             >
-                                <CheckCircle sx={{ fontSize: 18 }} />
-                                Finalizar
+                                <CheckCircle2 size={18} />
+                                <span>Finalizar</span>
                             </button>
                             <button
                                 onClick={() => handleUpdateStatus(myCurrentTicket.id, 'no_show')}
-                                className="flex items-center justify-center gap-2 py-3.5 px-5 text-xs font-black uppercase tracking-wider text-slate-950 bg-gradient-to-r from-jaboatao-yellow to-amber-500 hover:from-amber-500 hover:to-amber-600 rounded-xl shadow-lg shadow-amber-950/20 active:scale-95 transition-all duration-150 flex-1 sm:flex-none"
+                                className="flex items-center justify-center gap-2 px-5 py-4 bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 rounded-2xl text-rose-300 font-bold text-sm transition-all active:scale-95"
                             >
-                                Ausente
-                            </button>
-                            <button
-                                onClick={() => handleUpdateStatus(myCurrentTicket.id, 'cancelled')}
-                                className="flex items-center justify-center gap-2 py-3.5 px-5 text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-rose-500 to-red-600 hover:from-rose-600 hover:to-red-700 rounded-xl shadow-lg active:scale-95 transition-all duration-150 flex-1 sm:flex-none"
-                            >
-                                <Cancel sx={{ fontSize: 18 }} />
-                                Cancelar
+                                <UserX size={18} />
+                                <span>Ausente</span>
                             </button>
                         </div>
                     </div>
                 ) : (
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 text-center sm:text-left py-4 relative z-10">
-                        <div className="space-y-1.5">
-                            <h3 className="text-xl font-extrabold text-white">Pronto para iniciar novos atendimentos</h3>
-                            <p className="text-sm font-semibold text-white/70">Selecione e chame a próxima senha disponível na lista ao lado.</p>
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-6 relative z-10 py-4">
+                        <div className="text-center sm:text-left space-y-1">
+                            <h2 className="text-2xl font-black text-white">Nenhum Atendimento Ativo no Seu Guichê</h2>
+                            <p className="text-xs text-slate-400">Clique abaixo para chamar a próxima senha da fila respeitando as prioridades.</p>
                         </div>
-                        <span className="px-4 py-2.5 bg-white/15 border border-white/20 text-white text-xs font-black uppercase rounded-2xl tracking-widest shadow-inner">
-                            Aguardando Operador
-                        </span>
+                        {waitingTickets.length > 0 ? (
+                            <button
+                                onClick={() => handleUpdateStatus(waitingTickets[0].id, 'in_progress')}
+                                className="flex items-center justify-center gap-3 px-8 py-5 bg-gradient-to-r from-jaboatao-yellow to-amber-500 text-slate-950 rounded-2xl font-black text-base shadow-xl shadow-amber-500/20 hover:brightness-110 active:scale-95 transition-all w-full sm:w-auto"
+                            >
+                                <Play size={20} />
+                                <span>Chamar Próxima Senha ({waitingTickets[0].formatted_number})</span>
+                            </button>
+                        ) : (
+                            <div className="px-6 py-3 bg-white/5 border border-white/10 rounded-2xl text-slate-400 text-xs font-bold">
+                                Fila de Espera Vazia
+                            </div>
+                        )}
                     </div>
                 )}
             </section>
 
-            {/* ZONA 2 & 3: Fila de Espera (Aguardando) vs Histórico */}
-            <div className="flex flex-col lg:flex-row gap-6 items-stretch flex-grow min-h-0">
-                {/* Fila de Espera Principal */}
-                <div className="flex-1 bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-6 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex flex-col">
-                    <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-5">
-                        <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
-                            <span className="w-1.5 h-5 rounded-full bg-[#204FA1]"></span>
-                            Fila de Senhas Aguardando
-                            <span className="text-xs font-black text-slate-500 bg-slate-100 px-3 py-1 rounded-full border border-slate-200/50">
-                                {waitingTickets.length}
-                            </span>
-                        </h3>
+            {/* ZONA 2: Fila de Espera & Senhas em Atendimento em Outros Guichês */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Fila de Espera (2 cols) */}
+                <div className="lg:col-span-2 bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl p-6 flex flex-col">
+                    <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                        <div className="flex items-center gap-2.5">
+                            <Clock size={18} className="text-amber-400" />
+                            <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">
+                                Senhas Aguardando na Fila ({waitingTickets.length})
+                            </h3>
+                        </div>
                     </div>
 
-                    <div className="flex-grow overflow-y-auto lg:max-h-[600px] pr-2 space-y-3">
-                        {waitingTickets.length > 0 ? (
-                            waitingTickets.map((ticket) => {
-                                const isOld = oldTicketAlerts.some(a => a.ticket.id === ticket.id);
-                                const cardBorder = ticket.is_priority 
-                                    ? 'border-rose-200 hover:border-rose-300 shadow-rose-500/5 bg-rose-50/10' 
-                                    : 'border-slate-100 hover:border-slate-300 bg-white';
-                                
-                                return (
-                                    <div 
+                    <div className="space-y-3 overflow-y-auto max-h-96 pr-1">
+                        <AnimatePresence>
+                            {waitingTickets.length > 0 ? (
+                                waitingTickets.map((ticket, idx) => (
+                                    <motion.div
                                         key={ticket.id}
-                                        className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4.5 rounded-2xl border-2 transition-all duration-250 hover:-translate-y-0.5 shadow-[0_4px_12px_rgba(0,0,0,0.01)] ${cardBorder}`}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: 10 }}
+                                        transition={{ duration: 0.15 }}
+                                        className="flex items-center justify-between p-4 bg-slate-950/60 border border-white/5 hover:border-white/20 rounded-2xl transition-all group"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <span className={`font-mono font-black text-lg px-4 py-2 rounded-xl shadow-sm border ${
-                                                ticket.is_priority 
-                                                    ? 'bg-rose-50 border-rose-100 text-rose-700' 
-                                                    : 'bg-blue-50 border-blue-100 text-[#204FA1]'
-                                            }`}>
-                                                {ticket.formatted_number}
+                                            <span className="w-7 h-7 rounded-xl bg-white/5 text-slate-400 font-bold text-xs flex items-center justify-center">
+                                                {idx + 1}
                                             </span>
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                                                        {ticket.user_type.replace('_', ' ')}
+                                            <div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-mono font-black text-lg text-white group-hover:text-amber-400 transition-colors">
+                                                        {ticket.formatted_number}
                                                     </span>
                                                     {ticket.is_priority && (
-                                                        <span className="text-[9px] font-black tracking-widest px-2.5 py-0.5 bg-[#FFC000]/15 border border-[#FFC000]/30 text-[#B7791F] rounded-lg uppercase">
-                                                            Prioritário
+                                                        <span className="px-2 py-0.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 rounded text-[9px] font-bold uppercase tracking-wider">
+                                                            Preferencial
                                                         </span>
                                                     )}
                                                 </div>
-                                                <p className="text-xs font-semibold text-slate-500 flex items-center gap-1">
-                                                    <Assignment sx={{ fontSize: 14 }} className="text-slate-400" />
-                                                    {ticket.service?.name}
+                                                <p className="text-xs text-slate-400 font-medium mt-0.5">
+                                                    {ticket.service?.name} {ticket.attendee_name && `• ${ticket.attendee_name}`}
                                                 </p>
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center justify-between sm:justify-end gap-5">
-                                            <span className={`inline-flex items-center gap-1.5 text-xs font-extrabold ${isOld ? 'text-red-500 animate-pulse' : 'text-slate-400'}`}>
-                                                <AccessTime sx={{ fontSize: 15 }} />
-                                                {formatWaitingTime(ticket.created_at)}
-                                            </span>
-                                            
+                                        <div className="flex items-center gap-3">
                                             <button
                                                 onClick={() => handleUpdateStatus(ticket.id, 'in_progress')}
-                                                disabled={!!myCurrentTicket}
-                                                className="flex items-center justify-center gap-1 py-2.5 px-5 text-xs font-black uppercase tracking-wider text-white bg-[#204FA1] hover:bg-[#1C4690] disabled:bg-slate-100 disabled:text-slate-400 disabled:shadow-none disabled:cursor-not-allowed rounded-xl shadow-md active:scale-95 transition-all duration-150"
+                                                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5"
                                             >
-                                                Chamar
-                                                <ChevronRight sx={{ fontSize: 16 }} />
+                                                <span>Chamar</span>
+                                                <ChevronRight size={14} />
                                             </button>
                                         </div>
+                                    </motion.div>
+                                ))
+                            ) : (
+                                <div className="text-center py-12 text-slate-500 text-xs font-medium">
+                                    Nenhuma senha aguardando no momento.
+                                </div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </div>
+
+                {/* Em Atendimento por Outros Operadores (1 col) */}
+                <div className="bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl p-6 flex flex-col">
+                    <div className="flex items-center gap-2.5 pb-4 border-b border-white/10 mb-4">
+                        <User size={18} className="text-blue-400" />
+                        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">
+                            Outros Guichês Ativos ({otherActiveTickets.length})
+                        </h3>
+                    </div>
+
+                    <div className="space-y-3 overflow-y-auto max-h-96 pr-1">
+                        {otherActiveTickets.length > 0 ? (
+                            otherActiveTickets.map(ticket => (
+                                <div key={ticket.id} className="p-3.5 bg-slate-950/40 border border-white/5 rounded-2xl flex items-center justify-between">
+                                    <div>
+                                        <span className="font-mono font-bold text-sm text-blue-400">{ticket.formatted_number}</span>
+                                        <p className="text-[11px] text-slate-400">{ticket.operator?.name || 'Operador'}</p>
                                     </div>
-                                );
-                            })
+                                    <span className="px-2 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-lg text-[9px] font-bold uppercase">
+                                        Em Curso
+                                    </span>
+                                </div>
+                            ))
                         ) : (
-                            <div className="flex flex-col items-center justify-center py-24 text-center gap-3">
-                                <HourglassEmpty sx={{ fontSize: 40 }} className="text-slate-300" />
-                                <p className="text-sm font-bold text-slate-400">Sem senhas pendentes na fila.</p>
+                            <div className="text-center py-12 text-slate-500 text-xs font-medium">
+                                Nenhum outro guichê em atendimento.
                             </div>
                         )}
                     </div>
                 </div>
+            </div>
 
-                {/* Histórico Recente e Guichês Ativos */}
-                <div className="w-full lg:w-96 flex flex-col gap-6 shrink-0">
-                    {/* Guichês Ativos por Outros Operadores (se houver) */}
-                    {otherActiveTickets.length > 0 && (
-                        <div className="bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.02)]">
-                            <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2">
-                                <span className="w-1.5 h-4 rounded-full bg-[#FFC000]"></span>
-                                Operadores Ativos
-                            </h4>
-                            <div className="space-y-3">
-                                {otherActiveTickets.map(ticket => (
-                                    <div key={ticket.id} className="p-3 bg-slate-50/50 border border-slate-100 rounded-2xl flex items-center justify-between gap-3 text-xs">
-                                        <div className="min-w-0">
-                                            <p className="font-mono font-black text-[#204FA1]">{ticket.formatted_number}</p>
-                                            <p className="text-[10px] font-bold text-slate-500 truncate mt-0.5">{ticket.operator?.name || 'Operador'}</p>
-                                        </div>
-                                        <span className="px-2.5 py-1 bg-amber-500/10 border border-amber-500/20 text-amber-600 font-black rounded-lg text-[9px] uppercase tracking-wider">
-                                            Em Curso
-                                        </span>
-                                    </div>
+            {/* ZONA 3: Histórico de Senhas do Dia */}
+            <div className="bg-slate-900/60 backdrop-blur-md rounded-3xl border border-white/10 shadow-2xl overflow-hidden">
+                <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        <History size={18} className="text-amber-400" />
+                        <h3 className="text-xs font-bold text-slate-300 uppercase tracking-widest">
+                            Histórico de Atendimentos Recentes
+                        </h3>
+                    </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                    {historyTickets.length > 0 ? (
+                        <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                                <tr className="border-b border-white/10 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-950/40">
+                                    <th className="px-6 py-4">Senha</th>
+                                    <th className="px-6 py-4">Serviço</th>
+                                    <th className="px-6 py-4">Operador</th>
+                                    <th className="px-6 py-4">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5 font-medium text-slate-200">
+                                {historyTickets.slice(0, 10).map((ticket) => (
+                                    <tr key={ticket.id} className="hover:bg-white/5 transition-colors">
+                                        <td className="px-6 py-3.5 font-mono font-bold text-white">{ticket.formatted_number}</td>
+                                        <td className="px-6 py-3.5 text-slate-300">{ticket.service?.name || '—'}</td>
+                                        <td className="px-6 py-3.5 text-slate-400">{ticket.operator?.name || '—'}</td>
+                                        <td className="px-6 py-3.5">
+                                            <span className={`inline-flex px-2.5 py-0.5 rounded-md text-[9px] font-bold uppercase border ${
+                                                ticket.status === 'completed'
+                                                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                                    : ticket.status === 'no_show'
+                                                        ? 'bg-slate-500/10 border-slate-500/20 text-slate-400'
+                                                        : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
+                                            }`}>
+                                                {ticket.status === 'completed' ? 'Finalizada' : ticket.status === 'no_show' ? 'Ausente' : 'Cancelada'}
+                                            </span>
+                                        </td>
+                                    </tr>
                                 ))}
-                            </div>
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div className="text-center py-12 text-slate-500 text-xs font-medium">
+                            Nenhum histórico registrado hoje.
                         </div>
                     )}
-
-                    {/* Histórico Recente */}
-                    <div className="bg-white/90 backdrop-blur-md border border-slate-200/80 rounded-3xl p-5 shadow-[0_8px_30px_rgba(0,0,0,0.02)] flex-grow flex flex-col min-h-[300px]">
-                        <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 border-b border-slate-100 pb-3 flex items-center gap-2">
-                            <History sx={{ fontSize: 16 }} className="text-[#2E8B57]" />
-                            Histórico de Atendimentos
-                        </h4>
-                        
-                        <div className="flex-grow overflow-y-auto lg:max-h-[350px] space-y-3 pr-1">
-                            {historyTickets.length > 0 ? (
-                                historyTickets.slice(0, 10).map(ticket => (
-                                    <div key={ticket.id} className="p-3 border border-slate-100 rounded-2xl flex items-center justify-between gap-3 hover:bg-slate-50/50 transition-colors duration-150 bg-white/50">
-                                        <div className="min-w-0">
-                                            <span className="font-mono font-black text-sm text-slate-800">
-                                                {ticket.formatted_number}
-                                            </span>
-                                            <p className="text-[10px] font-bold text-slate-500 truncate mt-0.5">
-                                                {ticket.service?.name}
-                                            </p>
-                                        </div>
-                                        <span className={`inline-flex px-2.5 py-0.5 rounded-lg text-[9px] font-black border uppercase tracking-wider ${STATUS_CONFIG[ticket.status].badgeClass}`}>
-                                            {STATUS_CONFIG[ticket.status].label}
-                                        </span>
-                                    </div>
-                                ))
-                            ) : (
-                                <p className="text-center text-slate-400 py-12 font-bold text-xs">Nenhum atendimento finalizado hoje.</p>
-                            )}
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
     );
 };
-
-// Helper function to calculate waiting time in minutes
-function formatWaitingTime(createdAtStr: string): string {
-    try {
-        const diffMs = new Date().getTime() - new Date(createdAtStr).getTime();
-        const diffMins = Math.max(0, Math.floor(diffMs / 60000));
-        return `${diffMins} min`;
-    } catch {
-        return '—';
-    }
-}
 
 export default AttendanceTrackingScreen;
