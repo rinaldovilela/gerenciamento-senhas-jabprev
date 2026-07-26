@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/package.json": {
-    "mtime": 1780753042.85284,
-    "ast_hash": "8fbe390fd5476a567912708e2eded2bd",
+    "mtime": 1785028082.4940212,
+    "ast_hash": "8b1f659bd631c6ce53e8c041ab7d9baa",
     "semantic_hash": ""
   },
   "apps/frontend/src/App.tsx": {
@@ -270,8 +270,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/AttendanceTrackingScreen.tsx": {
-    "mtime": 1781517779.9123616,
-    "ast_hash": "04732a795a5b01fae37d1a88feecbf9e",
+    "mtime": 1785028252.0738187,
+    "ast_hash": "5b63b17759bf5346887578585572f475",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/ConfirmationModal.tsx": {
@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/MetricsDashboard.tsx": {
-    "mtime": 1780957549.2007475,
-    "ast_hash": "b29bd9aa81a2b427f94cfb55d2c8cd5e",
+    "mtime": 1785028233.389488,
+    "ast_hash": "a9a6cfaaea2cfec0d05c1bab742cd6b5",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/NameInputScreen.tsx": {
@@ -310,13 +310,13 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/RestrictedArea.tsx": {
-    "mtime": 1780960871.3711028,
-    "ast_hash": "b247a57e7368902e9f18acd48ef20ef4",
+    "mtime": 1785028860.0106134,
+    "ast_hash": "c2a60274a88e44e5aaf6581754712e4f",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/ServiceManagementScreen.tsx": {
-    "mtime": 1781517779.9165034,
-    "ast_hash": "57df5dabb512f7bd0e9021f9198a1912",
+    "mtime": 1785028306.2382562,
+    "ast_hash": "605fdb229c1cf645f4e31a669509552f",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/ServiceSelectionScreen.tsx": {
@@ -330,8 +330,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/UserManagementScreen.tsx": {
-    "mtime": 1780960133.7631311,
-    "ast_hash": "258fea1268cd03cf34fc3f4021202c5a",
+    "mtime": 1785028275.724032,
+    "ast_hash": "653f81cec2b2bdaf6b495280065b2863",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/UserTypeSelectionScreen.tsx": {
