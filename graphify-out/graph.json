@@ -17,17 +17,17 @@
       "label": "FilterState",
       "file_type": "code",
       "source_file": "apps/frontend/src/features/queue/components/MetricsDashboard.tsx",
-      "source_location": "L44",
+      "source_location": "L45",
       "_origin": "ast",
       "id": "components_metricsdashboard_filterstate",
-      "community": 13,
+      "community": 14,
       "norm_label": "filterstate"
     },
     {
       "label": "KPICard()",
       "file_type": "code",
       "source_file": "apps/frontend/src/features/queue/components/MetricsDashboard.tsx",
-      "source_location": "L53",
+      "source_location": "L54",
       "_origin": "ast",
       "id": "components_metricsdashboard_kpicard",
       "community": 14,
@@ -37,11 +37,91 @@
       "label": "MetricsDashboard()",
       "file_type": "code",
       "source_file": "apps/frontend/src/features/queue/components/MetricsDashboard.tsx",
-      "source_location": "L101",
+      "source_location": "L102",
       "_origin": "ast",
       "id": "components_metricsdashboard_metricsdashboard",
       "community": 14,
       "norm_label": "metricsdashboard()"
+    },
+    {
+      "label": "reportGenerator.ts",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "utils_reportgenerator",
+      "community": 26,
+      "norm_label": "reportgenerator.ts"
+    },
+    {
+      "label": "ReportFilterInfo",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "utils_reportgenerator_reportfilterinfo",
+      "community": 26,
+      "norm_label": "reportfilterinfo"
+    },
+    {
+      "label": "ReportMetrics",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "utils_reportgenerator_reportmetrics",
+      "community": 26,
+      "norm_label": "reportmetrics"
+    },
+    {
+      "label": "ServiceDistItem",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L29",
+      "_origin": "ast",
+      "id": "utils_reportgenerator_servicedistitem",
+      "community": 26,
+      "norm_label": "servicedistitem"
+    },
+    {
+      "label": "TimeSeriesItem",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L34",
+      "_origin": "ast",
+      "id": "utils_reportgenerator_timeseriesitem",
+      "community": 26,
+      "norm_label": "timeseriesitem"
+    },
+    {
+      "label": "ChartImages",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L43",
+      "_origin": "ast",
+      "id": "utils_reportgenerator_chartimages",
+      "community": 26,
+      "norm_label": "chartimages"
+    },
+    {
+      "label": "loadLogoBase64()",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L51",
+      "_origin": "ast",
+      "id": "utils_reportgenerator_loadlogobase64",
+      "community": 26,
+      "norm_label": "loadlogobase64()"
+    },
+    {
+      "label": "generateExecutivePDFReport()",
+      "file_type": "code",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L80",
+      "_origin": "ast",
+      "id": "utils_reportgenerator_generateexecutivepdfreport",
+      "community": 26,
+      "norm_label": "generateexecutivepdfreport()"
     },
     {
       "label": "PublicDisplayScreen.tsx",
@@ -49,9 +129,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "components_publicdisplayscreen",
       "community": 18,
-      "norm_label": "publicdisplayscreen.tsx"
+      "norm_label": "publicdisplayscreen.tsx",
+      "id": "components_publicdisplayscreen"
     },
     {
       "label": "JaboataoPrevLogo()",
@@ -59,9 +139,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L21",
       "_origin": "ast",
-      "id": "components_publicdisplayscreen_jaboataoprevlogo",
       "community": 18,
-      "norm_label": "jaboataoprevlogo()"
+      "norm_label": "jaboataoprevlogo()",
+      "id": "components_publicdisplayscreen_jaboataoprevlogo"
     },
     {
       "label": "UserTypeIcon()",
@@ -69,9 +149,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L37",
       "_origin": "ast",
-      "id": "components_publicdisplayscreen_usertypeicon",
       "community": 18,
-      "norm_label": "usertypeicon()"
+      "norm_label": "usertypeicon()",
+      "id": "components_publicdisplayscreen_usertypeicon"
     },
     {
       "label": "getGuicheForTicket()",
@@ -79,9 +159,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L48",
       "_origin": "ast",
-      "id": "components_publicdisplayscreen_getguicheforticket",
       "community": 18,
-      "norm_label": "getguicheforticket()"
+      "norm_label": "getguicheforticket()",
+      "id": "components_publicdisplayscreen_getguicheforticket"
     },
     {
       "label": "getAtendenteOrGuiche()",
@@ -89,9 +169,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L53",
       "_origin": "ast",
-      "id": "components_publicdisplayscreen_getatendenteorguiche",
       "community": 18,
-      "norm_label": "getatendenteorguiche()"
+      "norm_label": "getatendenteorguiche()",
+      "id": "components_publicdisplayscreen_getatendenteorguiche"
     },
     {
       "label": "SlideItem",
@@ -99,9 +179,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L62",
       "_origin": "ast",
-      "id": "components_publicdisplayscreen_slideitem",
       "community": 18,
-      "norm_label": "slideitem"
+      "norm_label": "slideitem",
+      "id": "components_publicdisplayscreen_slideitem"
     },
     {
       "label": "INFO_SLIDES",
@@ -109,9 +189,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L71",
       "_origin": "ast",
-      "id": "components_publicdisplayscreen_info_slides",
       "community": 18,
-      "norm_label": "info_slides"
+      "norm_label": "info_slides",
+      "id": "components_publicdisplayscreen_info_slides"
     },
     {
       "label": "NEWS_TICKER_TEXTS",
@@ -119,9 +199,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L98",
       "_origin": "ast",
-      "id": "components_publicdisplayscreen_news_ticker_texts",
       "community": 18,
-      "norm_label": "news_ticker_texts"
+      "norm_label": "news_ticker_texts",
+      "id": "components_publicdisplayscreen_news_ticker_texts"
     },
     {
       "label": "PublicDisplayScreenProps",
@@ -129,9 +209,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L106",
       "_origin": "ast",
-      "id": "components_publicdisplayscreen_publicdisplayscreenprops",
       "community": 18,
-      "norm_label": "publicdisplayscreenprops"
+      "norm_label": "publicdisplayscreenprops",
+      "id": "components_publicdisplayscreen_publicdisplayscreenprops"
     },
     {
       "label": "PublicDisplayScreen()",
@@ -139,9 +219,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L111",
       "_origin": "ast",
-      "id": "components_publicdisplayscreen_publicdisplayscreen",
       "community": 18,
-      "norm_label": "publicdisplayscreen()"
+      "norm_label": "publicdisplayscreen()",
+      "id": "components_publicdisplayscreen_publicdisplayscreen"
     },
     {
       "label": "RestrictedArea.tsx",
@@ -149,9 +229,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "components_restrictedarea",
       "community": 22,
-      "norm_label": "restrictedarea.tsx"
+      "norm_label": "restrictedarea.tsx",
+      "id": "components_restrictedarea"
     },
     {
       "label": "MetricsDashboard",
@@ -159,9 +239,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L25",
       "_origin": "ast",
-      "id": "components_restrictedarea_metricsdashboard",
       "community": 22,
-      "norm_label": "metricsdashboard"
+      "norm_label": "metricsdashboard",
+      "id": "components_restrictedarea_metricsdashboard"
     },
     {
       "label": "AttendanceTrackingScreen",
@@ -169,9 +249,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L26",
       "_origin": "ast",
-      "id": "components_restrictedarea_attendancetrackingscreen",
       "community": 22,
-      "norm_label": "attendancetrackingscreen"
+      "norm_label": "attendancetrackingscreen",
+      "id": "components_restrictedarea_attendancetrackingscreen"
     },
     {
       "label": "UserManagementScreen",
@@ -179,9 +259,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L27",
       "_origin": "ast",
-      "id": "components_restrictedarea_usermanagementscreen",
       "community": 22,
-      "norm_label": "usermanagementscreen"
+      "norm_label": "usermanagementscreen",
+      "id": "components_restrictedarea_usermanagementscreen"
     },
     {
       "label": "ServiceManagementScreen",
@@ -189,9 +269,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L28",
       "_origin": "ast",
-      "id": "components_restrictedarea_servicemanagementscreen",
       "community": 22,
-      "norm_label": "servicemanagementscreen"
+      "norm_label": "servicemanagementscreen",
+      "id": "components_restrictedarea_servicemanagementscreen"
     },
     {
       "label": "TvSettingsScreen",
@@ -199,9 +279,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L29",
       "_origin": "ast",
-      "id": "components_restrictedarea_tvsettingsscreen",
       "community": 22,
-      "norm_label": "tvsettingsscreen"
+      "norm_label": "tvsettingsscreen",
+      "id": "components_restrictedarea_tvsettingsscreen"
     },
     {
       "label": "ScreenSkeleton()",
@@ -209,9 +289,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L40",
       "_origin": "ast",
-      "id": "components_restrictedarea_screenskeleton",
       "community": 22,
-      "norm_label": "screenskeleton()"
+      "norm_label": "screenskeleton()",
+      "id": "components_restrictedarea_screenskeleton"
     },
     {
       "label": "JaboataoPrevLogo()",
@@ -219,9 +299,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L52",
       "_origin": "ast",
-      "id": "components_restrictedarea_jaboataoprevlogo",
       "community": 22,
-      "norm_label": "jaboataoprevlogo()"
+      "norm_label": "jaboataoprevlogo()",
+      "id": "components_restrictedarea_jaboataoprevlogo"
     },
     {
       "label": "NavButton()",
@@ -229,9 +309,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L68",
       "_origin": "ast",
-      "id": "components_restrictedarea_navbutton",
       "community": 22,
-      "norm_label": "navbutton()"
+      "norm_label": "navbutton()",
+      "id": "components_restrictedarea_navbutton"
     },
     {
       "label": "RestrictedArea()",
@@ -239,9 +319,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L81",
       "_origin": "ast",
-      "id": "components_restrictedarea_restrictedarea",
       "community": 22,
-      "norm_label": "restrictedarea()"
+      "norm_label": "restrictedarea()",
+      "id": "components_restrictedarea_restrictedarea"
     },
     {
       "label": "TvSettingsScreen.tsx",
@@ -249,9 +329,9 @@
       "source_file": "apps/frontend/src/features/queue/components/TvSettingsScreen.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "components_tvsettingsscreen",
       "community": 18,
-      "norm_label": "tvsettingsscreen.tsx"
+      "norm_label": "tvsettingsscreen.tsx",
+      "id": "components_tvsettingsscreen"
     },
     {
       "label": "TvSettingsScreen()",
@@ -259,9 +339,9 @@
       "source_file": "apps/frontend/src/features/queue/components/TvSettingsScreen.tsx",
       "source_location": "L31",
       "_origin": "ast",
-      "id": "components_tvsettingsscreen_tvsettingsscreen",
       "community": 18,
-      "norm_label": "tvsettingsscreen()"
+      "norm_label": "tvsettingsscreen()",
+      "id": "components_tvsettingsscreen_tvsettingsscreen"
     },
     {
       "label": "UserManagementScreen.tsx",
@@ -269,9 +349,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "components_usermanagementscreen",
       "community": 2,
-      "norm_label": "usermanagementscreen.tsx"
+      "norm_label": "usermanagementscreen.tsx",
+      "id": "components_usermanagementscreen"
     },
     {
       "label": "AdminUser",
@@ -279,9 +359,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L29",
       "_origin": "ast",
-      "id": "components_usermanagementscreen_adminuser",
       "community": 2,
-      "norm_label": "adminuser"
+      "norm_label": "adminuser",
+      "id": "components_usermanagementscreen_adminuser"
     },
     {
       "label": "UserDraft",
@@ -289,9 +369,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L39",
       "_origin": "ast",
-      "id": "components_usermanagementscreen_userdraft",
       "community": 2,
-      "norm_label": "userdraft"
+      "norm_label": "userdraft",
+      "id": "components_usermanagementscreen_userdraft"
     },
     {
       "label": "roleOptions",
@@ -299,9 +379,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L49",
       "_origin": "ast",
-      "id": "components_usermanagementscreen_roleoptions",
       "community": 2,
-      "norm_label": "roleoptions"
+      "norm_label": "roleoptions",
+      "id": "components_usermanagementscreen_roleoptions"
     },
     {
       "label": "statusOptions",
@@ -309,9 +389,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L50",
       "_origin": "ast",
-      "id": "components_usermanagementscreen_statusoptions",
       "community": 2,
-      "norm_label": "statusoptions"
+      "norm_label": "statusoptions",
+      "id": "components_usermanagementscreen_statusoptions"
     },
     {
       "label": "ROLE_LABELS",
@@ -319,9 +399,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L52",
       "_origin": "ast",
-      "id": "components_usermanagementscreen_role_labels",
       "community": 2,
-      "norm_label": "role_labels"
+      "norm_label": "role_labels",
+      "id": "components_usermanagementscreen_role_labels"
     },
     {
       "label": "STATUS_CONFIG",
@@ -329,9 +409,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L58",
       "_origin": "ast",
-      "id": "components_usermanagementscreen_status_config",
       "community": 2,
-      "norm_label": "status_config"
+      "norm_label": "status_config",
+      "id": "components_usermanagementscreen_status_config"
     },
     {
       "label": "createUserSchema",
@@ -339,9 +419,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L64",
       "_origin": "ast",
-      "id": "components_usermanagementscreen_createuserschema",
       "community": 2,
-      "norm_label": "createuserschema"
+      "norm_label": "createuserschema",
+      "id": "components_usermanagementscreen_createuserschema"
     },
     {
       "label": "updatePasswordSchema",
@@ -349,9 +429,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L72",
       "_origin": "ast",
-      "id": "components_usermanagementscreen_updatepasswordschema",
       "community": 2,
-      "norm_label": "updatepasswordschema"
+      "norm_label": "updatepasswordschema",
+      "id": "components_usermanagementscreen_updatepasswordschema"
     },
     {
       "label": "Toast()",
@@ -359,9 +439,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L79",
       "_origin": "ast",
-      "id": "components_usermanagementscreen_toast",
       "community": 2,
-      "norm_label": "toast()"
+      "norm_label": "toast()",
+      "id": "components_usermanagementscreen_toast"
     },
     {
       "label": "UserManagementScreen()",
@@ -369,9 +449,9 @@
       "source_file": "apps/frontend/src/features/queue/components/UserManagementScreen.tsx",
       "source_location": "L103",
       "_origin": "ast",
-      "id": "components_usermanagementscreen_usermanagementscreen",
       "community": 2,
-      "norm_label": "usermanagementscreen()"
+      "norm_label": "usermanagementscreen()",
+      "id": "components_usermanagementscreen_usermanagementscreen"
     },
     {
       "label": "tvConfigHelper.ts",
@@ -379,9 +459,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "utils_tvconfighelper",
       "community": 18,
-      "norm_label": "tvconfighelper.ts"
+      "norm_label": "tvconfighelper.ts",
+      "id": "utils_tvconfighelper"
     },
     {
       "label": "TvSlideItem",
@@ -389,9 +469,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "utils_tvconfighelper_tvslideitem",
       "community": 18,
-      "norm_label": "tvslideitem"
+      "norm_label": "tvslideitem",
+      "id": "utils_tvconfighelper_tvslideitem"
     },
     {
       "label": "TvTickerItem",
@@ -399,9 +479,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "id": "utils_tvconfighelper_tvtickeritem",
       "community": 18,
-      "norm_label": "tvtickeritem"
+      "norm_label": "tvtickeritem",
+      "id": "utils_tvconfighelper_tvtickeritem"
     },
     {
       "label": "TvConfig",
@@ -409,9 +489,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L16",
       "_origin": "ast",
-      "id": "utils_tvconfighelper_tvconfig",
       "community": 18,
-      "norm_label": "tvconfig"
+      "norm_label": "tvconfig",
+      "id": "utils_tvconfighelper_tvconfig"
     },
     {
       "label": "DEFAULT_TV_CONFIG",
@@ -419,9 +499,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L22",
       "_origin": "ast",
-      "id": "utils_tvconfighelper_default_tv_config",
       "community": 18,
-      "norm_label": "default_tv_config"
+      "norm_label": "default_tv_config",
+      "id": "utils_tvconfighelper_default_tv_config"
     },
     {
       "label": "getStoredTvConfig()",
@@ -429,9 +509,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L59",
       "_origin": "ast",
-      "id": "utils_tvconfighelper_getstoredtvconfig",
       "community": 18,
-      "norm_label": "getstoredtvconfig()"
+      "norm_label": "getstoredtvconfig()",
+      "id": "utils_tvconfighelper_getstoredtvconfig"
     },
     {
       "label": "saveTvConfig()",
@@ -439,9 +519,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L72",
       "_origin": "ast",
-      "id": "utils_tvconfighelper_savetvconfig",
       "community": 18,
-      "norm_label": "savetvconfig()"
+      "norm_label": "savetvconfig()",
+      "id": "utils_tvconfighelper_savetvconfig"
     },
     {
       "label": "constants.tsx",
@@ -449,9 +529,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "shared_constants",
       "community": 21,
-      "norm_label": "constants.tsx"
+      "norm_label": "constants.tsx",
+      "id": "shared_constants"
     },
     {
       "label": "CalculatorIcon()",
@@ -459,9 +539,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L7",
       "_origin": "ast",
-      "id": "shared_constants_calculatoricon",
       "community": 21,
-      "norm_label": "calculatoricon()"
+      "norm_label": "calculatoricon()",
+      "id": "shared_constants_calculatoricon"
     },
     {
       "label": "FileCheckIcon()",
@@ -469,9 +549,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L18",
       "_origin": "ast",
-      "id": "shared_constants_filecheckicon",
       "community": 21,
-      "norm_label": "filecheckicon()"
+      "norm_label": "filecheckicon()",
+      "id": "shared_constants_filecheckicon"
     },
     {
       "label": "FileSearchIcon()",
@@ -479,9 +559,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L26",
       "_origin": "ast",
-      "id": "shared_constants_filesearchicon",
       "community": 21,
-      "norm_label": "filesearchicon()"
+      "norm_label": "filesearchicon()",
+      "id": "shared_constants_filesearchicon"
     },
     {
       "label": "ReceiptIcon()",
@@ -489,9 +569,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L35",
       "_origin": "ast",
-      "id": "shared_constants_receipticon",
       "community": 21,
-      "norm_label": "receipticon()"
+      "norm_label": "receipticon()",
+      "id": "shared_constants_receipticon"
     },
     {
       "label": "FileTextIcon()",
@@ -499,9 +579,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L43",
       "_origin": "ast",
-      "id": "shared_constants_filetexticon",
       "community": 21,
-      "norm_label": "filetexticon()"
+      "norm_label": "filetexticon()",
+      "id": "shared_constants_filetexticon"
     },
     {
       "label": "UsersIcon()",
@@ -509,9 +589,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L53",
       "_origin": "ast",
-      "id": "shared_constants_usersicon",
       "community": 21,
-      "norm_label": "usersicon()"
+      "norm_label": "usersicon()",
+      "id": "shared_constants_usersicon"
     },
     {
       "label": "InfoIcon()",
@@ -519,9 +599,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L62",
       "_origin": "ast",
-      "id": "shared_constants_infoicon",
       "community": 21,
-      "norm_label": "infoicon()"
+      "norm_label": "infoicon()",
+      "id": "shared_constants_infoicon"
     },
     {
       "label": "TvIcon()",
@@ -529,9 +609,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L70",
       "_origin": "ast",
-      "id": "shared_constants_tvicon",
       "community": 21,
-      "norm_label": "tvicon()"
+      "norm_label": "tvicon()",
+      "id": "shared_constants_tvicon"
     },
     {
       "label": "SERVICES",
@@ -539,9 +619,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L80",
       "_origin": "ast",
-      "id": "shared_constants_services",
       "community": 21,
-      "norm_label": "services"
+      "norm_label": "services",
+      "id": "shared_constants_services"
     },
     {
       "label": "PANEL_CONFIG",
@@ -549,9 +629,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L96",
       "_origin": "ast",
-      "id": "shared_constants_panel_config",
       "community": 18,
-      "norm_label": "panel_config"
+      "norm_label": "panel_config",
+      "id": "shared_constants_panel_config"
     },
     {
       "label": "TRANSLATIONS",
@@ -559,9 +639,9 @@
       "source_file": "apps/frontend/src/shared/constants.tsx",
       "source_location": "L104",
       "_origin": "ast",
-      "id": "shared_constants_translations",
       "community": 21,
-      "norm_label": "translations"
+      "norm_label": "translations",
+      "id": "shared_constants_translations"
     },
     {
       "label": "vite.config.ts",
@@ -569,9 +649,9 @@
       "source_file": "apps/frontend/vite.config.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "id": "frontend_vite_config",
       "community": 34,
-      "norm_label": "vite.config.ts"
+      "norm_label": "vite.config.ts",
+      "id": "frontend_vite_config"
     },
     {
       "label": "manualChunks()",
@@ -579,9 +659,9 @@
       "source_file": "apps/frontend/vite.config.ts",
       "source_location": "L30",
       "_origin": "ast",
-      "id": "frontend_vite_config_manualchunks",
       "community": 34,
-      "norm_label": "manualchunks()"
+      "norm_label": "manualchunks()",
+      "id": "frontend_vite_config_manualchunks"
     },
     {
       "label": "package.json",
@@ -929,7 +1009,7 @@
       "source_file": "apps/frontend/src/features/queue/components/AttendanceTrackingScreen.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 14,
       "norm_label": "attendancetrackingscreen.tsx",
       "id": "components_attendancetrackingscreen"
     },
@@ -939,7 +1019,7 @@
       "source_file": "apps/frontend/src/features/queue/components/AttendanceTrackingScreen.tsx",
       "source_location": "L27",
       "_origin": "ast",
-      "community": 9,
+      "community": 14,
       "norm_label": "status_config",
       "id": "components_attendancetrackingscreen_status_config"
     },
@@ -949,7 +1029,7 @@
       "source_file": "apps/frontend/src/features/queue/components/AttendanceTrackingScreen.tsx",
       "source_location": "L35",
       "_origin": "ast",
-      "community": 9,
+      "community": 14,
       "norm_label": "toast()",
       "id": "components_attendancetrackingscreen_toast"
     },
@@ -959,7 +1039,7 @@
       "source_file": "apps/frontend/src/features/queue/components/AttendanceTrackingScreen.tsx",
       "source_location": "L53",
       "_origin": "ast",
-      "community": 9,
+      "community": 15,
       "norm_label": "attendancetrackingscreen()",
       "id": "components_attendancetrackingscreen_attendancetrackingscreen"
     },
@@ -1309,7 +1389,7 @@
       "source_file": "apps/backend/scratch_db_test.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "scratch_db_test.ts",
       "id": "backend_scratch_db_test"
     },
@@ -1319,7 +1399,7 @@
       "source_file": "apps/backend/scratch_db_test.ts",
       "source_location": "L4",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "test()",
       "id": "backend_scratch_db_test_test"
     },
@@ -1329,7 +1409,7 @@
       "source_file": "apps/backend/scratch_schema_discover.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "scratch_schema_discover.ts",
       "id": "backend_scratch_schema_discover"
     },
@@ -1339,7 +1419,7 @@
       "source_file": "apps/backend/scratch_schema_discover.ts",
       "source_location": "L4",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "test()",
       "id": "backend_scratch_schema_discover_test"
     },
@@ -2469,7 +2549,7 @@
       "source_file": "apps/backend/src/supabase.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "supabase.ts",
       "id": "src_supabase"
     },
@@ -2479,7 +2559,7 @@
       "source_file": "apps/backend/src/supabase.ts",
       "source_location": "L5",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "supabase",
       "id": "src_supabase_supabase"
     },
@@ -2489,7 +2569,7 @@
       "source_file": "apps/backend/src/supabase.ts",
       "source_location": "L8",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "supabaseanon",
       "id": "src_supabase_supabaseanon"
     },
@@ -2499,7 +2579,7 @@
       "source_file": "apps/backend/src/supabase.ts",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "ticket",
       "id": "src_supabase_ticket"
     },
@@ -2509,7 +2589,7 @@
       "source_file": "apps/backend/src/supabase.ts",
       "source_location": "L25",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "service",
       "id": "src_supabase_service"
     },
@@ -2519,7 +2599,7 @@
       "source_file": "apps/backend/src/supabase.ts",
       "source_location": "L34",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "gettodaytickets()",
       "id": "src_supabase_gettodaytickets"
     },
@@ -2529,7 +2609,7 @@
       "source_file": "apps/backend/src/supabase.ts",
       "source_location": "L60",
       "_origin": "ast",
-      "community": 15,
+      "community": 0,
       "norm_label": "getservices()",
       "id": "src_supabase_getservices"
     },
@@ -2659,7 +2739,7 @@
       "source_file": "apps/backend/src/types/index.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 14,
+      "community": 35,
       "norm_label": "index.ts",
       "id": "apps_backend_src_types_index_ts_types_index"
     },
@@ -2669,7 +2749,7 @@
       "source_file": "apps/backend/src/types/index.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 14,
+      "community": 35,
       "norm_label": "user",
       "id": "types_index_user"
     },
@@ -2689,7 +2769,7 @@
       "source_file": "apps/backend/src/types/index.ts",
       "source_location": "L22",
       "_origin": "ast",
-      "community": 14,
+      "community": 35,
       "norm_label": "attendancerecord",
       "id": "types_index_attendancerecord"
     },
@@ -2699,7 +2779,7 @@
       "source_file": "apps/backend/src/types/index.ts",
       "source_location": "L31",
       "_origin": "ast",
-      "community": 14,
+      "community": 35,
       "norm_label": "notification",
       "id": "types_index_notification"
     },
@@ -2709,7 +2789,7 @@
       "source_file": "apps/backend/src/types/index.ts",
       "source_location": "L40",
       "_origin": "ast",
-      "community": 14,
+      "community": 35,
       "norm_label": "apiresponse",
       "id": "types_index_apiresponse"
     },
@@ -3439,7 +3519,7 @@
       "source_file": "apps/frontend/src/App.tsx",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 9,
+      "community": 15,
       "norm_label": "appcontent()",
       "id": "src_app_appcontent"
     },
@@ -3569,7 +3649,7 @@
       "source_file": "apps/frontend/src/features/auth/contexts/AuthContext.tsx",
       "source_location": "L172",
       "_origin": "ast",
-      "community": 21,
+      "community": 15,
       "norm_label": "useauth()",
       "id": "contexts_authcontext_useauth"
     },
@@ -3619,7 +3699,7 @@
       "source_file": "apps/frontend/src/features/queue/components/AdminScreen.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 21,
+      "community": 15,
       "norm_label": "adminscreen.tsx",
       "id": "components_adminscreen"
     },
@@ -3629,7 +3709,7 @@
       "source_file": "apps/frontend/src/features/queue/components/AdminScreen.tsx",
       "source_location": "L10",
       "_origin": "ast",
-      "community": 21,
+      "community": 15,
       "norm_label": "operatorpanel()",
       "id": "components_adminscreen_operatorpanel"
     },
@@ -3669,7 +3749,7 @@
       "source_file": "apps/frontend/src/features/queue/components/HomeScreen.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 21,
+      "community": 8,
       "norm_label": "homescreen.tsx",
       "id": "components_homescreen"
     },
@@ -3679,7 +3759,7 @@
       "source_file": "apps/frontend/src/features/queue/components/HomeScreen.tsx",
       "source_location": "L7",
       "_origin": "ast",
-      "community": 21,
+      "community": 8,
       "norm_label": "homescreenprops",
       "id": "components_homescreen_homescreenprops"
     },
@@ -3689,7 +3769,7 @@
       "source_file": "apps/frontend/src/features/queue/components/HomeScreen.tsx",
       "source_location": "L16",
       "_origin": "ast",
-      "community": 21,
+      "community": 8,
       "norm_label": "homescreen()",
       "id": "components_homescreen_homescreen"
     },
@@ -3729,7 +3809,7 @@
       "source_file": "apps/frontend/src/features/queue/components/OuvidoriaClassificationModal.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 15,
       "norm_label": "ouvidoriaclassificationmodal.tsx",
       "id": "components_ouvidoriaclassificationmodal"
     },
@@ -3739,7 +3819,7 @@
       "source_file": "apps/frontend/src/features/queue/components/OuvidoriaClassificationModal.tsx",
       "source_location": "L9",
       "_origin": "ast",
-      "community": 9,
+      "community": 15,
       "norm_label": "ouvidoriaclassificationmodalprops",
       "id": "components_ouvidoriaclassificationmodal_ouvidoriaclassificationmodalprops"
     },
@@ -3749,7 +3829,7 @@
       "source_file": "apps/frontend/src/features/queue/components/OuvidoriaClassificationModal.tsx",
       "source_location": "L18",
       "_origin": "ast",
-      "community": 9,
+      "community": 15,
       "norm_label": "classification",
       "id": "components_ouvidoriaclassificationmodal_classification"
     },
@@ -3759,7 +3839,7 @@
       "source_file": "apps/frontend/src/features/queue/components/OuvidoriaClassificationModal.tsx",
       "source_location": "L20",
       "_origin": "ast",
-      "community": 9,
+      "community": 15,
       "norm_label": "ouvidoriaclassificationmodal()",
       "id": "components_ouvidoriaclassificationmodal_ouvidoriaclassificationmodal"
     },
@@ -3839,7 +3919,7 @@
       "source_file": "apps/frontend/src/features/queue/components/ServiceSelectionScreen.tsx",
       "source_location": "L96",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "norm_label": "serviceselectionscreen()",
       "id": "components_serviceselectionscreen_serviceselectionscreen"
     },
@@ -3869,7 +3949,7 @@
       "source_file": "apps/frontend/src/features/queue/components/TicketScreen.tsx",
       "source_location": "L19",
       "_origin": "ast",
-      "community": 9,
+      "community": 15,
       "norm_label": "ticketscreen()",
       "id": "components_ticketscreen_ticketscreen"
     },
@@ -3909,7 +3989,7 @@
       "source_file": "apps/frontend/src/features/queue/components/index.ts",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 9,
+      "community": 8,
       "norm_label": "index.ts",
       "id": "apps_frontend_src_features_queue_components_index_ts_components_index"
     },
@@ -3999,7 +4079,7 @@
       "source_file": "apps/frontend/src/features/queue/contexts/TodayQueueContext.tsx",
       "source_location": "L39",
       "_origin": "ast",
-      "community": 21,
+      "community": 15,
       "norm_label": "todayqueueprovider()",
       "id": "contexts_todayqueuecontext_todayqueueprovider"
     },
@@ -4009,7 +4089,7 @@
       "source_file": "apps/frontend/src/features/queue/contexts/TodayQueueContext.tsx",
       "source_location": "L516",
       "_origin": "ast",
-      "community": 9,
+      "community": 15,
       "norm_label": "usetodayqueue()",
       "id": "contexts_todayqueuecontext_usetodayqueue"
     },
@@ -4089,7 +4169,7 @@
       "source_file": "apps/frontend/src/index.tsx",
       "source_location": "L1",
       "_origin": "ast",
-      "community": 12,
+      "community": 36,
       "norm_label": "index.tsx",
       "id": "apps_frontend_src_index_tsx_src_index"
     },
@@ -4099,7 +4179,7 @@
       "source_file": "apps/frontend/src/index.tsx",
       "source_location": "L6",
       "_origin": "ast",
-      "community": 12,
+      "community": 36,
       "norm_label": "rootelement",
       "id": "src_index_rootelement"
     },
@@ -4109,7 +4189,7 @@
       "source_file": "apps/frontend/src/index.tsx",
       "source_location": "L11",
       "_origin": "ast",
-      "community": 12,
+      "community": 36,
       "norm_label": "root",
       "id": "src_index_root"
     },
@@ -5089,7 +5169,7 @@
       "source_file": "apps/frontend/src/shared/types/database.ts",
       "source_location": "L69",
       "_origin": "ast",
-      "community": 21,
+      "community": 8,
       "norm_label": "language",
       "id": "types_database_language"
     },
@@ -5860,6 +5940,28 @@
       "relation": "imports_from",
       "context": "import",
       "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/components/MetricsDashboard.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "components_metricsdashboard",
+      "target": "utils_reportgenerator",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/components/MetricsDashboard.tsx",
+      "source_location": "L8",
+      "weight": 1.0,
+      "source": "components_metricsdashboard",
+      "target": "utils_reportgenerator_generateexecutivepdfreport",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "imports_from",
+      "context": "import",
+      "confidence": "EXTRACTED",
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L7",
       "weight": 1.0,
@@ -5888,6 +5990,98 @@
       "weight": 1.0,
       "source": "components_metricsdashboard_metricsdashboard",
       "target": "contexts_queuecontext_usequeue"
+    },
+    {
+      "relation": "imports",
+      "context": "import",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L5",
+      "weight": 1.0,
+      "source": "utils_reportgenerator",
+      "target": "types_index_ticket",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L43",
+      "weight": 1.0,
+      "source": "utils_reportgenerator",
+      "target": "utils_reportgenerator_chartimages",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L80",
+      "weight": 1.0,
+      "source": "utils_reportgenerator",
+      "target": "utils_reportgenerator_generateexecutivepdfreport",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L51",
+      "weight": 1.0,
+      "source": "utils_reportgenerator",
+      "target": "utils_reportgenerator_loadlogobase64",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L7",
+      "weight": 1.0,
+      "source": "utils_reportgenerator",
+      "target": "utils_reportgenerator_reportfilterinfo",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L16",
+      "weight": 1.0,
+      "source": "utils_reportgenerator",
+      "target": "utils_reportgenerator_reportmetrics",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L29",
+      "weight": 1.0,
+      "source": "utils_reportgenerator",
+      "target": "utils_reportgenerator_servicedistitem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L34",
+      "weight": 1.0,
+      "source": "utils_reportgenerator",
+      "target": "utils_reportgenerator_timeseriesitem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "source_file": "apps/frontend/src/features/queue/utils/reportGenerator.ts",
+      "source_location": "L90",
+      "weight": 1.0,
+      "source": "utils_reportgenerator_generateexecutivepdfreport",
+      "target": "utils_reportgenerator_loadlogobase64",
+      "confidence_score": 1.0
     },
     {
       "relation": "re_exports",
@@ -6074,9 +6268,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_publicdisplayscreen",
-      "target": "utils_tvconfighelper",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper"
     },
     {
       "relation": "imports",
@@ -6085,9 +6279,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_publicdisplayscreen",
-      "target": "utils_tvconfighelper_default_tv_config",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_default_tv_config"
     },
     {
       "relation": "imports",
@@ -6096,9 +6290,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_publicdisplayscreen",
-      "target": "utils_tvconfighelper_getstoredtvconfig",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_getstoredtvconfig"
     },
     {
       "relation": "imports",
@@ -6107,9 +6301,9 @@
       "source_file": "apps/frontend/src/features/queue/components/PublicDisplayScreen.tsx",
       "source_location": "L104",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_publicdisplayscreen",
-      "target": "utils_tvconfighelper_tvconfig",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_tvconfig"
     },
     {
       "relation": "calls",
@@ -6172,9 +6366,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L26",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_restrictedarea",
-      "target": "components_restrictedarea_attendancetrackingscreen",
-      "confidence_score": 1.0
+      "target": "components_restrictedarea_attendancetrackingscreen"
     },
     {
       "relation": "contains",
@@ -6192,9 +6386,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L25",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_restrictedarea",
-      "target": "components_restrictedarea_metricsdashboard",
-      "confidence_score": 1.0
+      "target": "components_restrictedarea_metricsdashboard"
     },
     {
       "relation": "contains",
@@ -6222,9 +6416,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L40",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_restrictedarea",
-      "target": "components_restrictedarea_screenskeleton",
-      "confidence_score": 1.0
+      "target": "components_restrictedarea_screenskeleton"
     },
     {
       "relation": "contains",
@@ -6232,9 +6426,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L28",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_restrictedarea",
-      "target": "components_restrictedarea_servicemanagementscreen",
-      "confidence_score": 1.0
+      "target": "components_restrictedarea_servicemanagementscreen"
     },
     {
       "relation": "contains",
@@ -6242,9 +6436,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L29",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_restrictedarea",
-      "target": "components_restrictedarea_tvsettingsscreen",
-      "confidence_score": 1.0
+      "target": "components_restrictedarea_tvsettingsscreen"
     },
     {
       "relation": "contains",
@@ -6252,9 +6446,9 @@
       "source_file": "apps/frontend/src/features/queue/components/RestrictedArea.tsx",
       "source_location": "L27",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_restrictedarea",
-      "target": "components_restrictedarea_usermanagementscreen",
-      "confidence_score": 1.0
+      "target": "components_restrictedarea_usermanagementscreen"
     },
     {
       "relation": "imports_from",
@@ -6372,9 +6566,9 @@
       "source_file": "apps/frontend/src/features/queue/components/TvSettingsScreen.tsx",
       "source_location": "L31",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_tvsettingsscreen",
-      "target": "components_tvsettingsscreen_tvsettingsscreen",
-      "confidence_score": 1.0
+      "target": "components_tvsettingsscreen_tvsettingsscreen"
     },
     {
       "relation": "imports_from",
@@ -6383,9 +6577,9 @@
       "source_file": "apps/frontend/src/features/queue/components/TvSettingsScreen.tsx",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_tvsettingsscreen",
-      "target": "utils_tvconfighelper",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper"
     },
     {
       "relation": "imports",
@@ -6394,9 +6588,9 @@
       "source_file": "apps/frontend/src/features/queue/components/TvSettingsScreen.tsx",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_tvsettingsscreen",
-      "target": "utils_tvconfighelper_getstoredtvconfig",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_getstoredtvconfig"
     },
     {
       "relation": "imports",
@@ -6405,9 +6599,9 @@
       "source_file": "apps/frontend/src/features/queue/components/TvSettingsScreen.tsx",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_tvsettingsscreen",
-      "target": "utils_tvconfighelper_savetvconfig",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_savetvconfig"
     },
     {
       "relation": "imports",
@@ -6416,9 +6610,9 @@
       "source_file": "apps/frontend/src/features/queue/components/TvSettingsScreen.tsx",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_tvsettingsscreen",
-      "target": "utils_tvconfighelper_tvconfig",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_tvconfig"
     },
     {
       "relation": "imports",
@@ -6427,9 +6621,9 @@
       "source_file": "apps/frontend/src/features/queue/components/TvSettingsScreen.tsx",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_tvsettingsscreen",
-      "target": "utils_tvconfighelper_tvslideitem",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_tvslideitem"
     },
     {
       "relation": "imports",
@@ -6438,9 +6632,9 @@
       "source_file": "apps/frontend/src/features/queue/components/TvSettingsScreen.tsx",
       "source_location": "L23",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "components_tvsettingsscreen",
-      "target": "utils_tvconfighelper_tvtickeritem",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_tvtickeritem"
     },
     {
       "relation": "re_exports",
@@ -6592,9 +6786,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L22",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_tvconfighelper",
-      "target": "utils_tvconfighelper_default_tv_config",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_default_tv_config"
     },
     {
       "relation": "contains",
@@ -6602,9 +6796,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L59",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_tvconfighelper",
-      "target": "utils_tvconfighelper_getstoredtvconfig",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_getstoredtvconfig"
     },
     {
       "relation": "contains",
@@ -6612,9 +6806,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L72",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_tvconfighelper",
-      "target": "utils_tvconfighelper_savetvconfig",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_savetvconfig"
     },
     {
       "relation": "contains",
@@ -6622,9 +6816,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L16",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_tvconfighelper",
-      "target": "utils_tvconfighelper_tvconfig",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_tvconfig"
     },
     {
       "relation": "contains",
@@ -6632,9 +6826,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L1",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_tvconfighelper",
-      "target": "utils_tvconfighelper_tvslideitem",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_tvslideitem"
     },
     {
       "relation": "contains",
@@ -6642,9 +6836,9 @@
       "source_file": "apps/frontend/src/features/queue/utils/tvConfigHelper.ts",
       "source_location": "L10",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "utils_tvconfighelper",
-      "target": "utils_tvconfighelper_tvtickeritem",
-      "confidence_score": 1.0
+      "target": "utils_tvconfighelper_tvtickeritem"
     },
     {
       "relation": "imports_from",
@@ -6894,9 +7088,9 @@
       "source_file": "apps/frontend/vite.config.ts",
       "source_location": "L30",
       "weight": 1.0,
+      "confidence_score": 1.0,
       "source": "frontend_vite_config",
-      "target": "frontend_vite_config_manualchunks",
-      "confidence_score": 1.0
+      "target": "frontend_vite_config_manualchunks"
     },
     {
       "relation": "contains",
@@ -15421,5 +15615,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "0e4d1e421d20f7e4a079d43d4922daedb62a53f8"
+  "built_at_commit": "638ab483ed0e1906f87cc1fbf4152b067afa7056"
 }

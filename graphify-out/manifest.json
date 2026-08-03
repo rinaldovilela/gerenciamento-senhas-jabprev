@@ -285,8 +285,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/MetricsDashboard.tsx": {
-    "mtime": 1785038873.9279802,
-    "ast_hash": "b5af3fb518d2c42ddb3debd7d4bfd0c8",
+    "mtime": 1785724646.9661736,
+    "ast_hash": "76e8e9e9f0264a8ad4bd459811d5c8e5",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/components/NameInputScreen.tsx": {
@@ -547,6 +547,11 @@
   "apps/frontend/src/features/queue/utils/tvConfigHelper.ts": {
     "mtime": 1785038335.1409745,
     "ast_hash": "eb5a46254e0bf53d1dec3494db535b1f",
+    "semantic_hash": ""
+  },
+  "apps/frontend/src/features/queue/utils/reportGenerator.ts": {
+    "mtime": 1785724660.5970416,
+    "ast_hash": "e432e99986ebe09a713789375fce2411",
     "semantic_hash": ""
   }
 }
