@@ -5,6 +5,7 @@ import { format, subDays, startOfDay, endOfDay, parseISO, startOfMonth } from 'd
 import { ptBR } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { generateExecutivePDFReport } from '@features/queue/utils/reportGenerator';
 import { 
     TrendingUp, 
     Clock, 
@@ -110,6 +111,10 @@ const MetricsDashboard: React.FC = () => {
         type: 'info',
     });
     const exportRef = useRef<HTMLDivElement>(null);
+    const slaGaugeRef = useRef<any>(null);
+    const timeTrendRef = useRef<any>(null);
+    const volumeBarRef = useRef<any>(null);
+    const servicePieRef = useRef<any>(null);
 
     const today = new Date();
     const defaultStartDate = format(subDays(today, 30), 'yyyy-MM-dd');
@@ -316,6 +321,7 @@ const MetricsDashboard: React.FC = () => {
                 smooth: true,
                 symbolSize: 8,
                 itemStyle: { color: '#F59E0B' },
+                label: { show: true, position: 'top', formatter: '{c}m', color: '#F59E0B', fontSize: 10, fontWeight: 'bold' },
                 areaStyle: {
                     color: {
                         type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
@@ -330,6 +336,7 @@ const MetricsDashboard: React.FC = () => {
                 smooth: true,
                 symbolSize: 8,
                 itemStyle: { color: '#3B82F6' },
+                label: { show: true, position: 'bottom', formatter: '{c}m', color: '#60A5FA', fontSize: 10, fontWeight: 'bold' },
                 areaStyle: {
                     color: {
                         type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
@@ -373,6 +380,7 @@ const MetricsDashboard: React.FC = () => {
                 name: 'Completados',
                 type: 'bar',
                 stack: 'total',
+                label: { show: true, position: 'inside', formatter: (p: any) => p.value > 0 ? p.value : '', color: '#FFFFFF', fontWeight: 'bold', fontSize: 10 },
                 itemStyle: { color: '#10B981', borderRadius: [0, 0, 4, 4] },
                 data: timeSeriesData.map(d => d.completados)
             },
@@ -380,6 +388,7 @@ const MetricsDashboard: React.FC = () => {
                 name: 'Aguardando',
                 type: 'bar',
                 stack: 'total',
+                label: { show: true, position: 'inside', formatter: (p: any) => p.value > 0 ? p.value : '', color: '#FFFFFF', fontWeight: 'bold', fontSize: 10 },
                 itemStyle: { color: '#F59E0B' },
                 data: timeSeriesData.map(d => d.esperando)
             },
@@ -387,6 +396,7 @@ const MetricsDashboard: React.FC = () => {
                 name: 'Cancelados',
                 type: 'bar',
                 stack: 'total',
+                label: { show: true, position: 'inside', formatter: (p: any) => p.value > 0 ? p.value : '', color: '#FFFFFF', fontWeight: 'bold', fontSize: 10 },
                 itemStyle: { color: '#EF4444', borderRadius: [4, 4, 0, 0] },
                 data: timeSeriesData.map(d => d.cancelados)
             }
@@ -401,6 +411,7 @@ const MetricsDashboard: React.FC = () => {
             borderColor: 'rgba(255, 255, 255, 0.1)',
             textStyle: { color: '#F8FAFC', fontSize: 12 },
             borderRadius: 12,
+            formatter: '{b}: {c} senhas ({d}%)'
         },
         legend: {
             orient: 'vertical',
@@ -412,17 +423,28 @@ const MetricsDashboard: React.FC = () => {
             {
                 name: 'Serviços',
                 type: 'pie',
-                radius: ['45%', '75%'],
-                center: ['40%', '50%'],
-                avoidLabelOverlap: false,
+                radius: ['40%', '70%'],
+                center: ['35%', '50%'],
+                avoidLabelOverlap: true,
                 itemStyle: {
                     borderRadius: 8,
                     borderColor: '#0F172A',
                     borderWidth: 3
                 },
-                label: { show: false },
+                label: {
+                    show: true,
+                    position: 'outside',
+                    formatter: '{b}\n{c} ({d}%)',
+                    color: '#F8FAFC',
+                    fontSize: 10,
+                    fontWeight: 'bold'
+                },
+                labelLine: {
+                    show: true,
+                    lineStyle: { color: 'rgba(255, 255, 255, 0.3)' }
+                },
                 emphasis: {
-                    label: { show: true, fontSize: 14, fontWeight: 'bold', color: '#F8FAFC' }
+                    label: { show: true, fontSize: 12, fontWeight: 'bold', color: '#F8FAFC' }
                 },
                 data: serviceDistribution.map((s, idx) => {
                     const palette = ['#F59E0B', '#3B82F6', '#10B981', '#EC4899', '#8B5CF6', '#06B6D4'];
@@ -479,37 +501,68 @@ const MetricsDashboard: React.FC = () => {
         };
     }, [metrics.avgWaitTime]);
 
-    const exportPDF = useCallback(() => {
+    const exportPDF = useCallback(async () => {
         try {
-            const doc = new jsPDF();
-            doc.setFont('helvetica', 'normal');
-            doc.text('Relatório JaboatãoPrev - Métricas de Atendimento', 14, 15);
-            doc.setFontSize(10);
-            doc.text(`Período: ${format(parseISO(filters.startDate), 'dd/MM/yyyy')} a ${format(parseISO(filters.endDate), 'dd/MM/yyyy')}`, 14, 22);
+            setToast({ show: true, message: 'Gerando Relatório Executivo em PDF...', type: 'info' });
 
-            const tableRows = filteredTickets.map((t) => [
-                t.formatted_number,
-                t.service?.name || '—',
-                t.operator?.name || '—',
-                t.user_type.replace('_', ' ').toUpperCase(),
-                t.is_priority ? 'Sim' : 'Não',
-                t.status.toUpperCase(),
-                format(parseISO(t.created_at), 'dd/MM/yyyy HH:mm'),
-            ]);
+            const getChartImage = (ref: React.RefObject<any>) => {
+                try {
+                    const instance = ref.current?.getEchartsInstance();
+                    if (instance) {
+                        return instance.getDataURL({
+                            type: 'png',
+                            pixelRatio: 2,
+                            backgroundColor: '#0f172a',
+                        });
+                    }
+                } catch (e) {
+                    console.warn('Erro ao extrair imagem do gráfico:', e);
+                }
+                return undefined;
+            };
 
-            autoTable(doc, {
-                head: [['Senha', 'Serviço', 'Operador', 'Vínculo', 'Prioridade', 'Status', 'Data/Hora']],
-                body: tableRows,
-                startY: 28,
+            const chartImages = {
+                slaGaugeImg: getChartImage(slaGaugeRef),
+                timeTrendImg: getChartImage(timeTrendRef),
+                volumeBarImg: getChartImage(volumeBarRef),
+                servicePieImg: getChartImage(servicePieRef),
+            };
+
+            const selectedService = services.find((s) => s.id === filters.serviceId);
+            const selectedOperator = operators.find((op) => op.id === filters.operatorId);
+
+            const filterLabels = {
+                startDate: filters.startDate,
+                endDate: filters.endDate,
+                serviceName: selectedService ? selectedService.name : 'Todos os Serviços',
+                operatorName: selectedOperator ? selectedOperator.name : 'Todos os Operadores',
+                userTypeLabel:
+                    filters.userType === 'all'
+                        ? 'Todos os Vínculos'
+                        : filters.userType.replace('_', ' ').toUpperCase(),
+                priorityLabel:
+                    filters.priorityType === 'all'
+                        ? 'Fila Geral'
+                        : filters.priorityType === 'priority'
+                        ? 'Prioritária'
+                        : 'Normal',
+            };
+
+            await generateExecutivePDFReport({
+                tickets: filteredTickets,
+                metrics,
+                filters: filterLabels,
+                serviceDistribution,
+                timeSeriesData,
+                chartImages,
             });
 
-            doc.save(`relatorio_metricas_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-            setToast({ show: true, message: 'Relatório PDF gerado com sucesso!', type: 'success' });
+            setToast({ show: true, message: 'Relatório Executivo PDF gerado com sucesso!', type: 'success' });
         } catch (e) {
             console.error('Erro export PDF:', e);
             setToast({ show: true, message: 'Não foi possível exportar para PDF.', type: 'error' });
         }
-    }, [filteredTickets, filters]);
+    }, [filteredTickets, filters, metrics, serviceDistribution, timeSeriesData, services, operators]);
 
     const exportJSON = useCallback(() => {
         const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(filteredTickets, null, 2))}`;
@@ -733,7 +786,7 @@ const MetricsDashboard: React.FC = () => {
                         <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold rounded-lg">Meta: 15 min</span>
                     </div>
                     <div className="h-64 flex items-center justify-center">
-                        <EChartsCore echarts={echarts} option={slaGaugeOption} style={{ height: '100%', width: '100%' }} />
+                        <EChartsCore ref={slaGaugeRef} echarts={echarts} option={slaGaugeOption} style={{ height: '100%', width: '100%' }} />
                     </div>
                 </div>
 
@@ -741,7 +794,7 @@ const MetricsDashboard: React.FC = () => {
                 <div className="lg:col-span-2 bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
                     <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Fluxo & Tendência de Tempos (Espera vs Atendimento)</h2>
                     <div className="h-64">
-                        <EChartsCore echarts={echarts} option={timeTrendOption} style={{ height: '100%', width: '100%' }} />
+                        <EChartsCore ref={timeTrendRef} echarts={echarts} option={timeTrendOption} style={{ height: '100%', width: '100%' }} />
                     </div>
                 </div>
             </div>
@@ -751,7 +804,7 @@ const MetricsDashboard: React.FC = () => {
                 <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
                     <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Volume Diário por Status</h2>
                     <div className="h-72">
-                        <EChartsCore echarts={echarts} option={volumeBarOption} style={{ height: '100%', width: '100%' }} />
+                        <EChartsCore ref={volumeBarRef} echarts={echarts} option={volumeBarOption} style={{ height: '100%', width: '100%' }} />
                     </div>
                 </div>
 
@@ -759,7 +812,7 @@ const MetricsDashboard: React.FC = () => {
                 <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-2xl">
                     <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Distribuição por Categoria de Serviço</h2>
                     <div className="h-72">
-                        <EChartsCore echarts={echarts} option={servicePieOption} style={{ height: '100%', width: '100%' }} />
+                        <EChartsCore ref={servicePieRef} echarts={echarts} option={servicePieOption} style={{ height: '100%', width: '100%' }} />
                     </div>
                 </div>
             </div>
