@@ -1,18 +1,22 @@
 import { Response } from 'express';
 import type { AuthRequest } from '../middleware';
 import * as QueueService from '../services/QueueService';
+import { logger } from '../utils/logger';
 
 export async function createTicket(req: AuthRequest, res: Response, next: any) {
   try {
-    const { service, priority, description } = req.body;
-    const userId = req.user!.id;
+    const { serviceId, userType, isPriority, attendeeName } = req.body;
 
     const ticket = await QueueService.createTicket({
-      userId,
-      service,
-      priority: priority || 'medium',
-      description,
+      serviceId,
+      userType,
+      isPriority: isPriority ?? false,
+      attendeeName,
     });
+
+    logger.info(
+      `Senha ${ticket.formatted_number} emitida por ${req.user!.email} (${req.user!.id})`
+    );
 
     res.status(201).json(ticket);
   } catch (error: any) {

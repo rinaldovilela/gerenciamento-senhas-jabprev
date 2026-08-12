@@ -2,6 +2,29 @@ import { config } from './environment';
 
 const API_BASE_URL = `${config.apiUrl}/api/v1`;
 
+export interface CreateTicketPayload {
+  serviceId: string;
+  userType: 'aposentado' | 'pensionista' | 'servidor_ativo';
+  isPriority: boolean;
+  attendeeName?: string;
+}
+
+/** Linha de `tickets` retornada por POST /queue/tickets. */
+export interface CreatedTicketRow {
+  id: string;
+  number: number;
+  formatted_number: string;
+  attendee_name: string | null;
+  service_id: string;
+  user_type: 'aposentado' | 'pensionista' | 'servidor_ativo';
+  status: 'waiting' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  is_priority: boolean;
+  operator_id: string | null;
+  created_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -84,8 +107,8 @@ export class ApiClient {
   }
 
   // Queue endpoints
-  static async createTicket(data: { service: string; priority?: string; description?: string }) {
-    return this.request('POST', '/queue/tickets', data);
+  static async createTicket(data: CreateTicketPayload): Promise<CreatedTicketRow> {
+    return this.request<CreatedTicketRow>('POST', '/queue/tickets', data);
   }
 
   static async listTickets(filters?: { status?: string; service?: string }) {

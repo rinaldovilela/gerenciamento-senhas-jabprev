@@ -6,9 +6,10 @@ import Joi from 'joi';
 const router = Router();
 
 const createTicketSchema = Joi.object({
-  service: Joi.string().required(),
-  priority: Joi.string().valid('low', 'medium', 'high').default('medium'),
-  description: Joi.string(),
+  serviceId: Joi.string().uuid().required(),
+  userType: Joi.string().valid('aposentado', 'pensionista', 'servidor_ativo').required(),
+  isPriority: Joi.boolean().default(false),
+  attendeeName: Joi.string().trim().max(120).allow('', null).optional(),
 });
 
 const updateTicketSchema = Joi.object({

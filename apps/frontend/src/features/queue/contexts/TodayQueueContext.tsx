@@ -11,6 +11,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@lib/supabase/client';
+import { ApiClient } from '@lib/api';
 import { config as appConfig } from '@lib/environment';
 import type { Ticket, Service, UserType, TicketStatus } from '@shared/types';
 import { useAuth } from '@features/auth/contexts/AuthContext';
@@ -245,19 +246,21 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
     /**
      * Adiciona nova senha
+     *
+     * A emissão passa pelo backend (POST /queue/tickets), que exige JWT válido de
+     * qualquer role e é o único autorizado a executar a função `create_ticket`.
+     * Erros são propagados para que a tela possa distinguir sessão expirada (401)
+     * de falha de rede.
      */
     const addTicket = useCallback(
         async (serviceId: string, userType: UserType, isPriority: boolean, attendeeName?: string): Promise<Ticket | null> => {
             try {
-                // Usar a função RPC do Supabase para criar a senha
-                const { data: newTicketDocument, error } = await supabase.rpc('create_ticket', {
-                    p_service_id: serviceId,
-                    p_user_type: userType,
-                    p_is_priority: isPriority,
-                    p_attendee_name: attendeeName || null,
+                const newTicketDocument = await ApiClient.createTicket({
+                    serviceId,
+                    userType,
+                    isPriority,
+                    attendeeName,
                 });
-
-                if (error) throw error;
 
                 const service = services.find(s => s.id === serviceId);
                 const newTicket: Ticket = {
@@ -287,7 +290,7 @@ export const TodayQueueProvider: React.FC<{ children: React.ReactNode }> = ({ ch
                 return newTicket;
             } catch (error) {
                 console.error('[TodayQueueContext] Erro ao criar senha:', error);
-                return null;
+                throw error;
             }
         },
         [services]

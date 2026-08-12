@@ -2,11 +2,12 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { QueueProvider } from '@features/queue/contexts/QueueContext';
 import { TodayQueueProvider, useTodayQueue } from '@features/queue/contexts/TodayQueueContext';
-import { AuthProvider } from '@features/auth/contexts/AuthContext';
+import { AuthProvider, useAuth } from '@features/auth/contexts/AuthContext';
 import { HomeScreen } from '@features/queue/components';
 import { ServiceSelectionScreen } from '@features/queue/components';
 import { TicketScreen } from '@features/queue/components';
-import { LoginScreen } from '@features/auth/components';
+import { LoginScreen, LoginModal } from '@features/auth/components';
+import { ApiError } from '@lib/api';
 import { RestrictedArea } from '@features/queue/components';
 import { UserTypeSelectionScreen } from '@features/queue/components';
 import { PrioritySelectionScreen } from '@features/queue/components';
@@ -42,6 +43,30 @@ const AppContent: React.FC = () => {
         type: 'info',
     });
     const { addTicket } = useTodayQueue();
+    const { isAuthenticated } = useAuth();
+
+    // Gate de sessão: emitir senha exige um usuário autenticado (qualquer role).
+    const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
+    const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+    const [pendingAttendeeName, setPendingAttendeeName] = useState<string | null>(null);
+    const [loginMessage, setLoginMessage] = useState<string | undefined>(undefined);
+
+    /**
+     * Executa `next` se houver sessão; caso contrário abre o modal de login e
+     * retoma a ação depois que o atendente entrar.
+     */
+    const requireAuth = useCallback((next: () => void) => {
+        if (isAuthenticated) {
+            next();
+            return;
+        }
+
+        // O wrapper é obrigatório: useState trata função como updater.
+        setPendingAction(() => next);
+        setPendingAttendeeName(null);
+        setLoginMessage(undefined);
+        setIsLoginModalOpen(true);
+    }, [isAuthenticated]);
 
     // Detectar se entrou em fullscreen
     useEffect(() => {
@@ -59,7 +84,7 @@ const AppContent: React.FC = () => {
         };
     }, []);
 
-    const requestFullscreen = useCallback(async () => {
+    const enterFullscreen = useCallback(async () => {
         try {
             const element = document.documentElement;
             if (element.requestFullscreen) {
@@ -72,6 +97,14 @@ const AppContent: React.FC = () => {
             console.error('Erro ao entrar em fullscreen:', error);
         }
     }, []);
+
+    // O modo totem entra direto na seleção de tipo de usuário, sem passar pelo
+    // handleStart, por isso o gate de sessão também precisa estar aqui.
+    const requestFullscreen = useCallback(async () => {
+        requireAuth(() => {
+            void enterFullscreen();
+        });
+    }, [requireAuth, enterFullscreen]);
 
     const exitFullscreen = useCallback(async () => {
         try {
@@ -93,8 +126,8 @@ const AppContent: React.FC = () => {
     }, []);
 
     const handleStart = useCallback(() => {
-        setCurrentScreen(Screen.USER_TYPE_SELECTION);
-    }, []);
+        requireAuth(() => setCurrentScreen(Screen.USER_TYPE_SELECTION));
+    }, [requireAuth]);
 
     const handleUserTypeSelected = useCallback((userType: UserType) => {
         setSelectedUserType(userType);
@@ -156,11 +189,48 @@ const AppContent: React.FC = () => {
             }
         } catch (error) {
             console.error('Failed to create ticket:', error);
+
+            // Sessão expirou com o totem ligado: pede login e reemite a senha
+            // preservando serviço, tipo de usuário e prioridade já escolhidos.
+            if (error instanceof ApiError && error.status === 401) {
+                setPendingAction(null);
+                setPendingAttendeeName(attendeeName);
+                setLoginMessage('Sua sessão expirou. Faça login novamente para emitir a senha.');
+                setIsLoginModalOpen(true);
+                return;
+            }
+
             setToast({ show: true, message: 'Erro de conexão. Verifique sua internet.', type: 'error' });
         } finally {
             setIsGeneratingTicket(false);
         }
     }, [addTicket, selectedService, selectedUserType, isPriority, isGeneratingTicket]);
+
+    const handleLoginModalClose = useCallback(() => {
+        setIsLoginModalOpen(false);
+        setPendingAction(null);
+        setPendingAttendeeName(null);
+        setLoginMessage(undefined);
+    }, []);
+
+    const handleLoginModalSuccess = useCallback(() => {
+        const retryAttendeeName = pendingAttendeeName;
+        const next = pendingAction;
+
+        setIsLoginModalOpen(false);
+        setPendingAction(null);
+        setPendingAttendeeName(null);
+        setLoginMessage(undefined);
+
+        if (retryAttendeeName !== null) {
+            void handleAttendeeNameSubmitted(retryAttendeeName);
+            return;
+        }
+
+        if (next) {
+            next();
+        }
+    }, [pendingAction, pendingAttendeeName, handleAttendeeNameSubmitted]);
 
     const handleNewTicketRequest = useCallback(() => {
         setActiveTicket(null);
@@ -245,6 +315,12 @@ const AppContent: React.FC = () => {
                 onClose={() => setToast((prev) => ({ ...prev, show: false }))}
             />
             {renderScreen()}
+            <LoginModal
+                isOpen={isLoginModalOpen}
+                onClose={handleLoginModalClose}
+                onSuccess={handleLoginModalSuccess}
+                message={loginMessage}
+            />
         </div>
     );
 };
