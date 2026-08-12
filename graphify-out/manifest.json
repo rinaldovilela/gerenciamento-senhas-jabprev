@@ -50,8 +50,8 @@
     "semantic_hash": ""
   },
   "apps/backend/src/controllers/queueController.ts": {
-    "mtime": 1780752964.4681647,
-    "ast_hash": "9c6add107870831897d1c7bb4cff5452",
+    "mtime": 1786498510.9156675,
+    "ast_hash": "268b98da6524f48ec2233a5f44cb1a4e",
     "semantic_hash": ""
   },
   "apps/backend/src/db/index-exports.ts": {
@@ -120,8 +120,8 @@
     "semantic_hash": ""
   },
   "apps/backend/src/routes/queue.routes.ts": {
-    "mtime": 1780752964.4805045,
-    "ast_hash": "94fe8cfe22dc9356e65f7d7ba4ffd5db",
+    "mtime": 1786498516.0212204,
+    "ast_hash": "fa95390caf21ffe505e387b15ba0d6b1",
     "semantic_hash": ""
   },
   "apps/backend/src/services/AdminService.ts": {
@@ -145,8 +145,8 @@
     "semantic_hash": ""
   },
   "apps/backend/src/services/QueueService.ts": {
-    "mtime": 1780752964.4851055,
-    "ast_hash": "798848359d5df60e8d8888b918fe032b",
+    "mtime": 1786498503.7630124,
+    "ast_hash": "d2431cb0e37e2d3565c78d6c230774a7",
     "semantic_hash": ""
   },
   "apps/backend/src/services/index.ts": {
@@ -230,8 +230,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/App.tsx": {
-    "mtime": 1780769520.724402,
-    "ast_hash": "129bcd68fbde9aa2d6267412743d02c4",
+    "mtime": 1786498803.213873,
+    "ast_hash": "15af4397d539f2641154b33422619c39",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/auth/components/LoginScreen.tsx": {
@@ -240,8 +240,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/features/auth/components/index.ts": {
-    "mtime": 1780752964.7701616,
-    "ast_hash": "b4c706f69f06fed664ba446d5ebefa81",
+    "mtime": 1786498670.5035195,
+    "ast_hash": "3fe4df74014718610e41dfbe810b0145",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/auth/contexts/AuthContext.tsx": {
@@ -350,8 +350,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/contexts/TodayQueueContext.tsx": {
-    "mtime": 1781517779.9187229,
-    "ast_hash": "a5989a886b75a19163ea59a16b373365",
+    "mtime": 1786498700.509073,
+    "ast_hash": "ca3fee17870b9bb0c1286d53961f68e5",
     "semantic_hash": ""
   },
   "apps/frontend/src/features/queue/contexts/index.ts": {
@@ -385,8 +385,8 @@
     "semantic_hash": ""
   },
   "apps/frontend/src/lib/api.ts": {
-    "mtime": 1780960788.923203,
-    "ast_hash": "0167876819c206aef3c4883382d57d6f",
+    "mtime": 1786499543.8281112,
+    "ast_hash": "24dce4fe4c55c6d9da6d2d92cd2e755e",
     "semantic_hash": ""
   },
   "apps/frontend/src/lib/environment.ts": {
@@ -552,6 +552,11 @@
   "apps/frontend/src/features/queue/utils/reportGenerator.ts": {
     "mtime": 1785724660.5970416,
     "ast_hash": "e432e99986ebe09a713789375fce2411",
+    "semantic_hash": ""
+  },
+  "apps/frontend/src/features/auth/components/LoginModal.tsx": {
+    "mtime": 1786498665.323055,
+    "ast_hash": "4e3e770f1a661a5c53b4882dd0a8ca9c",
     "semantic_hash": ""
   }
 }
